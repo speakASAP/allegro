@@ -23,12 +23,12 @@ COPY tsconfig.json ./
 WORKDIR /app/shared
 RUN npm install --legacy-peer-deps
 
-# Generate Prisma Client in shared module
+# Generate Prisma Client in shared module's node_modules
+# Prisma will generate client where @prisma/client is installed (shared/node_modules)
 WORKDIR /app
 RUN npx prisma generate --schema=./prisma/schema.prisma
-# Copy generated Prisma Client to shared node_modules
-RUN cp -r node_modules/.prisma shared/node_modules/.prisma 2>/dev/null || true
-RUN cp -r node_modules/@prisma shared/node_modules/@prisma 2>/dev/null || true
+# Verify Prisma client was generated in shared module
+RUN test -d shared/node_modules/.prisma && echo "Prisma client generated successfully" || (echo "ERROR: Prisma client not found in shared/node_modules/.prisma" && exit 1)
 
 # Build shared module
 WORKDIR /app/shared
