@@ -1,0 +1,30 @@
+{
+  "name": "@allegro/shared",
+  "version": "1.0.0",
+  "description": "Shared utilities, types, and modules for Allegro integration microservices",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "tsc",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "allegro",
+    "shared",
+    "types"
+  ],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@nestjs/axios": "^3.0.0",
+    "@nestjs/common": "^10.0.0",
+    "@nestjs/config": "^3.0.0",
+    "@prisma/client": "^5.22.0",
+    "rxjs": "^7.8.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.10.0",
+    "prisma": "^5.7.1",
+    "typescript": "^5.3.3"
+  }
+}
+

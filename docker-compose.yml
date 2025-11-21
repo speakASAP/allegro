@@ -1,0 +1,223 @@
+services:
+  api-gateway:
+    build:
+      context: .
+      dockerfile: ./services/api-gateway/Dockerfile
+    container_name: allegro-api-gateway
+    restart: unless-stopped
+    env_file:
+      - .env
+    ports:
+      - "127.0.0.1:${API_GATEWAY_PORT:-3411}:${API_GATEWAY_PORT:-3411}"
+    depends_on:
+      - product-service
+      - allegro-service
+      - sync-service
+      - webhook-service
+      - import-service
+      - scheduler-service
+    volumes:
+      - ./logs:/app/logs
+    environment:
+      - NODE_ENV=${NODE_ENV:-development}
+      - PORT=${API_GATEWAY_PORT:-3411}
+    networks:
+      - default
+      - nginx-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:${API_GATEWAY_PORT:-3411}/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  product-service:
+    build:
+      context: .
+      dockerfile: ./services/product-service/Dockerfile
+    container_name: allegro-product-service
+    restart: unless-stopped
+    env_file:
+      - .env
+    ports:
+      - "127.0.0.1:${PRODUCT_SERVICE_PORT:-3402}:${PRODUCT_SERVICE_PORT:-3402}"
+    volumes:
+      - ./logs:/app/logs
+    environment:
+      - NODE_ENV=${NODE_ENV:-development}
+      - PORT=${PRODUCT_SERVICE_PORT:-3402}
+      - DB_HOST=${DB_HOST:-db-server-postgres}
+      - DB_PORT=${DB_PORT:-5432}
+      - DB_USER=${DB_USER:-dbadmin}
+      - DB_PASSWORD=${DB_PASSWORD}
+      - DB_NAME=${DB_NAME:-allegro}
+    networks:
+      - default
+      - nginx-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:${PRODUCT_SERVICE_PORT:-3402}/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  allegro-service:
+    build:
+      context: .
+      dockerfile: ./services/allegro-service/Dockerfile
+    container_name: allegro-allegro-service
+    restart: unless-stopped
+    env_file:
+      - .env
+    ports:
+      - "127.0.0.1:${ALLEGRO_SERVICE_PORT:-3403}:${ALLEGRO_SERVICE_PORT:-3403}"
+    volumes:
+      - ./logs:/app/logs
+    environment:
+      - NODE_ENV=${NODE_ENV:-development}
+      - PORT=${ALLEGRO_SERVICE_PORT:-3403}
+      - DB_HOST=${DB_HOST:-db-server-postgres}
+      - DB_PORT=${DB_PORT:-5432}
+      - DB_USER=${DB_USER:-dbadmin}
+      - DB_PASSWORD=${DB_PASSWORD}
+      - DB_NAME=${DB_NAME:-allegro}
+    networks:
+      - default
+      - nginx-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:${ALLEGRO_SERVICE_PORT:-3403}/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  sync-service:
+    build:
+      context: .
+      dockerfile: ./services/sync-service/Dockerfile
+    container_name: allegro-sync-service
+    restart: unless-stopped
+    env_file:
+      - .env
+    ports:
+      - "127.0.0.1:${SYNC_SERVICE_PORT:-3404}:${SYNC_SERVICE_PORT:-3404}"
+    volumes:
+      - ./logs:/app/logs
+    environment:
+      - NODE_ENV=${NODE_ENV:-development}
+      - PORT=${SYNC_SERVICE_PORT:-3404}
+      - DB_HOST=${DB_HOST:-db-server-postgres}
+      - DB_PORT=${DB_PORT:-5432}
+      - DB_USER=${DB_USER:-dbadmin}
+      - DB_PASSWORD=${DB_PASSWORD}
+      - DB_NAME=${DB_NAME:-allegro}
+    networks:
+      - default
+      - nginx-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:${SYNC_SERVICE_PORT:-3404}/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  webhook-service:
+    build:
+      context: .
+      dockerfile: ./services/webhook-service/Dockerfile
+    container_name: allegro-webhook-service
+    restart: unless-stopped
+    env_file:
+      - .env
+    ports:
+      - "127.0.0.1:${WEBHOOK_SERVICE_PORT:-3405}:${WEBHOOK_SERVICE_PORT:-3405}"
+    volumes:
+      - ./logs:/app/logs
+    environment:
+      - NODE_ENV=${NODE_ENV:-development}
+      - PORT=${WEBHOOK_SERVICE_PORT:-3405}
+      - DB_HOST=${DB_HOST:-db-server-postgres}
+      - DB_PORT=${DB_PORT:-5432}
+      - DB_USER=${DB_USER:-dbadmin}
+      - DB_PASSWORD=${DB_PASSWORD}
+      - DB_NAME=${DB_NAME:-allegro}
+    networks:
+      - default
+      - nginx-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:${WEBHOOK_SERVICE_PORT:-3405}/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  import-service:
+    build:
+      context: .
+      dockerfile: ./services/import-service/Dockerfile
+    container_name: allegro-import-service
+    restart: unless-stopped
+    env_file:
+      - .env
+    ports:
+      - "127.0.0.1:${IMPORT_SERVICE_PORT:-3406}:${IMPORT_SERVICE_PORT:-3406}"
+    volumes:
+      - ./logs:/app/logs
+      - ./uploads:/app/uploads
+    environment:
+      - NODE_ENV=${NODE_ENV:-development}
+      - PORT=${IMPORT_SERVICE_PORT:-3406}
+      - DB_HOST=${DB_HOST:-db-server-postgres}
+      - DB_PORT=${DB_PORT:-5432}
+      - DB_USER=${DB_USER:-dbadmin}
+      - DB_PASSWORD=${DB_PASSWORD}
+      - DB_NAME=${DB_NAME:-allegro}
+    networks:
+      - default
+      - nginx-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:${IMPORT_SERVICE_PORT:-3406}/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  scheduler-service:
+    build:
+      context: .
+      dockerfile: ./services/scheduler-service/Dockerfile
+    container_name: allegro-scheduler-service
+    restart: unless-stopped
+    env_file:
+      - .env
+    ports:
+      - "127.0.0.1:${SCHEDULER_SERVICE_PORT:-3407}:${SCHEDULER_SERVICE_PORT:-3407}"
+    volumes:
+      - ./logs:/app/logs
+    environment:
+      - NODE_ENV=${NODE_ENV:-development}
+      - PORT=${SCHEDULER_SERVICE_PORT:-3407}
+      - DB_HOST=${DB_HOST:-db-server-postgres}
+      - DB_PORT=${DB_PORT:-5432}
+      - DB_USER=${DB_USER:-dbadmin}
+      - DB_PASSWORD=${DB_PASSWORD}
+      - DB_NAME=${DB_NAME:-allegro}
+    networks:
+      - default
+      - nginx-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:${SCHEDULER_SERVICE_PORT:-3407}/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+networks:
+  default:
+    driver: bridge
+  nginx-network:
+    external: true
+    name: ${NGINX_NETWORK_NAME:-nginx-network}
+
+# Note: External Shared Production Microservices (used by multiple applications):
+# - ../notifications-microservice (Port 3368, Production: https://notifications.statex.cz)
+# - ../logging-microservice (Port 3268, Production: https://logging.statex.cz)
+# - ../auth-microservice (Port 3370, Production: https://auth.statex.cz)
+# - ../database-server (PostgreSQL + Redis, Docker network: db-server-postgres, db-server-redis)
+# - ../nginx-microservice (Reverse proxy, SSL termination, blue/green deployments)
+# These are shared services managed separately and must be running before deploying this application.
+# They should be started separately and connected to the nginx-network.
+

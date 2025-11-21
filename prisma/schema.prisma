@@ -1,0 +1,319 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Products from our system/BizBox
+model Product {
+  id               String  @id @default(uuid()) @db.Uuid
+  code             String  @unique @db.VarChar(255) // BizBox product code
+  externalId       String? @db.VarChar(255) // External supplier ID
+  name             String  @db.VarChar(500)
+  nameUrl          String? @db.VarChar(500) // URL-friendly name
+  description      String? @db.Text
+  shortDescription String? @db.Text
+  brand            String? @db.VarChar(255)
+  manufacturer     String? @db.VarChar(255)
+  supplier         String? @db.VarChar(255)
+  ean              String? @db.VarChar(50)
+  manufacturerCode String? @db.VarChar(255)
+
+  // Pricing
+  purchasePrice           Decimal? @db.Decimal(10, 2)
+  purchasePriceTaxRate    Decimal? @db.Decimal(5, 2)
+  purchasePriceGrossPrice Decimal? @db.Decimal(10, 2)
+  purchasePriceCurrency   String?  @db.VarChar(10)
+  sellingPrice            Decimal? @db.Decimal(10, 2)
+  sellingPriceCurrency    String?  @default("CZK") @db.VarChar(10)
+
+  // Physical attributes
+  weight    Decimal? @db.Decimal(10, 3)
+  netWeight Decimal? @db.Decimal(10, 3)
+  volume    Decimal? @db.Decimal(10, 3)
+  height    Decimal? @db.Decimal(10, 2)
+  width     Decimal? @db.Decimal(10, 2)
+  depth     Decimal? @db.Decimal(10, 2)
+  length    Decimal? @db.Decimal(10, 2)
+  material  String?  @db.VarChar(255)
+  origin    String?  @db.VarChar(100)
+
+  // Stock management
+  stockQuantity                Int     @default(0)
+  minimumRequiredStockQuantity Int?    @default(0)
+  trackInventory               Boolean @default(true)
+  availability                 String? @db.VarChar(50)
+
+  // Images
+  mainImageUrl  String? @db.VarChar(1000)
+  imageUrls     Json? // Array of image URLs
+  galleryImages Json? // Array of gallery image URLs
+
+  // SEO
+  seoTitle       String? @db.VarChar(255)
+  seoDescription String? @db.Text
+  seoKeywords    String? @db.VarChar(500)
+
+  // Status
+  active     Boolean   @default(true)
+  archived   Boolean   @default(false)
+  validFrom  DateTime?
+  validUntil DateTime?
+
+  // Metadata
+  tags       Json? // Array of tags
+  attributes Json? // Custom attributes
+  categories Json? // Category IDs
+
+  // Timestamps
+  createdAt DateTime @default(now()) @db.Timestamp(6)
+  updatedAt DateTime @updatedAt @db.Timestamp(6)
+
+  // Relations
+  allegroOffers    AllegroOffer[]
+  allegroOrders    AllegroOrder[]
+  supplierProducts SupplierProduct[]
+  importJobs       ImportJob[]
+
+  @@index([code])
+  @@index([active])
+  @@index([ean])
+  @@map("products")
+}
+
+// Allegro offers mapped to products
+model AllegroOffer {
+  id               String  @id @default(uuid()) @db.Uuid
+  productId        String? @db.Uuid
+  allegroOfferId   String  @unique @db.VarChar(100) // Allegro's offer ID
+  allegroListingId String? @db.VarChar(100) // Allegro's listing ID
+
+  // Offer details
+  title         String  @db.VarChar(500)
+  description   String? @db.Text
+  categoryId    String  @db.VarChar(100)
+  price         Decimal @db.Decimal(10, 2)
+  currency      String  @default("PLN") @db.VarChar(10)
+  quantity      Int     @default(1)
+  stockQuantity Int     @default(0)
+
+  // Status
+  status            String  @db.VarChar(50) // ACTIVE, INACTIVE, ENDED, etc.
+  publicationStatus String? @db.VarChar(50) // ACTIVE, INACTIVE, etc.
+
+  // Delivery and payment
+  deliveryOptions Json? // Delivery methods
+  paymentOptions  Json? // Payment methods
+
+  // Images
+  images Json? // Array of image URLs
+
+  // Sync metadata
+  lastSyncedAt DateTime? @db.Timestamp(6)
+  syncStatus   String    @default("PENDING") @db.VarChar(50) // PENDING, SYNCED, ERROR
+  syncError    String?   @db.Text
+
+  // Timestamps
+  createdAt DateTime @default(now()) @db.Timestamp(6)
+  updatedAt DateTime @updatedAt @db.Timestamp(6)
+
+  // Relations
+  product  Product?       @relation(fields: [productId], references: [id], onDelete: SetNull)
+  orders   AllegroOrder[]
+  syncJobs SyncJob[]
+
+  @@index([allegroOfferId])
+  @@index([productId])
+  @@index([status])
+  @@index([syncStatus])
+  @@map("allegro_offers")
+}
+
+// Orders from Allegro
+model AllegroOrder {
+  id             String  @id @default(uuid()) @db.Uuid
+  allegroOrderId String  @unique @db.VarChar(100) // Allegro's order ID
+  allegroOfferId String  @db.Uuid
+  productId      String? @db.Uuid
+
+  // Order details
+  buyerId    String? @db.VarChar(100)
+  buyerEmail String? @db.VarChar(255)
+  buyerLogin String? @db.VarChar(255)
+
+  // Order items
+  quantity   Int     @default(1)
+  price      Decimal @db.Decimal(10, 2)
+  totalPrice Decimal @db.Decimal(10, 2)
+  currency   String  @default("PLN") @db.VarChar(10)
+
+  // Status
+  status            String  @db.VarChar(50) // NEW, PAID, SENT, DELIVERED, CANCELLED
+  paymentStatus     String? @db.VarChar(50) // PAID, UNPAID, REFUNDED
+  fulfillmentStatus String? @db.VarChar(50) // NEW, PROCESSING, SENT, DELIVERED
+
+  // Delivery
+  deliveryMethod  String? @db.VarChar(100)
+  deliveryAddress Json? // Address object
+  trackingNumber  String? @db.VarChar(255)
+
+  // Payment
+  paymentMethod String?   @db.VarChar(100)
+  paidAt        DateTime? @db.Timestamp(6)
+
+  // Timestamps
+  orderDate DateTime @db.Timestamp(6)
+  createdAt DateTime @default(now()) @db.Timestamp(6)
+  updatedAt DateTime @updatedAt @db.Timestamp(6)
+
+  // Relations
+  offer   AllegroOffer @relation(fields: [allegroOfferId], references: [id])
+  product Product?     @relation(fields: [productId], references: [id], onDelete: SetNull)
+
+  @@index([allegroOrderId])
+  @@index([allegroOfferId])
+  @@index([status])
+  @@index([orderDate])
+  @@map("allegro_orders")
+}
+
+// Sync job tracking
+model SyncJob {
+  id          String    @id @default(uuid()) @db.Uuid
+  type        String    @db.VarChar(50) // DB_TO_ALLEGRO, ALLEGRO_TO_DB, INVENTORY
+  direction   String    @db.VarChar(50) // TO_ALLEGRO, FROM_ALLEGRO, BIDIRECTIONAL
+  status      String    @db.VarChar(50) // PENDING, RUNNING, COMPLETED, FAILED
+  startedAt   DateTime? @db.Timestamp(6)
+  completedAt DateTime? @db.Timestamp(6)
+
+  // Statistics
+  totalItems      Int @default(0)
+  processedItems  Int @default(0)
+  successfulItems Int @default(0)
+  failedItems     Int @default(0)
+
+  // Error tracking
+  errors       Json? // Array of error objects
+  errorMessage String? @db.Text
+
+  // Metadata
+  metadata Json? // Additional job metadata
+
+  // Relations
+  allegroOfferId String?       @db.Uuid
+  offer          AllegroOffer? @relation(fields: [allegroOfferId], references: [id])
+
+  createdAt DateTime @default(now()) @db.Timestamp(6)
+  updatedAt DateTime @updatedAt @db.Timestamp(6)
+
+  @@index([type])
+  @@index([status])
+  @@index([createdAt])
+  @@map("sync_jobs")
+}
+
+// CSV import job tracking
+model ImportJob {
+  id       String  @id @default(uuid()) @db.Uuid
+  fileName String  @db.VarChar(500)
+  filePath String? @db.VarChar(1000)
+  fileSize BigInt? @db.BigInt
+  mimeType String? @db.VarChar(100)
+
+  // Status
+  status      String    @db.VarChar(50) // PENDING, PROCESSING, COMPLETED, FAILED
+  startedAt   DateTime? @db.Timestamp(6)
+  completedAt DateTime? @db.Timestamp(6)
+
+  // Statistics
+  totalRows      Int @default(0)
+  processedRows  Int @default(0)
+  successfulRows Int @default(0)
+  failedRows     Int @default(0)
+  skippedRows    Int @default(0)
+
+  // Error tracking
+  errors       Json? // Array of error objects with row numbers
+  errorMessage String? @db.Text
+
+  // Metadata
+  source   String @default("BIZBOX") @db.VarChar(50) // BIZBOX, MANUAL, API
+  metadata Json? // Additional import metadata
+
+  // Relations
+  productId String?  @db.Uuid
+  product   Product? @relation(fields: [productId], references: [id])
+
+  createdAt DateTime @default(now()) @db.Timestamp(6)
+  updatedAt DateTime @updatedAt @db.Timestamp(6)
+
+  @@index([status])
+  @@index([source])
+  @@index([createdAt])
+  @@map("import_jobs")
+}
+
+// Webhook events log
+model WebhookEvent {
+  id        String @id @default(uuid()) @db.Uuid
+  eventId   String @unique @db.VarChar(255) // Allegro's event ID
+  eventType String @db.VarChar(100) // order.created, order.updated, offer.updated, etc.
+  source    String @default("ALLEGRO") @db.VarChar(50)
+
+  // Event data
+  payload     Json // Full webhook payload
+  processed   Boolean   @default(false)
+  processedAt DateTime? @db.Timestamp(6)
+
+  // Error tracking
+  processingError String? @db.Text
+  retryCount      Int     @default(0)
+
+  createdAt DateTime @default(now()) @db.Timestamp(6)
+  updatedAt DateTime @updatedAt @db.Timestamp(6)
+
+  @@index([eventType])
+  @@index([processed])
+  @@index([createdAt])
+  @@map("webhook_events")
+}
+
+// Supplier products (placeholder for future integration)
+model SupplierProduct {
+  id           String  @id @default(uuid()) @db.Uuid
+  productId    String  @db.Uuid
+  supplierId   String  @db.VarChar(100)
+  supplierCode String  @db.VarChar(255)
+  supplierName String? @db.VarChar(255)
+
+  // Supplier-specific data
+  supplierPrice    Decimal? @db.Decimal(10, 2)
+  supplierCurrency String?  @db.VarChar(10)
+  supplierStock    Int?     @default(0)
+  supplierUrl      String?  @db.VarChar(1000)
+
+  // Sync metadata
+  lastSyncedAt DateTime? @db.Timestamp(6)
+  syncStatus   String    @default("PENDING") @db.VarChar(50)
+  syncError    String?   @db.Text
+
+  // API configuration (placeholder)
+  apiEndpoint String? @db.VarChar(1000)
+  apiKey      String? @db.VarChar(500)
+  apiConfig   Json? // Additional API configuration
+
+  createdAt DateTime @default(now()) @db.Timestamp(6)
+  updatedAt DateTime @updatedAt @db.Timestamp(6)
+
+  // Relations
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@unique([supplierId, supplierCode])
+  @@index([productId])
+  @@index([supplierId])
+  @@index([syncStatus])
+  @@map("supplier_products")
+}
