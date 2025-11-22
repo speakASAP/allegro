@@ -63,7 +63,7 @@ export class ProductsService {
   /**
    * Get product by ID
    */
-  async getProduct(id: string) {
+  async getProduct(id: string): Promise<any> {
     const product = await this.prisma.product.findUnique({
       where: { id },
       include: {
@@ -82,7 +82,7 @@ export class ProductsService {
   /**
    * Get product by code
    */
-  async getProductByCode(code: string) {
+  async getProductByCode(code: string): Promise<any> {
     const product = await this.prisma.product.findUnique({
       where: { code },
       include: {
@@ -101,7 +101,7 @@ export class ProductsService {
   /**
    * Create product
    */
-  async createProduct(dto: any) {
+  async createProduct(dto: any): Promise<any> {
     this.logger.log('Creating product', { code: dto.code });
     
     const product = await this.prisma.product.create({
@@ -114,7 +114,7 @@ export class ProductsService {
   /**
    * Update product
    */
-  async updateProduct(id: string, dto: any) {
+  async updateProduct(id: string, dto: any): Promise<any> {
     this.logger.log('Updating product', { id });
 
     const product = await this.prisma.product.update({
