@@ -22,33 +22,33 @@ export class ProductsController {
   constructor(private readonly productsService: ProductsService) {}
 
   @Get()
-  async getProducts(@Query() query: any) {
+  async getProducts(@Query() query: any): Promise<{ success: boolean; data: any }> {
     const result = await this.productsService.getProducts(query);
     return { success: true, data: result };
   }
 
   @Get(':id')
-  async getProduct(@Param('id') id: string) {
+  async getProduct(@Param('id') id: string): Promise<{ success: boolean; data: any }> {
     const product = await this.productsService.getProduct(id);
     return { success: true, data: product };
   }
 
   @Get('code/:code')
-  async getProductByCode(@Param('code') code: string) {
+  async getProductByCode(@Param('code') code: string): Promise<{ success: boolean; data: any }> {
     const product = await this.productsService.getProductByCode(code);
     return { success: true, data: product };
   }
 
   @Post()
   @UseGuards(JwtAuthGuard)
-  async createProduct(@Body() dto: any) {
+  async createProduct(@Body() dto: any): Promise<{ success: boolean; data: any }> {
     const product = await this.productsService.createProduct(dto);
     return { success: true, data: product };
   }
 
   @Put(':id')
   @UseGuards(JwtAuthGuard)
-  async updateProduct(@Param('id') id: string, @Body() dto: any) {
+  async updateProduct(@Param('id') id: string, @Body() dto: any): Promise<{ success: boolean; data: any }> {
     const product = await this.productsService.updateProduct(id, dto);
     return { success: true, data: product };
   }
