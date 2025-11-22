@@ -4,6 +4,7 @@
 
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
+import { join } from 'path';
 import { ScheduleModule } from '@nestjs/schedule';
 import { SchedulerModule } from './scheduler/scheduler.module';
 import { PrismaModule, LoggerModule, HealthModule } from '@allegro/shared';
@@ -13,7 +14,7 @@ import { HealthController } from './health/health.controller';
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
-      envFilePath: '../../.env',
+      envFilePath: join(process.cwd(), '../../.env'),
     }),
     ScheduleModule.forRoot(),
     PrismaModule,

@@ -72,7 +72,7 @@ export class OffersService {
   /**
    * Create offer
    */
-  async createOffer(dto: any) {
+  async createOffer(dto: any): Promise<any> {
     this.logger.log('Creating Allegro offer', { productId: dto.productId });
 
     // Create offer via Allegro API

@@ -2,6 +2,12 @@
  * API Gateway Main Entry Point
  */
 
+import { config } from 'dotenv';
+import { join } from 'path';
+
+// Load .env file before any other imports
+config({ path: join(process.cwd(), '../../.env') });
+
 import { NestFactory } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
