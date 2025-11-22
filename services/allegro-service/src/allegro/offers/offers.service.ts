@@ -101,7 +101,7 @@ export class OffersService {
   /**
    * Update offer
    */
-  async updateOffer(id: string, dto: any) {
+  async updateOffer(id: string, dto: any): Promise<any> {
     this.logger.log('Updating Allegro offer', { id });
 
     const offer = await this.prisma.allegroOffer.findUnique({
@@ -156,7 +156,7 @@ export class OffersService {
   /**
    * Update stock
    */
-  async updateStock(id: string, quantity: number) {
+  async updateStock(id: string, quantity: number): Promise<any> {
     const offer = await this.prisma.allegroOffer.findUnique({
       where: { id },
     });
