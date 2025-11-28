@@ -147,6 +147,42 @@ For production deployment:
    - Set up SSL certificates
    - Configure domain names
    - Update `FRONTEND_API_URL` to production API URL
+   - **Configure frontend service routing**:
+     
+     Add the following to your nginx configuration file (e.g., `allegro.statex.cz.blue.conf`):
+     
+     ```nginx
+     # Add upstream block for frontend service (after api-gateway upstream)
+     upstream allegro-frontend-service {
+         server allegro-frontend-service:3410 max_fails=3 fail_timeout=30s;
+     }
+     
+     # Add location block for root path (before /api/ location)
+     location / {
+         proxy_pass http://allegro-frontend-service;
+         proxy_http_version 1.1;
+         proxy_set_header Upgrade $http_upgrade;
+         proxy_set_header Connection "upgrade";
+         proxy_set_header Host $host;
+         proxy_set_header X-Real-IP $remote_addr;
+         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+         proxy_set_header X-Forwarded-Proto $scheme;
+         proxy_cache_bypass $http_upgrade;
+         
+         proxy_connect_timeout 300s;
+         proxy_read_timeout 300s;
+         proxy_send_timeout 300s;
+         
+         proxy_buffer_size 128k;
+         proxy_buffers 4 256k;
+         proxy_busy_buffers_size 256k;
+     }
+     ```
+     
+     Then reload nginx:
+     ```bash
+     docker exec nginx-microservice nginx -t && docker exec nginx-microservice nginx -s reload
+     ```
 
 3. **Update frontend environment**:
    - Set `VITE_API_URL` to production API URL
