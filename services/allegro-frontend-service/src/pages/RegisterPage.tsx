@@ -4,6 +4,7 @@
 
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { AxiosError } from 'axios';
 import { useAuth } from '../contexts/AuthContext';
 import { Button } from '../components/Button';
 import { Input } from '../components/Input';
@@ -27,8 +28,12 @@ const RegisterPage: React.FC = () => {
     try {
       await register(email, password, firstName || undefined, lastName || undefined);
       navigate('/dashboard');
-    } catch (err: any) {
-      setError(err.response?.data?.error?.message || 'Failed to register. Please try again.');
+    } catch (err: unknown) {
+      const errorMessage =
+        err instanceof AxiosError && err.response?.data?.error?.message
+          ? err.response.data.error.message
+          : 'Failed to register. Please try again.';
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -109,4 +114,3 @@ const RegisterPage: React.FC = () => {
 };
 
 export default RegisterPage;
-

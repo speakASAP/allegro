@@ -281,12 +281,14 @@ export class SettingsService {
 
       if (response.data && response.data.access_token) {
         this.logger.log('Allegro API keys validated successfully', { userId });
-        await this.notificationService.sendNotification({
-          userId,
-          type: 'API_KEY_VALIDATED',
-          title: 'Allegro API Keys Validated',
-          message: 'Your Allegro API keys have been successfully validated.',
-        });
+        // Note: Notification can be sent via email if needed
+        // await this.notificationService.sendNotification({
+        //   channel: 'email',
+        //   type: 'custom',
+        //   recipient: userEmail,
+        //   subject: 'Allegro API Keys Validated',
+        //   message: 'Your Allegro API keys have been successfully validated.',
+        // });
         return { valid: true, message: 'API keys are valid' };
       }
 
@@ -306,4 +308,3 @@ export class SettingsService {
     }
   }
 }
-

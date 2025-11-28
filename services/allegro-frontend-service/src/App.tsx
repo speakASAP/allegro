@@ -2,7 +2,6 @@
  * Main App Component
  */
 
-import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './contexts/AuthContext';
 import { ProtectedRoute } from './components/ProtectedRoute';
@@ -46,4 +45,3 @@ function App() {
 }
 
 export default App;
-

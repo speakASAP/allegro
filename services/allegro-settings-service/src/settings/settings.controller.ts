@@ -86,4 +86,3 @@ export class SettingsController {
     return { success: true, data: result };
   }
 }
-

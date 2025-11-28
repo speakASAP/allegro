@@ -18,4 +18,3 @@ export const Card: React.FC<CardProps> = ({ title, children, className = '' }) =
     </div>
   );
 };
-

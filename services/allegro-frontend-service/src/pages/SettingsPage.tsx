@@ -3,18 +3,27 @@
  */
 
 import React, { useState, useEffect } from 'react';
+import { AxiosError } from 'axios';
 import api from '../services/api';
 import { Button } from '../components/Button';
 import { Input } from '../components/Input';
 import { Card } from '../components/Card';
+
+interface SupplierConfig {
+  id: string;
+  name: string;
+  apiEndpoint: string;
+  apiKey?: string;
+  apiConfig?: Record<string, unknown>;
+}
 
 interface Settings {
   id: string;
   userId: string;
   allegroClientId?: string;
   allegroClientSecret?: string;
-  supplierConfigs?: any[];
-  preferences?: any;
+  supplierConfigs?: SupplierConfig[];
+  preferences?: Record<string, unknown>;
 }
 
 const SettingsPage: React.FC = () => {
@@ -45,7 +54,7 @@ const SettingsPage: React.FC = () => {
         setAllegroClientId(data.allegroClientId || '');
         setAllegroClientSecret(data.allegroClientSecret || '');
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       setError('Failed to load settings');
     } finally {
       setLoading(false);
@@ -67,8 +76,12 @@ const SettingsPage: React.FC = () => {
         setSuccess('Allegro settings saved successfully');
         loadSettings();
       }
-    } catch (err: any) {
-      setError(err.response?.data?.error?.message || 'Failed to save settings');
+    } catch (err: unknown) {
+      const errorMessage =
+        err instanceof AxiosError && err.response?.data?.error?.message
+          ? err.response.data.error.message
+          : 'Failed to save settings';
+      setError(errorMessage);
     } finally {
       setSaving(false);
     }
@@ -95,8 +108,12 @@ const SettingsPage: React.FC = () => {
       } else {
         setError(response.data.data.message || 'Invalid API keys');
       }
-    } catch (err: any) {
-      setError(err.response?.data?.error?.message || 'Failed to validate API keys');
+    } catch (err: unknown) {
+      const errorMessage =
+        err instanceof AxiosError && err.response?.data?.error?.message
+          ? err.response.data.error.message
+          : 'Failed to validate API keys';
+      setError(errorMessage);
     } finally {
       setSaving(false);
     }
@@ -127,8 +144,12 @@ const SettingsPage: React.FC = () => {
         setShowAddSupplier(false);
         loadSettings();
       }
-    } catch (err: any) {
-      setError(err.response?.data?.error?.message || 'Failed to add supplier');
+    } catch (err: unknown) {
+      const errorMessage =
+        err instanceof AxiosError && err.response?.data?.error?.message
+          ? err.response.data.error.message
+          : 'Failed to add supplier';
+      setError(errorMessage);
     } finally {
       setSaving(false);
     }
@@ -143,8 +164,12 @@ const SettingsPage: React.FC = () => {
       await api.delete(`/settings/suppliers/${supplierId}`);
       setSuccess('Supplier removed successfully');
       loadSettings();
-    } catch (err: any) {
-      setError(err.response?.data?.error?.message || 'Failed to remove supplier');
+    } catch (err: unknown) {
+      const errorMessage =
+        err instanceof AxiosError && err.response?.data?.error?.message
+          ? err.response.data.error.message
+          : 'Failed to remove supplier';
+      setError(errorMessage);
     }
   };
 
@@ -203,7 +228,7 @@ const SettingsPage: React.FC = () => {
         <div className="space-y-4">
           {settings?.supplierConfigs && settings.supplierConfigs.length > 0 ? (
             <div className="space-y-2">
-              {settings.supplierConfigs.map((supplier: any) => (
+              {settings.supplierConfigs.map((supplier: SupplierConfig) => (
                 <div key={supplier.id} className="p-4 border rounded-lg flex justify-between items-center">
                   <div>
                     <h4 className="font-semibold">{supplier.name}</h4>
@@ -263,4 +288,3 @@ const SettingsPage: React.FC = () => {
 };
 
 export default SettingsPage;
-

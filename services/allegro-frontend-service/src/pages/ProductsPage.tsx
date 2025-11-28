@@ -2,7 +2,7 @@
  * Products Page
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import api from '../services/api';
 import { Card } from '../components/Card';
 
@@ -21,11 +21,7 @@ const ProductsPage: React.FC = () => {
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
 
-  useEffect(() => {
-    loadProducts();
-  }, [page]);
-
-  const loadProducts = async () => {
+  const loadProducts = useCallback(async () => {
     try {
       const response = await api.get(`/products?page=${page}&limit=20`);
       if (response.data.success) {
@@ -37,7 +33,11 @@ const ProductsPage: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [page]);
+
+  useEffect(() => {
+    loadProducts();
+  }, [loadProducts]);
 
   if (loading) {
     return <div>Loading products...</div>;
@@ -114,4 +114,3 @@ const ProductsPage: React.FC = () => {
 };
 
 export default ProductsPage;
-
