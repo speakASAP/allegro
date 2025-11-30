@@ -111,7 +111,7 @@ export function getServiceInfo(url: string): ServiceErrorInfo | null {
 /**
  * Generates a helpful error message with service information
  */
-export function getConnectionErrorMessage(error: unknown, url: string): string {
+export function getConnectionErrorMessage(_error: unknown, url: string): string {
   const serviceInfo = getServiceInfo(url);
   
   if (!serviceInfo) {
