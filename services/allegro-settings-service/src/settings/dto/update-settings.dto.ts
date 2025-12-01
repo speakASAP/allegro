@@ -82,3 +82,4 @@ export class ValidateAllegroKeysDto {
   clientSecret: string;
 }
 
+

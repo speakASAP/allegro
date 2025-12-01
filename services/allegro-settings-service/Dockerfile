@@ -57,3 +57,4 @@ ENV NODE_PATH=/app/shared/node_modules:/app/node_modules
 
 # Start service
 CMD ["node", "dist/main.js"]
+
