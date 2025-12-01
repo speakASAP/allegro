@@ -18,7 +18,7 @@ services:
       - scheduler-service
       - allegro-settings-service
     volumes:
-      - /srv/storagebox/statex/docker-volumes/allegro/logs:/app/logs
+      - ./logs:/app/logs
     environment:
       - NODE_ENV=${NODE_ENV:-development}
       - PORT=${API_GATEWAY_PORT:-3411}
@@ -42,7 +42,7 @@ services:
     ports:
       - "127.0.0.1:${PRODUCT_SERVICE_PORT:-3402}:${PRODUCT_SERVICE_PORT:-3402}"
     volumes:
-      - /srv/storagebox/statex/docker-volumes/allegro/logs:/app/logs
+      - ./logs:/app/logs
     environment:
       - NODE_ENV=${NODE_ENV:-development}
       - PORT=${PRODUCT_SERVICE_PORT:-3402}
@@ -71,7 +71,7 @@ services:
     ports:
       - "127.0.0.1:${ALLEGRO_SERVICE_PORT:-3403}:${ALLEGRO_SERVICE_PORT:-3403}"
     volumes:
-      - /srv/storagebox/statex/docker-volumes/allegro/logs:/app/logs
+      - ./logs:/app/logs
     environment:
       - NODE_ENV=${NODE_ENV:-development}
       - PORT=${ALLEGRO_SERVICE_PORT:-3403}
@@ -100,7 +100,7 @@ services:
     ports:
       - "127.0.0.1:${SYNC_SERVICE_PORT:-3404}:${SYNC_SERVICE_PORT:-3404}"
     volumes:
-      - /srv/storagebox/statex/docker-volumes/allegro/logs:/app/logs
+      - ./logs:/app/logs
     environment:
       - NODE_ENV=${NODE_ENV:-development}
       - PORT=${SYNC_SERVICE_PORT:-3404}
@@ -129,7 +129,7 @@ services:
     ports:
       - "127.0.0.1:${WEBHOOK_SERVICE_PORT:-3405}:${WEBHOOK_SERVICE_PORT:-3405}"
     volumes:
-      - /srv/storagebox/statex/docker-volumes/allegro/logs:/app/logs
+      - ./logs:/app/logs
     environment:
       - NODE_ENV=${NODE_ENV:-development}
       - PORT=${WEBHOOK_SERVICE_PORT:-3405}
@@ -158,8 +158,8 @@ services:
     ports:
       - "127.0.0.1:${IMPORT_SERVICE_PORT:-3406}:${IMPORT_SERVICE_PORT:-3406}"
     volumes:
-      - /srv/storagebox/statex/docker-volumes/allegro/logs:/app/logs
-      - /srv/storagebox/statex/docker-volumes/allegro/uploads:/app/uploads
+      - ./logs:/app/logs
+      - ./uploads:/app/uploads
     environment:
       - NODE_ENV=${NODE_ENV:-development}
       - PORT=${IMPORT_SERVICE_PORT:-3406}
@@ -188,7 +188,7 @@ services:
     ports:
       - "127.0.0.1:${SCHEDULER_SERVICE_PORT:-3407}:${SCHEDULER_SERVICE_PORT:-3407}"
     volumes:
-      - /srv/storagebox/statex/docker-volumes/allegro/logs:/app/logs
+      - ./logs:/app/logs
     environment:
       - NODE_ENV=${NODE_ENV:-development}
       - PORT=${SCHEDULER_SERVICE_PORT:-3407}
@@ -217,7 +217,7 @@ services:
     ports:
       - "127.0.0.1:${ALLEGRO_SETTINGS_SERVICE_PORT:-3408}:${ALLEGRO_SETTINGS_SERVICE_PORT:-3408}"
     volumes:
-      - /srv/storagebox/statex/docker-volumes/allegro/logs:/app/logs
+      - ./logs:/app/logs
     environment:
       - NODE_ENV=${NODE_ENV:-development}
       - PORT=${ALLEGRO_SETTINGS_SERVICE_PORT:-3408}
