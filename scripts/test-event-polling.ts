@@ -21,8 +21,24 @@ try {
 // Load environment variables
 dotenv.config({ path: join(__dirname, '../.env') });
 
-const API_BASE_URL = process.env.FRONTEND_API_URL || 'http://localhost:3411/api';
+// Use localhost for local testing, override with env vars if needed
+const API_BASE_URL = process.env.FRONTEND_API_URL || process.env.API_BASE_URL || 'http://localhost:3411/api';
 const ALLEGRO_SERVICE_URL = process.env.ALLEGRO_SERVICE_URL || 'http://localhost:3403';
+const WEBHOOK_SERVICE_URL = process.env.WEBHOOK_SERVICE_URL || 'http://localhost:3405';
+
+// Normalize URLs - remove Docker service names, use localhost for local testing
+const normalizeUrl = (url: string): string => {
+  if (url.includes('-service') && !url.includes('localhost')) {
+    // Extract port from URL or use default
+    const portMatch = url.match(/:(\d+)/);
+    const port = portMatch ? portMatch[1] : '3403';
+    return `http://localhost:${port}`;
+  }
+  return url;
+};
+
+const normalizedAllegroUrl = normalizeUrl(ALLEGRO_SERVICE_URL);
+const normalizedWebhookUrl = normalizeUrl(WEBHOOK_SERVICE_URL);
 
 interface TestResult {
   name: string;
@@ -56,17 +72,18 @@ async function runTest(name: string, testFn: () => Promise<any>): Promise<void> 
 async function main() {
   console.log('🚀 Starting Event Polling Tests\n');
   console.log(`API Base URL: ${API_BASE_URL}`);
-  console.log(`Allegro Service URL: ${ALLEGRO_SERVICE_URL}\n`);
+  console.log(`Allegro Service URL: ${normalizedAllegroUrl}`);
+  console.log(`Webhook Service URL: ${normalizedWebhookUrl}\n`);
 
   // Test 1: Check webhook service health
   await runTest('Webhook Service Health Check', async () => {
-    const response = await axios.get(`${ALLEGRO_SERVICE_URL.replace('/allegro', '')}/health` || `http://localhost:3405/health`);
+    const response = await axios.get(`${normalizedWebhookUrl}/health`, { timeout: 5000 });
     return response.data;
   });
 
   // Test 2: Check Allegro service health
   await runTest('Allegro Service Health Check', async () => {
-    const response = await axios.get(`${ALLEGRO_SERVICE_URL}/health` || `http://localhost:3403/health`);
+    const response = await axios.get(`${normalizedAllegroUrl}/health`, { timeout: 5000 });
     return response.data;
   });
 
@@ -78,16 +95,18 @@ async function main() {
 
   // Test 4: Test direct event polling (via Allegro service)
   await runTest('Direct Offer Events Endpoint (GET /allegro/events/offers)', async () => {
-    const response = await axios.get(`${ALLEGRO_SERVICE_URL}/allegro/events/offers`, {
+    const response = await axios.get(`${normalizedAllegroUrl}/allegro/events/offers`, {
       params: { limit: 10 },
+      timeout: 10000,
     });
     return response.data;
   });
 
   // Test 5: Test order events endpoint
   await runTest('Direct Order Events Endpoint (GET /allegro/events/orders)', async () => {
-    const response = await axios.get(`${ALLEGRO_SERVICE_URL}/allegro/events/orders`, {
+    const response = await axios.get(`${normalizedAllegroUrl}/allegro/events/orders`, {
       params: { limit: 10 },
+      timeout: 10000,
     });
     return response.data;
   });
@@ -110,8 +129,9 @@ async function main() {
 
   // Test 7: Test with 'after' parameter
   await runTest('Offer Events with after parameter', async () => {
-    const response = await axios.get(`${ALLEGRO_SERVICE_URL}/allegro/events/offers`, {
-      params: { after: 'test-event-id', limit: 5 },
+    const response = await axios.get(`${normalizedAllegroUrl}/allegro/events/offers`, {
+      params: { after: 'test-event-id', limit: 3 },
+      timeout: 10000,
     });
     return response.data;
   });
