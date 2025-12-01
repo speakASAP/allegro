@@ -9,7 +9,7 @@ This system provides complete automation for:
 - Importing existing Allegro offers into our database
 - Importing products from BizBox CSV files, transforming to Allegro format, and publishing
 - Bidirectional synchronization between our database and Allegro
-- Handling webhook events from Allegro (orders, stock changes)
+- Polling events from Allegro API (orders, stock changes, offer updates)
 - Running scheduled sync jobs for periodic updates
 - Integrating with external shared microservices (database, logging, auth, notifications)
 
@@ -21,7 +21,7 @@ The system consists of 9 microservices:
 2. **Product Service** (Port 3402) - Product catalog management
 3. **Allegro Service** (Port 3403) - Allegro API integration
 4. **Sync Service** (Port 3404) - Bidirectional synchronization
-5. **Webhook Service** (Port 3405) - Allegro webhook event handling
+5. **Webhook Service** (Port 3405) - Allegro event polling and processing
 6. **Import Service** (Port 3406) - CSV import and transformation
 7. **Scheduler Service** (Port 3407) - Scheduled cron jobs
 8. **Settings Service** (Port 3408) - User settings and API key management
@@ -111,10 +111,10 @@ Create a `.env` file in the root directory with the following variables:
 
 - `ALLEGRO_CLIENT_ID` - Allegro API client ID
 - `ALLEGRO_CLIENT_SECRET` - Allegro API client secret
+- `ALLEGRO_REDIRECT_URI` - OAuth redirect URI for authentication
 - `ALLEGRO_API_URL` - Allegro API URL (<https://api.allegro.pl>)
 - `ALLEGRO_API_SANDBOX_URL` - Allegro Sandbox API URL
 - `ALLEGRO_USE_SANDBOX` - Use sandbox environment (false)
-- `ALLEGRO_WEBHOOK_SECRET` - Webhook secret for verification
 
 ### Sync Configuration
 
@@ -192,11 +192,11 @@ All requests go through API Gateway at `http://localhost:3411/api`
 - `GET /api/sync/jobs` - List sync jobs (auth required)
 - `GET /api/sync/jobs/:id` - Get sync job details (auth required)
 
-### Webhook Service Endpoints
+### Webhook Service Endpoints (Event Polling)
 
-- `POST /api/webhooks/allegro` - Receive Allegro webhook events
-- `GET /api/webhooks/events` - List webhook events (auth required)
-- `GET /api/webhooks/events/:id` - Get webhook event details (auth required)
+- `POST /api/webhooks/poll-events` - Manually trigger event polling from Allegro API
+- `GET /api/webhooks/events` - List processed events (auth required)
+- `GET /api/webhooks/events/:id` - Get event details (auth required)
 - `POST /api/webhooks/events/:id/retry` - Retry processing event (auth required)
 
 ### Settings Service Endpoints
@@ -221,6 +221,7 @@ The Scheduler Service runs the following cron jobs:
 - **DB → Allegro sync**: Every 15 minutes
 - **Allegro → DB sync**: Every 30 minutes
 - **Inventory sync**: Every 10 minutes
+- **Event polling**: Every 37 minutes (polls Allegro for new offer and order events)
 - **Cleanup old jobs**: Daily at 2 AM
 
 ## Database Schema
@@ -319,6 +320,23 @@ curl -X POST http://localhost:3411/api/allegro/offers \
 
 ## Testing
 
+### Event Polling Tests
+
+Test the event polling functionality:
+
+```bash
+# Run TypeScript test script
+npm run test:event-polling
+
+# Or run bash test script
+npm run test:event-polling:bash
+
+# Manual test - trigger event polling
+curl -X POST http://localhost:3411/api/webhooks/poll-events
+```
+
+See [TESTING_EVENT_POLLING.md](./docs/TESTING_EVENT_POLLING.md) for comprehensive testing instructions.
+
 ### Unit Tests
 
 - Test individual service methods
@@ -350,6 +368,8 @@ curl -X POST http://localhost:3411/api/allegro/offers \
 - Verify `ALLEGRO_CLIENT_ID` and `ALLEGRO_CLIENT_SECRET`
 - Check token expiration and refresh logic
 - Verify API endpoint URLs
+- Check event polling logs - events are polled every 37 minutes by default
+- Verify event format matches Allegro API response structure
 
 ### Sync Issues
 

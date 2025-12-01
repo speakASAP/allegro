@@ -12,6 +12,7 @@ import { SyncDbToAllegroTask } from './tasks/sync-db-to-allegro.task';
 import { SyncAllegroToDbTask } from './tasks/sync-allegro-to-db.task';
 import { InventorySyncTask } from './tasks/inventory-sync.task';
 import { CleanupOldJobsTask } from './tasks/cleanup-old-jobs.task';
+import { PollAllegroEventsTask } from './tasks/poll-allegro-events.task';
 
 @Module({
   imports: [ScheduleModule.forRoot(), HttpModule, ConfigModule, LoggerModule, PrismaModule],
@@ -21,6 +22,7 @@ import { CleanupOldJobsTask } from './tasks/cleanup-old-jobs.task';
     SyncAllegroToDbTask,
     InventorySyncTask,
     CleanupOldJobsTask,
+    PollAllegroEventsTask,
   ],
 })
 export class SchedulerModule {}

@@ -12,28 +12,23 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { LoggerService, JwtAuthGuard } from '@allegro/shared';
 import { WebhooksService } from './webhooks.service';
-import { JwtAuthGuard } from '@allegro/shared';
 
 @Controller('webhooks')
 export class WebhooksController {
+  private readonly logger = new LoggerService();
+
   constructor(
     private readonly webhooksService: WebhooksService,
     private readonly configService: ConfigService,
-  ) {}
+  ) {
+    this.logger.setContext(WebhooksController.name);
+  }
 
-  @Post('allegro')
-  async receiveAllegroWebhook(@Body() body: any) {
-    // Verify webhook secret if configured
-    const secret = this.configService.get<string>('WEBHOOK_SECRET');
-    if (secret && body.secret !== secret) {
-      throw new Error('Invalid webhook secret');
-    }
-
-    const eventType = body.type || body.eventType;
-    const payload = body.payload || body;
-
-    const result = await this.webhooksService.processEvent(eventType, payload);
+  @Post('poll-events')
+  async pollEvents(): Promise<{ success: boolean; data: any }> {
+    const result = await this.webhooksService.pollEvents();
     return { success: true, data: result };
   }
 

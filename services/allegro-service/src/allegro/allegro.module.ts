@@ -15,6 +15,8 @@ import { OrdersService } from './orders/orders.service';
 import { CategoriesController } from './categories/categories.controller';
 import { CategoriesService } from './categories/categories.service';
 import { InventoryService } from './inventory/inventory.service';
+import { EventsController } from './events/events.controller';
+import { EventsService } from './events/events.service';
 
 @Module({
   imports: [HttpModule, ConfigModule, PrismaModule, LoggerModule, AuthModule],
@@ -22,6 +24,7 @@ import { InventoryService } from './inventory/inventory.service';
     OffersController,
     OrdersController,
     CategoriesController,
+    EventsController,
   ],
   providers: [
     AllegroApiService,
@@ -30,8 +33,9 @@ import { InventoryService } from './inventory/inventory.service';
     OrdersService,
     CategoriesService,
     InventoryService,
+    EventsService,
   ],
-  exports: [AllegroApiService, OffersService, OrdersService, CategoriesService, InventoryService],
+  exports: [AllegroApiService, OffersService, OrdersService, CategoriesService, InventoryService, EventsService],
 })
 export class AllegroModule {}
 

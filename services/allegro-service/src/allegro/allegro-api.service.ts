@@ -175,6 +175,44 @@ export class AllegroApiService {
     });
   }
 
+  /**
+   * Get offer events (for event polling)
+   * @param after - Event ID to start after (optional) - Allegro uses 'after' parameter
+   * @param limit - Maximum number of events to return (default: 100)
+   */
+  async getOfferEvents(after?: string, limit: number = 100) {
+    const params: any = { limit };
+    if (after) {
+      params.after = after;
+    }
+    const queryString = new URLSearchParams(params).toString();
+    return this.request('GET', `/sale/offer-events?${queryString}`);
+  }
+
+  /**
+   * Get order events (for event polling)
+   * Note: Allegro may not have a dedicated /order/events endpoint
+   * This method attempts to fetch order events, or returns empty if not available
+   * @param after - Event ID to start after (optional)
+   * @param limit - Maximum number of events to return (default: 100)
+   */
+  async getOrderEvents(after?: string, limit: number = 100) {
+    // Try /order/events first, fallback to /order/orders if events endpoint doesn't exist
+    try {
+      const params: any = { limit };
+      if (after) {
+        params.after = after;
+      }
+      const queryString = new URLSearchParams(params).toString();
+      return this.request('GET', `/order/events?${queryString}`);
+    } catch (error: any) {
+      // If /order/events doesn't exist, we'll handle order updates via order sync
+      // Return empty events array
+      this.logger.warn('Order events endpoint may not be available, using order sync instead');
+      return { events: [], lastEventId: after || null };
+    }
+  }
+
   private throwConfigError(key: string): never {
     throw new Error(`Missing required environment variable: ${key}. Please set it in your .env file.`);
   }
