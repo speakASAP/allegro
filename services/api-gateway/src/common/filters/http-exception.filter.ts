@@ -10,6 +10,7 @@ import {
   HttpException,
   HttpStatus,
   Logger,
+  UnauthorizedException,
 } from '@nestjs/common';
 import { Request, Response } from 'express';
 
@@ -26,20 +27,23 @@ export class HttpExceptionFilter implements ExceptionFilter {
     let message = 'Internal server error';
     let code = 'INTERNAL_ERROR';
 
-    if (exception instanceof HttpException) {
-      status = exception.getStatus();
+    // Handle UnauthorizedException specifically
+    if (exception instanceof UnauthorizedException) {
+      status = HttpStatus.UNAUTHORIZED;
+      code = 'UNAUTHORIZED';
       const exceptionResponse = exception.getResponse();
-      
       if (typeof exceptionResponse === 'string') {
         message = exceptionResponse;
       } else if (typeof exceptionResponse === 'object' && exceptionResponse !== null) {
         const responseObj = exceptionResponse as any;
-        message = responseObj.message || exception.message || message;
-        code = responseObj.code || responseObj.error || code;
+        message = responseObj.message || exception.message || 'Authentication required';
       } else {
-        message = exception.message || message;
+        message = exception.message || 'Authentication required';
       }
-
+    } else if (exception instanceof HttpException) {
+      status = exception.getStatus();
+      const exceptionResponse = exception.getResponse();
+      
       // Set code based on status
       if (status === 401) {
         code = 'UNAUTHORIZED';
@@ -51,6 +55,19 @@ export class HttpExceptionFilter implements ExceptionFilter {
         code = 'CONFLICT';
       } else if (status === 503) {
         code = 'SERVICE_UNAVAILABLE';
+      }
+      
+      if (typeof exceptionResponse === 'string') {
+        message = exceptionResponse;
+      } else if (typeof exceptionResponse === 'object' && exceptionResponse !== null) {
+        const responseObj = exceptionResponse as any;
+        message = responseObj.message || exception.message || message;
+        // Only override code if it's not already set by status
+        if (!code || code === 'INTERNAL_ERROR') {
+          code = responseObj.code || responseObj.error || code;
+        }
+      } else {
+        message = exception.message || message;
       }
     } else if (exception instanceof Error) {
       message = exception.message || message;
