@@ -4,6 +4,7 @@
 
 import axios, { AxiosInstance, InternalAxiosRequestConfig, AxiosError } from 'axios';
 import { isConnectionError, getConnectionErrorMessage } from '../utils/serviceErrorHandler';
+import { authService } from './auth';
 
 // Determine API URL:
 // 1. Use VITE_API_URL if set during build (production)
@@ -34,12 +35,33 @@ const api: AxiosInstance = axios.create({
   },
 });
 
+// Helper to validate JWT token format
+function isValidJWT(token: string): boolean {
+  try {
+    const parts = token.split('.');
+    if (parts.length !== 3) return false;
+    // Basic validation - JWT should have 3 parts separated by dots
+    return parts.every(part => part.length > 0);
+  } catch {
+    return false;
+  }
+}
+
 // Request interceptor to add auth token
 api.interceptors.request.use(
   (config: InternalAxiosRequestConfig) => {
     const token = localStorage.getItem('accessToken');
-    if (token && config.headers) {
-      config.headers.Authorization = `Bearer ${token}`;
+    if (token) {
+      // Validate token format before using it
+      if (!isValidJWT(token)) {
+        console.warn('Invalid token format detected, clearing storage');
+        localStorage.removeItem('accessToken');
+        localStorage.removeItem('refreshToken');
+        localStorage.removeItem('user');
+        // Don't redirect here, let the 401 handler do it
+      } else if (config.headers) {
+        config.headers.Authorization = `Bearer ${token}`;
+      }
     }
     return config;
   },
@@ -82,6 +104,35 @@ api.interceptors.response.use(
     }
     
     if (error.response?.status === 401) {
+      const originalRequest = error.config as InternalAxiosRequestConfig & { _retry?: boolean };
+      
+      // Try to refresh token if this is not a retry and we have a refreshToken
+      if (!originalRequest._retry) {
+        const refreshToken = localStorage.getItem('refreshToken');
+        if (refreshToken) {
+          originalRequest._retry = true;
+          try {
+            const response = await authService.refreshToken(refreshToken);
+            if (response && response.accessToken) {
+              localStorage.setItem('accessToken', response.accessToken);
+              localStorage.setItem('refreshToken', response.refreshToken);
+              if (response.user) {
+                localStorage.setItem('user', JSON.stringify(response.user));
+              }
+              
+              // Retry the original request with new token
+              if (originalRequest.headers) {
+                originalRequest.headers.Authorization = `Bearer ${response.accessToken}`;
+              }
+              return api(originalRequest);
+            }
+          } catch (refreshError) {
+            console.error('Token refresh failed:', refreshError);
+            // Fall through to clear storage and redirect
+          }
+        }
+      }
+      
       // Token expired or invalid, clear storage and redirect to login
       localStorage.removeItem('accessToken');
       localStorage.removeItem('refreshToken');
