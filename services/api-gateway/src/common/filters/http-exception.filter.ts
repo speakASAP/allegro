@@ -27,15 +27,29 @@ export class HttpExceptionFilter implements ExceptionFilter {
     let message = 'Internal server error';
     let code = 'INTERNAL_ERROR';
 
+    // Debug logging
+    const exceptionName = exception?.constructor?.name;
+    const isHttpException = exception instanceof HttpException;
+    const isUnauthorizedException = exception instanceof UnauthorizedException;
+    
+    this.logger.log(`[ExceptionFilter] Exception: ${exceptionName}, isHttpException: ${isHttpException}, isUnauthorizedException: ${isUnauthorizedException}`);
+    
+    if (exception instanceof Error) {
+      this.logger.log(`[ExceptionFilter] Error message: ${exception.message}`);
+    }
+
     // Handle UnauthorizedException specifically
     // Check both instanceof and status code (in case instanceof doesn't work across modules)
     if (exception instanceof HttpException) {
       status = exception.getStatus();
       const exceptionResponse = exception.getResponse();
       
+      this.logger.log(`[ExceptionFilter] HttpException status: ${status}, HttpStatus.UNAUTHORIZED: ${HttpStatus.UNAUTHORIZED}, status === 401: ${status === 401}`);
+      
       // Check if it's an UnauthorizedException by status or instanceof
-      if (status === HttpStatus.UNAUTHORIZED || exception instanceof UnauthorizedException) {
-        status = HttpStatus.UNAUTHORIZED;
+      // Use numeric comparison (401) since HttpStatus.UNAUTHORIZED should be 401
+      if (status === 401 || exception instanceof UnauthorizedException) {
+        status = 401;
         code = 'UNAUTHORIZED';
         if (typeof exceptionResponse === 'string') {
           message = exceptionResponse;
