@@ -129,13 +129,49 @@ export class GatewayController {
         return;
       }
 
+      // Handle timeout errors (auth service unreachable)
+      if (error.code === 'ECONNABORTED' || error.message?.includes('timeout')) {
+        res.status(503).json({
+          success: false,
+          error: {
+            code: 'SERVICE_UNAVAILABLE',
+            message: `Unable to reach ${serviceName} service. Please check if the service is running and accessible.`,
+          },
+        });
+        return;
+      }
+
+      // Handle connection errors
+      if (error.code === 'ECONNREFUSED' || error.code === 'ENOTFOUND' || error.code === 'ETIMEDOUT') {
+        res.status(503).json({
+          success: false,
+          error: {
+            code: 'SERVICE_UNAVAILABLE',
+            message: `Cannot connect to ${serviceName} service. Please check network connectivity and service configuration.`,
+          },
+        });
+        return;
+      }
+
+      // Handle 409 Conflict (user already exists, etc.)
+      if (error.response?.status === 409) {
+        res.status(409).json({
+          success: false,
+          error: {
+            code: error.response?.data?.error?.code || 'CONFLICT',
+            message: error.response?.data?.error?.message || error.response?.data?.message || 'Resource already exists',
+          },
+        });
+        return;
+      }
+
       // Handle other errors
       const statusCode = error.response?.status || error.status || 500;
       res.status(statusCode).json({
         success: false,
         error: {
           code: error.response?.data?.error?.code || 'GATEWAY_ERROR',
-          message: error.response?.data?.error?.message || error.message || 'Internal server error',
+          message: error.response?.data?.error?.message || error.response?.data?.message || error.message || 'Internal server error',
         },
       });
     }
