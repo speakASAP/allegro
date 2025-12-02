@@ -112,17 +112,32 @@ const SettingsPage: React.FC = () => {
         clientSecret: allegroClientSecret,
       });
 
-      if (response.data.success && response.data.data.valid) {
-        setSuccess('Allegro API keys are valid!');
+      if (response.data.success && response.data.data && response.data.data.valid === true) {
+        setSuccess('Allegro API keys validated successfully');
+        setError('');
       } else {
-        setError(response.data.data.message || 'Invalid API keys');
+        const errorMsg = response.data?.data?.message || 'Invalid API keys';
+        setError(errorMsg);
+        setSuccess('');
       }
     } catch (err: unknown) {
-      const errorMessage =
-        err instanceof AxiosError && err.response?.data?.error?.message
-          ? err.response.data.error.message
-          : 'Failed to validate API keys';
-      setError(errorMessage);
+      if (err instanceof AxiosError) {
+        // Check if it's a connection error
+        const axiosError = err as AxiosError & { isConnectionError?: boolean; serviceErrorMessage?: string };
+        if (axiosError.isConnectionError && axiosError.serviceErrorMessage) {
+          setError(axiosError.serviceErrorMessage);
+        } else {
+          // Check if the response has error data
+          const errorMessage = err.response?.data?.error?.message 
+            || err.response?.data?.data?.message
+            || err.response?.data?.message
+            || 'Failed to validate API keys';
+          setError(errorMessage);
+        }
+      } else {
+        setError('Failed to validate API keys');
+      }
+      setSuccess('');
     } finally {
       setSaving(false);
     }

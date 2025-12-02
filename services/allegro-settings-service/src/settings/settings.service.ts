@@ -254,15 +254,10 @@ export class SettingsService {
   async validateAllegroKeys(userId: string, dto: ValidateAllegroKeysDto): Promise<{ valid: boolean; message?: string }> {
     this.logger.log('Validating Allegro API keys', { userId });
 
-    try {
-      const allegroApiUrl = this.configService.get<string>('ALLEGRO_API_URL') || 'https://api.allegro.pl';
-      const useSandbox = this.configService.get<string>('ALLEGRO_USE_SANDBOX') === 'true';
-      const baseUrl = useSandbox
-        ? (this.configService.get<string>('ALLEGRO_API_SANDBOX_URL') || 'https://api.allegro.pl')
-        : allegroApiUrl;
+    // Always use real ALLEGRO_AUTH_URL for both environments
+    const tokenUrl = this.configService.get<string>('ALLEGRO_AUTH_URL') || 'https://allegro.pl/auth/oauth/token';
 
-      // Try to get OAuth token using the credentials
-      const tokenUrl = `${baseUrl}/auth/oauth/token`;
+    try {
       const credentials = Buffer.from(`${dto.clientId}:${dto.clientSecret}`).toString('base64');
 
       const response = await firstValueFrom(
@@ -281,30 +276,30 @@ export class SettingsService {
 
       if (response.data && response.data.access_token) {
         this.logger.log('Allegro API keys validated successfully', { userId });
-        // Note: Notification can be sent via email if needed
-        // await this.notificationService.sendNotification({
-        //   channel: 'email',
-        //   type: 'custom',
-        //   recipient: userEmail,
-        //   subject: 'Allegro API Keys Validated',
-        //   message: 'Your Allegro API keys have been successfully validated.',
-        // });
-        return { valid: true, message: 'API keys are valid' };
+        return { valid: true, message: 'Validated successfully' };
       }
 
       return { valid: false, message: 'Invalid response from Allegro API' };
     } catch (error: any) {
+      const status = error.response?.status;
+      const errorMessage = error.response?.data?.error_description || error.response?.data?.error || error.message;
+      
       this.logger.error('Failed to validate Allegro API keys', {
         userId,
-        error: error.message,
-        status: error.response?.status,
+        error: errorMessage,
+        status,
+        tokenUrl,
       });
 
-      if (error.response?.status === 401 || error.response?.status === 403) {
-        return { valid: false, message: 'Invalid API credentials' };
+      if (status === 401 || status === 403) {
+        return { valid: false, message: 'Invalid API credentials. Please check your Client ID and Client Secret.' };
       }
 
-      return { valid: false, message: `Validation failed: ${error.message}` };
+      if (status === 404) {
+        return { valid: false, message: `OAuth endpoint not found. Please check ALLEGRO_AUTH_URL configuration.` };
+      }
+
+      return { valid: false, message: `Validation failed: ${errorMessage || error.message}` };
     }
   }
 }
