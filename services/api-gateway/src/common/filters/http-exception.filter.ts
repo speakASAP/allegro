@@ -70,19 +70,6 @@ export class HttpExceptionFilter implements ExceptionFilter {
           message = exception.message || message;
         }
       }
-      
-      if (typeof exceptionResponse === 'string') {
-        message = exceptionResponse;
-      } else if (typeof exceptionResponse === 'object' && exceptionResponse !== null) {
-        const responseObj = exceptionResponse as any;
-        message = responseObj.message || exception.message || message;
-        // Only override code if it's not already set by status
-        if (!code || code === 'INTERNAL_ERROR') {
-          code = responseObj.code || responseObj.error || code;
-        }
-      } else {
-        message = exception.message || message;
-      }
     } else if (exception instanceof Error) {
       message = exception.message || message;
       this.logger.error(`Unhandled exception: ${exception.message}`, exception.stack);
