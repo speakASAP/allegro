@@ -239,6 +239,8 @@ services:
     build:
       context: .
       dockerfile: ./services/allegro-frontend-service/Dockerfile
+      args:
+        VITE_API_URL: ${FRONTEND_API_URL:-https://allegro.statex.cz/api}
     container_name: allegro-frontend-service-blue
     restart: unless-stopped
     ports:

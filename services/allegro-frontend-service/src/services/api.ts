@@ -5,7 +5,27 @@
 import axios, { AxiosInstance, InternalAxiosRequestConfig, AxiosError } from 'axios';
 import { isConnectionError, getConnectionErrorMessage } from '../utils/serviceErrorHandler';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3411/api';
+// Determine API URL:
+// 1. Use VITE_API_URL if set during build (production)
+// 2. Auto-detect from current origin (if on production domain)
+// 3. Fallback to localhost for development
+const getApiUrl = (): string => {
+  // If VITE_API_URL is set during build, use it
+  if (import.meta.env.VITE_API_URL) {
+    return import.meta.env.VITE_API_URL;
+  }
+  
+  // Auto-detect production URL from current origin
+  const origin = window.location.origin;
+  if (origin.includes('allegro.statex.cz') || origin.includes('statex.cz')) {
+    return `${origin}/api`;
+  }
+  
+  // Development fallback
+  return 'http://localhost:3411/api';
+};
+
+const API_URL = getApiUrl();
 
 const api: AxiosInstance = axios.create({
   baseURL: API_URL,

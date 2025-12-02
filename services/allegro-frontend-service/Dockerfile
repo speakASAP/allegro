@@ -13,7 +13,10 @@ RUN npm install
 # Copy source code
 COPY services/allegro-frontend-service ./
 
-# Build the application
+# Build the application with API URL from environment variable
+# VITE_API_URL should be set in docker-compose.yml or .env file
+ARG VITE_API_URL
+ENV VITE_API_URL=${VITE_API_URL}
 RUN npm run build
 
 # Production stage
