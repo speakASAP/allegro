@@ -145,15 +145,9 @@ Docker (from project root directory):
   # Make sure you're in the allegro project directory, not nginx-microservice
   cd ~/allegro  # or your project path
   docker compose up -d ${dockerServiceName}
-  
-  # Alternative if docker-compose is installed:
-  docker-compose up -d ${dockerServiceName}
 
 Check if container is running:
   docker ps | grep ${dockerServiceName}
-  
-  # Or check by container name pattern:
-  docker ps | grep allegro-${dockerServiceName}
 
 Check service health:
   curl http://localhost:${serviceInfo.servicePort}/health
