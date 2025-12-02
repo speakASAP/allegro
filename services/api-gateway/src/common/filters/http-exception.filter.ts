@@ -28,33 +28,47 @@ export class HttpExceptionFilter implements ExceptionFilter {
     let code = 'INTERNAL_ERROR';
 
     // Handle UnauthorizedException specifically
-    if (exception instanceof UnauthorizedException) {
-      status = HttpStatus.UNAUTHORIZED;
-      code = 'UNAUTHORIZED';
-      const exceptionResponse = exception.getResponse();
-      if (typeof exceptionResponse === 'string') {
-        message = exceptionResponse;
-      } else if (typeof exceptionResponse === 'object' && exceptionResponse !== null) {
-        const responseObj = exceptionResponse as any;
-        message = responseObj.message || exception.message || 'Authentication required';
-      } else {
-        message = exception.message || 'Authentication required';
-      }
-    } else if (exception instanceof HttpException) {
+    // Check both instanceof and status code (in case instanceof doesn't work across modules)
+    if (exception instanceof HttpException) {
       status = exception.getStatus();
       const exceptionResponse = exception.getResponse();
       
-      // Set code based on status
-      if (status === 401) {
+      // Check if it's an UnauthorizedException by status or instanceof
+      if (status === HttpStatus.UNAUTHORIZED || exception instanceof UnauthorizedException) {
+        status = HttpStatus.UNAUTHORIZED;
         code = 'UNAUTHORIZED';
-      } else if (status === 403) {
-        code = 'FORBIDDEN';
-      } else if (status === 404) {
-        code = 'NOT_FOUND';
-      } else if (status === 409) {
-        code = 'CONFLICT';
-      } else if (status === 503) {
-        code = 'SERVICE_UNAVAILABLE';
+        if (typeof exceptionResponse === 'string') {
+          message = exceptionResponse;
+        } else if (typeof exceptionResponse === 'object' && exceptionResponse !== null) {
+          const responseObj = exceptionResponse as any;
+          message = responseObj.message || exception.message || 'Authentication required';
+        } else {
+          message = exception.message || 'Authentication required';
+        }
+      } else {
+        // Set code based on status for other HttpExceptions
+        if (status === 403) {
+          code = 'FORBIDDEN';
+        } else if (status === 404) {
+          code = 'NOT_FOUND';
+        } else if (status === 409) {
+          code = 'CONFLICT';
+        } else if (status === 503) {
+          code = 'SERVICE_UNAVAILABLE';
+        }
+        
+        if (typeof exceptionResponse === 'string') {
+          message = exceptionResponse;
+        } else if (typeof exceptionResponse === 'object' && exceptionResponse !== null) {
+          const responseObj = exceptionResponse as any;
+          message = responseObj.message || exception.message || message;
+          // Only override code if it's not already set by status
+          if (!code || code === 'INTERNAL_ERROR') {
+            code = responseObj.code || responseObj.error || code;
+          }
+        } else {
+          message = exception.message || message;
+        }
       }
       
       if (typeof exceptionResponse === 'string') {
