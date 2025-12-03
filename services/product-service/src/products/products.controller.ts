@@ -13,7 +13,9 @@ import {
   Query,
   Body,
   UseGuards,
+  Res,
 } from '@nestjs/common';
+import { Response } from 'express';
 import { ProductsService } from './products.service';
 import { JwtAuthGuard } from '@allegro/shared';
 
@@ -71,6 +73,15 @@ export class ProductsController {
   async updateStock(@Param('id') id: string, @Body() body: { quantity: number }) {
     const stock = await this.productsService.updateStock(id, body.quantity);
     return { success: true, data: stock };
+  }
+
+  @Get('export/csv')
+  @UseGuards(JwtAuthGuard)
+  async exportToCsv(@Res() res: Response) {
+    const csv = await this.productsService.exportToCsv();
+    res.setHeader('Content-Type', 'text/csv');
+    res.setHeader('Content-Disposition', `attachment; filename=products_${new Date().toISOString().split('T')[0]}.csv`);
+    res.send(csv);
   }
 }
 

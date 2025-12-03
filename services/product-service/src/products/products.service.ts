@@ -166,5 +166,52 @@ export class ProductsService {
       stockQuantity: product.stockQuantity,
     };
   }
+
+  /**
+   * Export products to CSV
+   */
+  async exportToCsv(): Promise<string> {
+    this.logger.log('Exporting products to CSV');
+
+    const products = await this.prisma.product.findMany({
+      orderBy: { createdAt: 'desc' },
+    });
+
+    // CSV header
+    const headers = [
+      'Code',
+      'Name',
+      'Stock Quantity',
+      'Selling Price',
+      'Purchase Price',
+      'EAN',
+      'Brand',
+      'Manufacturer',
+      'Active',
+      'Created At',
+    ];
+
+    // CSV rows
+    const rows = products.map((product) => [
+      product.code || '',
+      product.name || '',
+      String(product.stockQuantity || 0),
+      product.sellingPrice ? String(product.sellingPrice) : '',
+      product.purchasePrice ? String(product.purchasePrice) : '',
+      product.ean || '',
+      product.brand || '',
+      product.manufacturer || '',
+      product.active ? 'Yes' : 'No',
+      product.createdAt.toISOString(),
+    ]);
+
+    // Combine header and rows
+    const csvContent = [
+      headers.join(','),
+      ...rows.map((row) => row.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(',')),
+    ].join('\n');
+
+    return csvContent;
+  }
 }
 

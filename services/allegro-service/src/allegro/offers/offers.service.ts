@@ -183,6 +183,116 @@ export class OffersService {
   }
 
   /**
+   * Preview offers from Allegro (without importing)
+   */
+  async previewOffersFromAllegro() {
+    this.logger.log('Previewing offers from Allegro');
+
+    let offset = 0;
+    const limit = 100;
+    let hasMore = true;
+    const previewOffers: any[] = [];
+
+    // Get first batch for preview (limit to 100 items for preview)
+    const response = await this.allegroApi.getOffers({
+      limit,
+      offset,
+    });
+
+    const offers = response.offers || [];
+    
+    for (const allegroOffer of offers) {
+      previewOffers.push({
+        allegroOfferId: allegroOffer.id,
+        title: allegroOffer.name,
+        description: allegroOffer.description,
+        categoryId: allegroOffer.category?.id || '',
+        price: parseFloat(allegroOffer.sellingMode?.price?.amount || '0'),
+        quantity: allegroOffer.stock?.available || 0,
+        stockQuantity: allegroOffer.stock?.available || 0,
+        status: allegroOffer.publication?.status || 'INACTIVE',
+        publicationStatus: allegroOffer.publication?.status || 'INACTIVE',
+        rawData: allegroOffer, // Keep raw data for reference
+      });
+    }
+
+    this.logger.log('Finished previewing offers', { total: previewOffers.length });
+    return { items: previewOffers, total: response.count || previewOffers.length };
+  }
+
+  /**
+   * Import approved offers from preview
+   */
+  async importApprovedOffers(approvedOfferIds: string[]) {
+    this.logger.log('Importing approved offers', { count: approvedOfferIds.length });
+
+    let offset = 0;
+    const limit = 100;
+    let hasMore = true;
+    let totalImported = 0;
+    const approvedSet = new Set(approvedOfferIds);
+
+    while (hasMore) {
+      const response = await this.allegroApi.getOffers({
+        limit,
+        offset,
+      });
+
+      const offers = response.offers || [];
+      
+      for (const allegroOffer of offers) {
+        // Only import if approved
+        if (!approvedSet.has(allegroOffer.id)) {
+          continue;
+        }
+
+        try {
+          await this.prisma.allegroOffer.upsert({
+            where: { allegroOfferId: allegroOffer.id },
+            update: {
+              title: allegroOffer.name,
+              description: allegroOffer.description,
+              categoryId: allegroOffer.category?.id || '',
+              price: parseFloat(allegroOffer.sellingMode?.price?.amount || '0'),
+              quantity: allegroOffer.stock?.available || 0,
+              stockQuantity: allegroOffer.stock?.available || 0,
+              status: allegroOffer.publication?.status || 'INACTIVE',
+              publicationStatus: allegroOffer.publication?.status || 'INACTIVE',
+              syncStatus: 'SYNCED',
+              lastSyncedAt: new Date(),
+            },
+            create: {
+              allegroOfferId: allegroOffer.id,
+              title: allegroOffer.name,
+              description: allegroOffer.description,
+              categoryId: allegroOffer.category?.id || '',
+              price: parseFloat(allegroOffer.sellingMode?.price?.amount || '0'),
+              quantity: allegroOffer.stock?.available || 0,
+              stockQuantity: allegroOffer.stock?.available || 0,
+              status: allegroOffer.publication?.status || 'INACTIVE',
+              publicationStatus: allegroOffer.publication?.status || 'INACTIVE',
+              syncStatus: 'SYNCED',
+              lastSyncedAt: new Date(),
+            },
+          });
+          totalImported++;
+        } catch (error: any) {
+          this.logger.error('Failed to import approved offer', {
+            offerId: allegroOffer.id,
+            error: error.message,
+          });
+        }
+      }
+
+      hasMore = offers.length === limit;
+      offset += limit;
+    }
+
+    this.logger.log('Finished importing approved offers', { totalImported });
+    return { totalImported };
+  }
+
+  /**
    * Import all offers from Allegro
    */
   async importAllOffers() {
@@ -243,6 +353,235 @@ export class OffersService {
     }
 
     this.logger.log('Finished importing offers', { totalImported });
+    return { totalImported };
+  }
+
+  /**
+   * Export offers to CSV
+   */
+  async exportToCsv(): Promise<string> {
+    this.logger.log('Exporting offers to CSV');
+
+    const offers = await this.prisma.allegroOffer.findMany({
+      include: {
+        product: true,
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    // CSV header
+    const headers = [
+      'Allegro Offer ID',
+      'Title',
+      'Price',
+      'Currency',
+      'Stock Quantity',
+      'Status',
+      'Publication Status',
+      'Category ID',
+      'Product Code',
+      'Product Name',
+      'Created At',
+      'Last Synced At',
+    ];
+
+    // CSV rows
+    const rows = offers.map((offer) => [
+      offer.allegroOfferId || '',
+      offer.title || '',
+      String(offer.price || 0),
+      offer.currency || 'PLN',
+      String(offer.stockQuantity || 0),
+      offer.status || '',
+      offer.publicationStatus || '',
+      offer.categoryId || '',
+      offer.product?.code || '',
+      offer.product?.name || '',
+      offer.createdAt.toISOString(),
+      offer.lastSyncedAt ? offer.lastSyncedAt.toISOString() : '',
+    ]);
+
+    // Combine header and rows
+    const csvContent = [
+      headers.join(','),
+      ...rows.map((row) => row.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(',')),
+    ].join('\n');
+
+    return csvContent;
+  }
+
+  /**
+   * Preview offers from Allegro Sales Center (without importing)
+   */
+  async previewOffersFromSalesCenter() {
+    this.logger.log('Previewing offers from Allegro Sales Center');
+
+    const limit = 100;
+    const queryParams: any = {
+      limit: limit.toString(),
+      offset: '0',
+    };
+    
+    const response = await this.allegroApi.getOffers(queryParams);
+    const offers = response.offers || [];
+    
+    const previewOffers = offers.map((allegroOffer: any) => ({
+      allegroOfferId: allegroOffer.id,
+      title: allegroOffer.name,
+      description: allegroOffer.description,
+      categoryId: allegroOffer.category?.id || '',
+      price: parseFloat(allegroOffer.sellingMode?.price?.amount || '0'),
+      quantity: allegroOffer.stock?.available || 0,
+      stockQuantity: allegroOffer.stock?.available || 0,
+      status: allegroOffer.publication?.status || 'INACTIVE',
+      publicationStatus: allegroOffer.publication?.status || 'INACTIVE',
+      rawData: allegroOffer,
+    }));
+
+    this.logger.log('Finished previewing offers from Sales Center', { total: previewOffers.length });
+    return { items: previewOffers, total: response.count || previewOffers.length };
+  }
+
+  /**
+   * Import approved offers from Sales Center preview
+   */
+  async importApprovedOffersFromSalesCenter(approvedOfferIds: string[]) {
+    this.logger.log('Importing approved offers from Sales Center', { count: approvedOfferIds.length });
+
+    let offset = 0;
+    const limit = 100;
+    let hasMore = true;
+    let totalImported = 0;
+    const approvedSet = new Set(approvedOfferIds);
+
+    while (hasMore) {
+      const queryParams: any = {
+        limit: limit.toString(),
+        offset: offset.toString(),
+      };
+      
+      const response = await this.allegroApi.getOffers(queryParams);
+      const offers = response.offers || [];
+      
+      for (const allegroOffer of offers) {
+        if (!approvedSet.has(allegroOffer.id)) {
+          continue;
+        }
+
+        try {
+          await this.prisma.allegroOffer.upsert({
+            where: { allegroOfferId: allegroOffer.id },
+            update: {
+              title: allegroOffer.name,
+              description: allegroOffer.description,
+              categoryId: allegroOffer.category?.id || '',
+              price: parseFloat(allegroOffer.sellingMode?.price?.amount || '0'),
+              quantity: allegroOffer.stock?.available || 0,
+              stockQuantity: allegroOffer.stock?.available || 0,
+              status: allegroOffer.publication?.status || 'INACTIVE',
+              publicationStatus: allegroOffer.publication?.status || 'INACTIVE',
+              syncStatus: 'SYNCED',
+              lastSyncedAt: new Date(),
+            },
+            create: {
+              allegroOfferId: allegroOffer.id,
+              title: allegroOffer.name,
+              description: allegroOffer.description,
+              categoryId: allegroOffer.category?.id || '',
+              price: parseFloat(allegroOffer.sellingMode?.price?.amount || '0'),
+              quantity: allegroOffer.stock?.available || 0,
+              stockQuantity: allegroOffer.stock?.available || 0,
+              status: allegroOffer.publication?.status || 'INACTIVE',
+              publicationStatus: allegroOffer.publication?.status || 'INACTIVE',
+              syncStatus: 'SYNCED',
+              lastSyncedAt: new Date(),
+            },
+          });
+          totalImported++;
+        } catch (error: any) {
+          this.logger.error('Failed to import approved offer from Sales Center', {
+            offerId: allegroOffer.id,
+            error: error.message,
+          });
+        }
+      }
+
+      hasMore = offers.length === limit;
+      offset += limit;
+    }
+
+    this.logger.log('Finished importing approved offers from Sales Center', { totalImported });
+    return { totalImported };
+  }
+
+  /**
+   * Import offers from Allegro Sales Center (my-assortment)
+   */
+  async importFromSalesCenter() {
+    this.logger.log('Importing offers from Allegro Sales Center');
+
+    let offset = 0;
+    const limit = 100;
+    let hasMore = true;
+    let totalImported = 0;
+
+    // Use the same API endpoint but with different parameters for Sales Center
+    // The Sales Center uses the same offers endpoint but with publication.status=ACTIVE filter
+    while (hasMore) {
+      // Build query params manually to handle nested keys
+      const queryParams: any = {
+        limit: limit.toString(),
+        offset: offset.toString(),
+      };
+      
+      const response = await this.allegroApi.getOffers(queryParams);
+
+      const offers = response.offers || [];
+      
+      for (const allegroOffer of offers) {
+        try {
+          await this.prisma.allegroOffer.upsert({
+            where: { allegroOfferId: allegroOffer.id },
+            update: {
+              title: allegroOffer.name,
+              description: allegroOffer.description,
+              categoryId: allegroOffer.category?.id || '',
+              price: parseFloat(allegroOffer.sellingMode?.price?.amount || '0'),
+              quantity: allegroOffer.stock?.available || 0,
+              stockQuantity: allegroOffer.stock?.available || 0,
+              status: allegroOffer.publication?.status || 'INACTIVE',
+              publicationStatus: allegroOffer.publication?.status || 'INACTIVE',
+              syncStatus: 'SYNCED',
+              lastSyncedAt: new Date(),
+            },
+            create: {
+              allegroOfferId: allegroOffer.id,
+              title: allegroOffer.name,
+              description: allegroOffer.description,
+              categoryId: allegroOffer.category?.id || '',
+              price: parseFloat(allegroOffer.sellingMode?.price?.amount || '0'),
+              quantity: allegroOffer.stock?.available || 0,
+              stockQuantity: allegroOffer.stock?.available || 0,
+              status: allegroOffer.publication?.status || 'INACTIVE',
+              publicationStatus: allegroOffer.publication?.status || 'INACTIVE',
+              syncStatus: 'SYNCED',
+              lastSyncedAt: new Date(),
+            },
+          });
+          totalImported++;
+        } catch (error: any) {
+          this.logger.error('Failed to import offer from Sales Center', {
+            offerId: allegroOffer.id,
+            error: error.message,
+          });
+        }
+      }
+
+      hasMore = offers.length === limit;
+      offset += limit;
+    }
+
+    this.logger.log('Finished importing offers from Sales Center', { totalImported });
     return { totalImported };
   }
 }

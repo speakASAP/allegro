@@ -12,7 +12,9 @@ import {
   Query,
   Body,
   UseGuards,
+  Res,
 } from '@nestjs/common';
+import { Response } from 'express';
 import { OffersService } from './offers.service';
 import { JwtAuthGuard } from '@allegro/shared';
 import { CreateOfferDto } from '../dto/create-offer.dto';
@@ -30,11 +32,55 @@ export class OffersController {
     return { success: true, data: result };
   }
 
+  @Get('import/preview')
+  @UseGuards(JwtAuthGuard)
+  async previewOffers(): Promise<{ success: boolean; data: any }> {
+    const result = await this.offersService.previewOffersFromAllegro();
+    return { success: true, data: result };
+  }
+
+  @Post('import/approve')
+  @UseGuards(JwtAuthGuard)
+  async importApprovedOffers(@Body() body: { offerIds: string[] }): Promise<{ success: boolean; data: any }> {
+    const result = await this.offersService.importApprovedOffers(body.offerIds);
+    return { success: true, data: result };
+  }
+
   @Get('import')
   @UseGuards(JwtAuthGuard)
   async importOffers(): Promise<{ success: boolean; data: any }> {
     const result = await this.offersService.importAllOffers();
     return { success: true, data: result };
+  }
+
+  @Get('import/sales-center/preview')
+  @UseGuards(JwtAuthGuard)
+  async previewOffersFromSalesCenter(): Promise<{ success: boolean; data: any }> {
+    const result = await this.offersService.previewOffersFromSalesCenter();
+    return { success: true, data: result };
+  }
+
+  @Post('import/sales-center/approve')
+  @UseGuards(JwtAuthGuard)
+  async importApprovedOffersFromSalesCenter(@Body() body: { offerIds: string[] }): Promise<{ success: boolean; data: any }> {
+    const result = await this.offersService.importApprovedOffersFromSalesCenter(body.offerIds);
+    return { success: true, data: result };
+  }
+
+  @Post('import/sales-center')
+  @UseGuards(JwtAuthGuard)
+  async importFromSalesCenter(): Promise<{ success: boolean; data: any }> {
+    const result = await this.offersService.importFromSalesCenter();
+    return { success: true, data: result };
+  }
+
+  @Get('export/csv')
+  @UseGuards(JwtAuthGuard)
+  async exportToCsv(@Res() res: Response) {
+    const csv = await this.offersService.exportToCsv();
+    res.setHeader('Content-Type', 'text/csv');
+    res.setHeader('Content-Disposition', `attachment; filename=offers_${new Date().toISOString().split('T')[0]}.csv`);
+    res.send(csv);
   }
 
   @Get(':id')
