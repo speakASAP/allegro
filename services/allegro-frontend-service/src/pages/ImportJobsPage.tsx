@@ -57,7 +57,7 @@ const ImportJobsPage: React.FC = () => {
   const [processingExport, setProcessingExport] = useState(false);
 
   useEffect(() => {
-    let intervalId: NodeJS.Timeout | null = null;
+    let intervalId: number | null = null;
     
     const loadJobsSafely = async () => {
       try {
@@ -65,7 +65,7 @@ const ImportJobsPage: React.FC = () => {
       } catch (err) {
         // If we get a 401, stop the interval to prevent infinite loops
         if (err instanceof AxiosError && err.response?.status === 401) {
-          if (intervalId) {
+          if (intervalId !== null) {
             clearInterval(intervalId);
             intervalId = null;
           }
@@ -74,10 +74,10 @@ const ImportJobsPage: React.FC = () => {
     };
     
     loadJobsSafely();
-    intervalId = setInterval(loadJobsSafely, 30000); // Refresh every 30 seconds
+    intervalId = window.setInterval(loadJobsSafely, 30000); // Refresh every 30 seconds
     
     return () => {
-      if (intervalId) {
+      if (intervalId !== null) {
         clearInterval(intervalId);
       }
     };
