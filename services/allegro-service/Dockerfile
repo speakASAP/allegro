@@ -10,10 +10,11 @@ COPY package.json package-lock.json* ./
 COPY shared/package.json shared/package-lock.json* ./shared/
 COPY services/allegro-service/package.json ./services/allegro-service/
 
-# Install root dependencies (includes @prisma/client) with retry logic for network issues
-RUN npm install --fetch-retries=5 --fetch-retry-mintimeout=20000 --fetch-retry-maxtimeout=120000 || \
-    (sleep 10 && npm install --fetch-retries=5 --fetch-retry-mintimeout=20000 --fetch-retry-maxtimeout=120000) || \
-    (sleep 20 && npm install --fetch-retries=5 --fetch-retry-mintimeout=20000 --fetch-retry-maxtimeout=120000)
+# Install root dependencies (includes @prisma/client) with retry logic and BuildKit cache
+RUN --mount=type=cache,target=/root/.npm \
+    npm ci --fetch-retries=5 --fetch-retry-mintimeout=20000 --fetch-retry-maxtimeout=120000 || \
+    (sleep 10 && npm ci --fetch-retries=5 --fetch-retry-mintimeout=20000 --fetch-retry-maxtimeout=120000) || \
+    (sleep 20 && npm ci --fetch-retries=5 --fetch-retry-mintimeout=20000 --fetch-retry-maxtimeout=120000)
 
 # Copy source code
 COPY shared ./shared
@@ -27,11 +28,12 @@ RUN ./node_modules/.bin/prisma generate --schema=./prisma/schema.prisma || node_
 # Verify Prisma client was generated in root
 RUN test -d node_modules/.prisma && echo "Prisma client generated in root" || (echo "ERROR: Prisma client not found in root" && ls -la node_modules/ | head -20 && exit 1)
 
-# Install shared module dependencies with retry logic for network issues
+# Install shared module dependencies with retry logic and BuildKit cache
 WORKDIR /app/shared
-RUN npm install --legacy-peer-deps --fetch-retries=5 --fetch-retry-mintimeout=20000 --fetch-retry-maxtimeout=120000 || \
-    (sleep 10 && npm install --legacy-peer-deps --fetch-retries=5 --fetch-retry-mintimeout=20000 --fetch-retry-maxtimeout=120000) || \
-    (sleep 20 && npm install --legacy-peer-deps --fetch-retries=5 --fetch-retry-mintimeout=20000 --fetch-retry-maxtimeout=120000)
+RUN --mount=type=cache,target=/root/.npm \
+    npm ci --legacy-peer-deps --fetch-retries=5 --fetch-retry-mintimeout=20000 --fetch-retry-maxtimeout=120000 || \
+    (sleep 10 && npm ci --legacy-peer-deps --fetch-retries=5 --fetch-retry-mintimeout=20000 --fetch-retry-maxtimeout=120000) || \
+    (sleep 20 && npm ci --legacy-peer-deps --fetch-retries=5 --fetch-retry-mintimeout=20000 --fetch-retry-maxtimeout=120000)
 
 # Generate Prisma Client directly in shared node_modules where @prisma/client is installed
 # This ensures Prisma client is properly initialized in the correct location
@@ -46,9 +48,11 @@ RUN test -d node_modules/.prisma && echo "Prisma client generated in shared" || 
 WORKDIR /app/shared
 RUN npm run build
 
-# Build service
+# Build service with BuildKit cache
 WORKDIR /app/services/allegro-service
-RUN npm install --include=dev
+RUN --mount=type=cache,target=/root/.npm \
+    npm ci --include=dev --fetch-retries=5 --fetch-retry-mintimeout=20000 --fetch-retry-maxtimeout=120000 || \
+    npm install --include=dev --fetch-retries=5 --fetch-retry-mintimeout=20000 --fetch-retry-maxtimeout=120000
 RUN npm run build
 # Copy compiled shared module to service dist
 RUN cp -r ../../shared/dist ./dist/shared || true
