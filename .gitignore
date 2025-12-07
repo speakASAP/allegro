@@ -3,7 +3,6 @@
 
 # Dependencies
 node_modules/
-package-lock.json
 !services/allegro-frontend-service/package-lock.json
 !shared/package-lock.json
 yarn.lock
