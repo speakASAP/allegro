@@ -7,8 +7,10 @@ WORKDIR /app
 COPY services/allegro-frontend-service/package.json ./
 COPY services/allegro-frontend-service/package-lock.json* ./
 
-# Install dependencies
-RUN npm install
+# Install dependencies with retry logic for network issues
+RUN npm install --fetch-retries=5 --fetch-retry-mintimeout=20000 --fetch-retry-maxtimeout=120000 || \
+    (sleep 10 && npm install --fetch-retries=5 --fetch-retry-mintimeout=20000 --fetch-retry-maxtimeout=120000) || \
+    (sleep 20 && npm install --fetch-retries=5 --fetch-retry-mintimeout=20000 --fetch-retry-maxtimeout=120000)
 
 # Copy source code
 COPY services/allegro-frontend-service ./
