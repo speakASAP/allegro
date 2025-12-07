@@ -8,7 +8,7 @@ services:
     env_file:
       - .env
     ports:
-      - "127.0.0.1:${API_GATEWAY_PORT:-3411}:${API_GATEWAY_PORT:-3411}"
+      - ${API_GATEWAY_PORT:-3411}:${API_GATEWAY_PORT:-3411}
     depends_on:
       - product-service
       - allegro-service
@@ -20,16 +20,15 @@ services:
     volumes:
       - ./logs:/app/logs
     environment:
-      - NODE_ENV=${NODE_ENV:-development}
-      - PORT=${API_GATEWAY_PORT:-3411}
+      - NODE_ENV=${NODE_ENV:-production}
+      - PORT=3411
     networks:
-      - default
       - nginx-network
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:${API_GATEWAY_PORT:-3411}/health"]
-      interval: 30s
+      interval: 10s
       timeout: 10s
-      retries: 5
+      retries: 2
 
   product-service:
     build:
@@ -40,25 +39,24 @@ services:
     env_file:
       - .env
     ports:
-      - "127.0.0.1:${PRODUCT_SERVICE_PORT:-3402}:${PRODUCT_SERVICE_PORT:-3402}"
+      - ${PRODUCT_SERVICE_PORT:-3402}:${PRODUCT_SERVICE_PORT:-3402}
     volumes:
       - ./logs:/app/logs
     environment:
-      - NODE_ENV=${NODE_ENV:-development}
-      - PORT=${PRODUCT_SERVICE_PORT:-3402}
+      - NODE_ENV=${NODE_ENV:-production}
+      - PORT=3402
       - DB_HOST=${DB_HOST:-db-server-postgres}
       - DB_PORT=${DB_PORT:-5432}
       - DB_USER=${DB_USER:-dbadmin}
       - DB_PASSWORD=${DB_PASSWORD}
       - DB_NAME=${DB_NAME:-allegro}
     networks:
-      - default
       - nginx-network
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:${PRODUCT_SERVICE_PORT:-3402}/health"]
-      interval: 30s
+      interval: 10s
       timeout: 10s
-      retries: 5
+      retries: 2
 
   allegro-service:
     build:
@@ -69,25 +67,24 @@ services:
     env_file:
       - .env
     ports:
-      - "127.0.0.1:${ALLEGRO_SERVICE_PORT:-3403}:${ALLEGRO_SERVICE_PORT:-3403}"
+      - ${ALLEGRO_SERVICE_PORT:-3403}:${ALLEGRO_SERVICE_PORT:-3403}
     volumes:
       - ./logs:/app/logs
     environment:
-      - NODE_ENV=${NODE_ENV:-development}
-      - PORT=${ALLEGRO_SERVICE_PORT:-3403}
+      - NODE_ENV=${NODE_ENV:-production}
+      - PORT=3403
       - DB_HOST=${DB_HOST:-db-server-postgres}
       - DB_PORT=${DB_PORT:-5432}
       - DB_USER=${DB_USER:-dbadmin}
       - DB_PASSWORD=${DB_PASSWORD}
       - DB_NAME=${DB_NAME:-allegro}
     networks:
-      - default
       - nginx-network
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:${ALLEGRO_SERVICE_PORT:-3403}/health"]
-      interval: 30s
+      interval: 10s
       timeout: 10s
-      retries: 5
+      retries: 2
 
   sync-service:
     build:
@@ -98,25 +95,24 @@ services:
     env_file:
       - .env
     ports:
-      - "127.0.0.1:${SYNC_SERVICE_PORT:-3404}:${SYNC_SERVICE_PORT:-3404}"
+      - ${SYNC_SERVICE_PORT:-3404}:${SYNC_SERVICE_PORT:-3404}
     volumes:
       - ./logs:/app/logs
     environment:
-      - NODE_ENV=${NODE_ENV:-development}
-      - PORT=${SYNC_SERVICE_PORT:-3404}
+      - NODE_ENV=${NODE_ENV:-production}
+      - PORT=3404
       - DB_HOST=${DB_HOST:-db-server-postgres}
       - DB_PORT=${DB_PORT:-5432}
       - DB_USER=${DB_USER:-dbadmin}
       - DB_PASSWORD=${DB_PASSWORD}
       - DB_NAME=${DB_NAME:-allegro}
     networks:
-      - default
       - nginx-network
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:${SYNC_SERVICE_PORT:-3404}/health"]
-      interval: 30s
+      interval: 10s
       timeout: 10s
-      retries: 5
+      retries: 2
 
   webhook-service:
     build:
@@ -127,25 +123,24 @@ services:
     env_file:
       - .env
     ports:
-      - "127.0.0.1:${WEBHOOK_SERVICE_PORT:-3405}:${WEBHOOK_SERVICE_PORT:-3405}"
+      - ${WEBHOOK_SERVICE_PORT:-3405}:${WEBHOOK_SERVICE_PORT:-3405}
     volumes:
       - ./logs:/app/logs
     environment:
-      - NODE_ENV=${NODE_ENV:-development}
-      - PORT=${WEBHOOK_SERVICE_PORT:-3405}
+      - NODE_ENV=${NODE_ENV:-production}
+      - PORT=3405
       - DB_HOST=${DB_HOST:-db-server-postgres}
       - DB_PORT=${DB_PORT:-5432}
       - DB_USER=${DB_USER:-dbadmin}
       - DB_PASSWORD=${DB_PASSWORD}
       - DB_NAME=${DB_NAME:-allegro}
     networks:
-      - default
       - nginx-network
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:${WEBHOOK_SERVICE_PORT:-3405}/health"]
-      interval: 30s
+      interval: 10s
       timeout: 10s
-      retries: 5
+      retries: 2
 
   import-service:
     build:
@@ -156,26 +151,25 @@ services:
     env_file:
       - .env
     ports:
-      - "127.0.0.1:${IMPORT_SERVICE_PORT:-3406}:${IMPORT_SERVICE_PORT:-3406}"
+      - ${IMPORT_SERVICE_PORT:-3406}:${IMPORT_SERVICE_PORT:-3406}
     volumes:
       - ./logs:/app/logs
       - ./uploads:/app/uploads
     environment:
-      - NODE_ENV=${NODE_ENV:-development}
-      - PORT=${IMPORT_SERVICE_PORT:-3406}
+      - NODE_ENV=${NODE_ENV:-production}
+      - PORT=3406
       - DB_HOST=${DB_HOST:-db-server-postgres}
       - DB_PORT=${DB_PORT:-5432}
       - DB_USER=${DB_USER:-dbadmin}
       - DB_PASSWORD=${DB_PASSWORD}
       - DB_NAME=${DB_NAME:-allegro}
     networks:
-      - default
       - nginx-network
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:${IMPORT_SERVICE_PORT:-3406}/health"]
-      interval: 30s
+      interval: 10s
       timeout: 10s
-      retries: 5
+      retries: 2
 
   scheduler-service:
     build:
@@ -186,25 +180,24 @@ services:
     env_file:
       - .env
     ports:
-      - "127.0.0.1:${SCHEDULER_SERVICE_PORT:-3407}:${SCHEDULER_SERVICE_PORT:-3407}"
+      - ${SCHEDULER_SERVICE_PORT:-3407}:${SCHEDULER_SERVICE_PORT:-3407}"
     volumes:
       - ./logs:/app/logs
     environment:
-      - NODE_ENV=${NODE_ENV:-development}
-      - PORT=${SCHEDULER_SERVICE_PORT:-3407}
+      - NODE_ENV=${NODE_ENV:-production}
+      - PORT=3407
       - DB_HOST=${DB_HOST:-db-server-postgres}
       - DB_PORT=${DB_PORT:-5432}
       - DB_USER=${DB_USER:-dbadmin}
       - DB_PASSWORD=${DB_PASSWORD}
       - DB_NAME=${DB_NAME:-allegro}
     networks:
-      - default
       - nginx-network
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:${SCHEDULER_SERVICE_PORT:-3407}/health"]
-      interval: 30s
+      interval: 10s
       timeout: 10s
-      retries: 5
+      retries: 2
 
   allegro-settings-service:
     build:
@@ -215,25 +208,24 @@ services:
     env_file:
       - .env
     ports:
-      - "127.0.0.1:${ALLEGRO_SETTINGS_SERVICE_PORT:-3408}:${ALLEGRO_SETTINGS_SERVICE_PORT:-3408}"
+      - ${ALLEGRO_SETTINGS_SERVICE_PORT:-3408}:${ALLEGRO_SETTINGS_SERVICE_PORT:-3408}"
     volumes:
       - ./logs:/app/logs
     environment:
-      - NODE_ENV=${NODE_ENV:-development}
-      - PORT=${ALLEGRO_SETTINGS_SERVICE_PORT:-3408}
+      - NODE_ENV=${NODE_ENV:-production}
+      - PORT=3408
       - DB_HOST=${DB_HOST:-db-server-postgres}
       - DB_PORT=${DB_PORT:-5432}
       - DB_USER=${DB_USER:-dbadmin}
       - DB_PASSWORD=${DB_PASSWORD}
       - DB_NAME=${DB_NAME:-allegro}
     networks:
-      - default
       - nginx-network
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:${ALLEGRO_SETTINGS_SERVICE_PORT:-3408}/health"]
-      interval: 30s
+      interval: 10s
       timeout: 10s
-      retries: 5
+      retries: 2
 
   allegro-frontend-service:
     build:
@@ -244,16 +236,15 @@ services:
     container_name: allegro-frontend-service-blue
     restart: unless-stopped
     ports:
-      - "127.0.0.1:${ALLEGRO_FRONTEND_SERVICE_PORT:-3410}:3410"
+      - ${ALLEGRO_FRONTEND_SERVICE_PORT:-3410}:3410"
     networks:
-      - default
       - nginx-network
     healthcheck:
       # Port configured in allegro/.env: ALLEGRO_FRONTEND_SERVICE_PORT (default: 3410)
       test: ["CMD", "curl", "-f", `http://localhost:${ALLEGRO_FRONTEND_SERVICE_PORT:-3410}/health`]
-      interval: 30s
+      interval: 10s
       timeout: 10s
-      retries: 5
+      retries: 2
 
 networks:
   default:
