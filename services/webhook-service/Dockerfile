@@ -78,6 +78,7 @@ COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
 # Copy compiled code from builder (NO source code, NO dev deps)
 COPY --from=builder /app/services/webhook-service/dist ./dist
 COPY --from=builder /app/shared/dist ./shared/dist
+COPY --from=builder /app/shared/package.json ./shared/package.json
 
 # Set NODE_PATH for module resolution
 ENV NODE_PATH=/app/shared/node_modules:/app/node_modules
