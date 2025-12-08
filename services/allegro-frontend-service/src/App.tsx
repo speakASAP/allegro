@@ -12,6 +12,7 @@ import Dashboard from './pages/Dashboard';
 import SettingsPage from './pages/SettingsPage';
 import ImportJobsPage from './pages/ImportJobsPage';
 import OrdersPage from './pages/OrdersPage';
+import AllegroOAuthCallbackPage from './pages/AllegroOAuthCallbackPage';
 
 function App() {
   return (
@@ -26,6 +27,7 @@ function App() {
           <Route path="/" element={<LandingPage />} />
           <Route path="/login" element={<LoginPage />} />
           <Route path="/register" element={<RegisterPage />} />
+          <Route path="/auth/callback" element={<AllegroOAuthCallbackPage />} />
           <Route
             path="/dashboard"
             element={

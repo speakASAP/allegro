@@ -1,0 +1,304 @@
+/**
+ * OAuth Controller
+ * Handles OAuth 2.0 Authorization Code Flow endpoints
+ */
+
+import { Controller, Get, Post, Query, Req, Res, UseGuards, HttpException, HttpStatus } from '@nestjs/common';
+import { Request, Response } from 'express';
+import { JwtAuthGuard } from '@allegro/shared';
+import { LoggerService } from '@allegro/shared';
+import { AllegroOAuthService } from '../allegro-oauth.service';
+import { PrismaService } from '@allegro/shared';
+import { ConfigService } from '@nestjs/config';
+import * as crypto from 'crypto';
+
+@Controller('allegro/oauth')
+export class OAuthController {
+  private readonly encryptionKey: string;
+  private readonly encryptionAlgorithm = 'aes-256-cbc';
+
+  constructor(
+    private readonly oauthService: AllegroOAuthService,
+    private readonly prisma: PrismaService,
+    private readonly configService: ConfigService,
+    private readonly logger: LoggerService,
+  ) {
+    this.encryptionKey = this.configService.get<string>('ENCRYPTION_KEY') || 'default-encryption-key-change-in-production-32chars!!';
+  }
+
+  /**
+   * Encrypt sensitive data
+   */
+  private encrypt(text: string): string {
+    const iv = crypto.randomBytes(16);
+    const cipher = crypto.createCipheriv(this.encryptionAlgorithm, Buffer.from(this.encryptionKey.slice(0, 32), 'utf8'), iv);
+    let encrypted = cipher.update(text, 'utf8', 'hex');
+    encrypted += cipher.final('hex');
+    return iv.toString('hex') + ':' + encrypted;
+  }
+
+  /**
+   * Decrypt sensitive data
+   */
+  private decrypt(encryptedText: string): string {
+    const parts = encryptedText.split(':');
+    if (parts.length !== 2) {
+      throw new Error('Invalid encrypted text format');
+    }
+    const iv = Buffer.from(parts[0], 'hex');
+    const encrypted = parts[1];
+    const decipher = crypto.createDecipheriv(this.encryptionAlgorithm, Buffer.from(this.encryptionKey.slice(0, 32), 'utf8'), iv);
+    let decrypted = decipher.update(encrypted, 'hex', 'utf8');
+    decrypted += decipher.final('utf8');
+    return decrypted;
+  }
+
+  /**
+   * Generate authorization URL
+   * GET /allegro/oauth/authorize
+   */
+  @Get('authorize')
+  @UseGuards(JwtAuthGuard)
+  async authorize(@Req() req: any) {
+    const userId = String(req.user.id);
+
+    this.logger.log('Generating Allegro OAuth authorization URL', { userId });
+
+    // Get user settings to retrieve client ID
+    const settings = await this.prisma.userSettings.findUnique({
+      where: { userId },
+    });
+
+    if (!settings?.allegroClientId) {
+      throw new HttpException(
+        {
+          success: false,
+          error: {
+            code: 'CREDENTIALS_REQUIRED',
+            message: 'Allegro API credentials not configured. Please configure Client ID and Client Secret in Settings first.',
+          },
+        },
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+
+    // Get redirect URI from config
+    const redirectUri = this.configService.get<string>('ALLEGRO_REDIRECT_URI');
+    if (!redirectUri) {
+      throw new HttpException(
+        {
+          success: false,
+          error: {
+            code: 'CONFIG_ERROR',
+            message: 'ALLEGRO_REDIRECT_URI not configured. Please set it in .env file.',
+          },
+        },
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+
+    // Generate authorization URL with PKCE
+    const { url, state, codeVerifier } = this.oauthService.generateAuthorizationUrl(
+      settings.allegroClientId,
+      redirectUri,
+    );
+
+    // Store state and code verifier in database
+    await this.prisma.userSettings.update({
+      where: { userId },
+      data: {
+        allegroOAuthState: state,
+        allegroOAuthCodeVerifier: this.encrypt(codeVerifier),
+      },
+    });
+
+    this.logger.log('Generated OAuth authorization URL', { userId, state });
+
+    return {
+      success: true,
+      data: {
+        authorizationUrl: url,
+        state: state,
+      },
+    };
+  }
+
+  /**
+   * Handle OAuth callback
+   * GET /allegro/oauth/callback
+   * Note: This endpoint is public (no auth guard) as it's called by Allegro
+   */
+  @Get('callback')
+  async callback(@Query('code') code: string, @Query('state') state: string, @Res() res: Response) {
+    if (!code || !state) {
+      this.logger.error('OAuth callback missing code or state', { code: !!code, state: !!state });
+      return res.redirect(`${this.getFrontendUrl()}/auth/callback?error=missing_parameters`);
+    }
+
+    this.logger.log('Processing OAuth callback', { state });
+
+    try {
+      // Find user by OAuth state
+      const settings = await this.prisma.userSettings.findFirst({
+        where: { allegroOAuthState: state },
+      });
+
+      if (!settings) {
+        this.logger.error('OAuth state not found', { state });
+        return res.redirect(`${this.getFrontendUrl()}/auth/callback?error=invalid_state`);
+      }
+
+      // Validate state
+      if (!this.oauthService.validateState(state, settings.allegroOAuthState || '')) {
+        this.logger.error('OAuth state validation failed', { state, storedState: settings.allegroOAuthState });
+        return res.redirect(`${this.getFrontendUrl()}/auth/callback?error=state_mismatch`);
+      }
+
+      // Get code verifier
+      let codeVerifier: string;
+      try {
+        codeVerifier = this.decrypt(settings.allegroOAuthCodeVerifier || '');
+      } catch (error) {
+        this.logger.error('Failed to decrypt code verifier', { userId: settings.userId, error: error.message });
+        return res.redirect(`${this.getFrontendUrl()}/auth/callback?error=decryption_failed`);
+      }
+
+      // Get redirect URI
+      const redirectUri = this.configService.get<string>('ALLEGRO_REDIRECT_URI');
+      if (!redirectUri) {
+        throw new Error('ALLEGRO_REDIRECT_URI not configured');
+      }
+
+      // Decrypt client secret
+      let clientSecret: string;
+      try {
+        clientSecret = this.decrypt(settings.allegroClientSecret || '');
+      } catch (error) {
+        this.logger.error('Failed to decrypt client secret', { userId: settings.userId, error: error.message });
+        return res.redirect(`${this.getFrontendUrl()}/auth/callback?error=decryption_failed`);
+      }
+
+      // Exchange code for tokens
+      const tokenResponse = await this.oauthService.exchangeCodeForToken(
+        code,
+        codeVerifier,
+        redirectUri,
+        settings.allegroClientId || '',
+        clientSecret,
+      );
+
+      // Store tokens
+      const expiresAt = new Date(Date.now() + tokenResponse.expires_in * 1000);
+      await this.prisma.userSettings.update({
+        where: { userId: settings.userId },
+        data: {
+          allegroAccessToken: this.encrypt(tokenResponse.access_token),
+          allegroRefreshToken: this.encrypt(tokenResponse.refresh_token || ''),
+          allegroTokenExpiresAt: expiresAt,
+          allegroTokenScopes: tokenResponse.scope,
+          allegroOAuthState: null,
+          allegroOAuthCodeVerifier: null,
+        },
+      });
+
+      this.logger.log('OAuth authorization successful', {
+        userId: settings.userId,
+        expiresAt,
+        scopes: tokenResponse.scope,
+      });
+
+      return res.redirect(`${this.getFrontendUrl()}/auth/callback?success=true`);
+    } catch (error: any) {
+      this.logger.error('OAuth callback error', {
+        error: error.message,
+        state,
+      });
+      return res.redirect(
+        `${this.getFrontendUrl()}/auth/callback?error=${encodeURIComponent(error.message)}`,
+      );
+    }
+  }
+
+  /**
+   * Get OAuth authorization status
+   * GET /allegro/oauth/status
+   */
+  @Get('status')
+  @UseGuards(JwtAuthGuard)
+  async getStatus(@Req() req: any) {
+    const userId = String(req.user.id);
+
+    const settings = await this.prisma.userSettings.findUnique({
+      where: { userId },
+      select: {
+        allegroAccessToken: true,
+        allegroTokenExpiresAt: true,
+        allegroTokenScopes: true,
+      },
+    });
+
+    if (!settings?.allegroAccessToken) {
+      return {
+        success: true,
+        data: {
+          authorized: false,
+        },
+      };
+    }
+
+    return {
+      success: true,
+      data: {
+        authorized: true,
+        expiresAt: settings.allegroTokenExpiresAt || undefined,
+        scopes: settings.allegroTokenScopes || undefined,
+      },
+    };
+  }
+
+  /**
+   * Revoke OAuth authorization
+   * POST /allegro/oauth/revoke
+   */
+  @Post('revoke')
+  @UseGuards(JwtAuthGuard)
+  async revoke(@Req() req: any) {
+    const userId = String(req.user.id);
+
+    this.logger.log('Revoking OAuth authorization', { userId });
+
+    await this.prisma.userSettings.update({
+      where: { userId },
+      data: {
+        allegroAccessToken: null,
+        allegroRefreshToken: null,
+        allegroTokenExpiresAt: null,
+        allegroTokenScopes: null,
+        allegroOAuthState: null,
+        allegroOAuthCodeVerifier: null,
+      },
+    });
+
+    this.logger.log('OAuth authorization revoked', { userId });
+
+    return {
+      success: true,
+      message: 'OAuth authorization revoked successfully',
+    };
+  }
+
+  /**
+   * Get frontend URL for redirects
+   */
+  private getFrontendUrl(): string {
+    const nodeEnv = this.configService.get<string>('NODE_ENV') || 'development';
+    const frontendPort = this.configService.get<string>('ALLEGRO_FRONTEND_SERVICE_PORT') || '3410';
+    
+    if (nodeEnv === 'production') {
+      return this.configService.get<string>('FRONTEND_URL') || `https://allegro.statex.cz`;
+    }
+    
+    return `http://localhost:${frontendPort}`;
+  }
+}
+

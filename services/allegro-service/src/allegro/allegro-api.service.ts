@@ -70,11 +70,18 @@ export class AllegroApiService {
 
       return response.data;
     } catch (error: any) {
+      const errorData = error.response?.data || {};
+      // Extract error details for better logging
+      const errorDetails = errorData.errors ? JSON.stringify(errorData.errors, null, 2) : JSON.stringify(errorData, null, 2);
       this.logger.error('Allegro API request failed', {
         method,
         endpoint,
         error: error.message,
         status: error.response?.status,
+        statusText: error.response?.statusText,
+        errorData: errorData,
+        errorDetails: errorDetails,
+        responseHeaders: error.response?.headers,
       });
       throw error;
     }
@@ -87,6 +94,39 @@ export class AllegroApiService {
     const queryString = new URLSearchParams(params).toString();
     const endpoint = `/sale/offers${queryString ? `?${queryString}` : ''}`;
     return this.request('GET', endpoint);
+  }
+
+  /**
+   * Get offers with OAuth token (for user-specific resources)
+   */
+  async getOffersWithOAuthToken(accessToken: string, params?: any) {
+    const queryString = new URLSearchParams(params).toString();
+    const endpoint = `/sale/offers${queryString ? `?${queryString}` : ''}`;
+    const url = `${this.apiUrl}${endpoint}`;
+
+    try {
+      const config = {
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+          'Content-Type': 'application/json',
+          'Accept': 'application/vnd.allegro.public.v1+json',
+        },
+      };
+
+      const response = await firstValueFrom(this.httpService.get(url, config));
+      return response.data;
+    } catch (error: any) {
+      const errorData = error.response?.data || {};
+      this.logger.error('Allegro API request failed with OAuth token', {
+        endpoint,
+        error: error.message,
+        status: error.response?.status,
+        statusText: error.response?.statusText,
+        errorData: errorData,
+        responseHeaders: error.response?.headers,
+      });
+      throw error;
+    }
   }
 
   /**
@@ -110,10 +150,14 @@ export class AllegroApiService {
       const response = await firstValueFrom(this.httpService.get(url, config));
       return response.data;
     } catch (error: any) {
+      const errorData = error.response?.data || {};
       this.logger.error('Allegro API request failed with custom credentials', {
         endpoint,
         error: error.message,
         status: error.response?.status,
+        statusText: error.response?.statusText,
+        errorData: errorData,
+        responseHeaders: error.response?.headers,
       });
       throw error;
     }

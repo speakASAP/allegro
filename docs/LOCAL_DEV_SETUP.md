@@ -181,6 +181,30 @@ Expected output: `Script executed successfully.`
    docker compose up -d
    ```
 
+## OAuth Configuration
+
+To use OAuth for accessing user-specific Allegro resources (like `/sale/offers`), you need to configure the redirect URI:
+
+1. **Set `ALLEGRO_REDIRECT_URI` in `.env`**:
+
+   ```bash
+   ALLEGRO_REDIRECT_URI=http://localhost:3410/auth/callback
+   ```
+
+2. **Configure in Allegro Developer Portal**:
+   - Go to [Allegro Developer Portal](https://developer.allegro.pl/)
+   - Add the redirect URI to your application settings
+   - The URI must match exactly (including protocol and port)
+
+3. **Authorize the Application**:
+   - Go to Settings page in the application
+   - Configure your Allegro Client ID and Client Secret
+   - Click "Authorize with Allegro" button
+   - You'll be redirected to Allegro to grant permissions
+   - After authorization, you'll be redirected back to the application
+
+**Note**: OAuth is required for accessing user-specific resources. The `client_credentials` grant type only works for public endpoints.
+
 ## Troubleshooting
 
 ### Database Connection Fails

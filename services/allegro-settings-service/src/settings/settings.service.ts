@@ -310,4 +310,139 @@ export class SettingsService {
       return { valid: false, message: `Validation failed: ${errorMessage || error.message}` };
     }
   }
+
+  /**
+   * Store Allegro OAuth tokens
+   */
+  async storeAllegroOAuthTokens(
+    userId: string,
+    accessToken: string,
+    refreshToken: string,
+    expiresIn: number,
+    scopes?: string,
+  ): Promise<void> {
+    this.logger.log('Storing Allegro OAuth tokens', { userId, expiresIn, scopes });
+
+    const expiresAt = new Date(Date.now() + expiresIn * 1000);
+
+    await this.prisma.userSettings.upsert({
+      where: { userId },
+      update: {
+        allegroAccessToken: this.encrypt(accessToken),
+        allegroRefreshToken: this.encrypt(refreshToken),
+        allegroTokenExpiresAt: expiresAt,
+        allegroTokenScopes: scopes,
+        // Clear OAuth state and code verifier after successful authorization
+        allegroOAuthState: null,
+        allegroOAuthCodeVerifier: null,
+      },
+      create: {
+        userId,
+        allegroAccessToken: this.encrypt(accessToken),
+        allegroRefreshToken: this.encrypt(refreshToken),
+        allegroTokenExpiresAt: expiresAt,
+        allegroTokenScopes: scopes,
+        supplierConfigs: [],
+        preferences: {},
+      },
+    });
+
+    this.logger.log('Allegro OAuth tokens stored successfully', { userId, expiresAt });
+  }
+
+  /**
+   * Get Allegro OAuth status
+   */
+  async getAllegroOAuthStatus(userId: string): Promise<{ authorized: boolean; expiresAt?: Date; scopes?: string }> {
+    const settings = await this.prisma.userSettings.findUnique({
+      where: { userId },
+      select: {
+        allegroAccessToken: true,
+        allegroTokenExpiresAt: true,
+        allegroTokenScopes: true,
+      },
+    });
+
+    if (!settings?.allegroAccessToken) {
+      return { authorized: false };
+    }
+
+    return {
+      authorized: true,
+      expiresAt: settings.allegroTokenExpiresAt || undefined,
+      scopes: settings.allegroTokenScopes || undefined,
+    };
+  }
+
+  /**
+   * Revoke Allegro OAuth authorization (clear tokens)
+   */
+  async revokeAllegroOAuth(userId: string): Promise<void> {
+    this.logger.log('Revoking Allegro OAuth authorization', { userId });
+
+    await this.prisma.userSettings.update({
+      where: { userId },
+      data: {
+        allegroAccessToken: null,
+        allegroRefreshToken: null,
+        allegroTokenExpiresAt: null,
+        allegroTokenScopes: null,
+        allegroOAuthState: null,
+        allegroOAuthCodeVerifier: null,
+      },
+    });
+
+    this.logger.log('Allegro OAuth authorization revoked', { userId });
+  }
+
+  /**
+   * Store OAuth state and code verifier (for PKCE)
+   */
+  async storeOAuthState(
+    userId: string,
+    state: string,
+    codeVerifier: string,
+  ): Promise<void> {
+    await this.prisma.userSettings.upsert({
+      where: { userId },
+      update: {
+        allegroOAuthState: state,
+        allegroOAuthCodeVerifier: this.encrypt(codeVerifier),
+      },
+      create: {
+        userId,
+        allegroOAuthState: state,
+        allegroOAuthCodeVerifier: this.encrypt(codeVerifier),
+        supplierConfigs: [],
+        preferences: {},
+      },
+    });
+  }
+
+  /**
+   * Get OAuth state and code verifier
+   */
+  async getOAuthState(userId: string): Promise<{ state: string; codeVerifier: string } | null> {
+    const settings = await this.prisma.userSettings.findUnique({
+      where: { userId },
+      select: {
+        allegroOAuthState: true,
+        allegroOAuthCodeVerifier: true,
+      },
+    });
+
+    if (!settings?.allegroOAuthState || !settings?.allegroOAuthCodeVerifier) {
+      return null;
+    }
+
+    try {
+      return {
+        state: settings.allegroOAuthState,
+        codeVerifier: this.decrypt(settings.allegroOAuthCodeVerifier),
+      };
+    } catch (error) {
+      this.logger.error('Failed to decrypt OAuth code verifier', { userId, error: error.message });
+      return null;
+    }
+  }
 }

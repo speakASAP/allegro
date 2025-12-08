@@ -301,5 +301,29 @@ function getPortFromUrl(url: string): number {
   return match ? parseInt(match[1], 10) : parseInt(apiGatewayPort, 10);
 }
 
+// OAuth methods
+export const oauthApi = {
+  /**
+   * Get OAuth authorization status
+   */
+  getStatus: async () => {
+    return api.get('/allegro/oauth/status');
+  },
+
+  /**
+   * Get authorization URL
+   */
+  authorize: async () => {
+    return api.get('/allegro/oauth/authorize');
+  },
+
+  /**
+   * Revoke OAuth authorization
+   */
+  revoke: async () => {
+    return api.post('/allegro/oauth/revoke');
+  },
+};
+
 export default api;
 

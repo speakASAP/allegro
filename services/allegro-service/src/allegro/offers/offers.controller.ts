@@ -51,21 +51,44 @@ export class OffersController {
       const result = await this.offersService.previewOffersFromAllegro(userId);
       return { success: true, data: result };
     } catch (error: any) {
+      const errorStatus = error.response?.status || HttpStatus.INTERNAL_SERVER_ERROR;
+      const errorData = error.response?.data || {};
+      const errorMessage = errorData.error_description || errorData.error || errorData.message || error.message || 'Failed to preview offers from Allegro API';
+      
       this.logger.error('Failed to preview offers', {
         error: error.message,
-        status: error.response?.status,
+        status: errorStatus,
         userId: req.user?.id,
+        allegroError: errorData,
+        responseData: error.response?.data,
       });
+      
+      // Provide more helpful error messages based on status code
+      let userFriendlyMessage = errorMessage;
+      if (errorStatus === 403) {
+        // Allegro API requires OAuth authorization code flow for accessing user's offers
+        // client_credentials grant only works for public endpoints
+        const allegroError = errorData.errors?.[0];
+        if (allegroError?.code === 'AccessDenied') {
+          userFriendlyMessage = 'Access denied: To import offers from Allegro, you need to authorize the application using OAuth. The current API credentials (client_credentials) only provide access to public endpoints, not your personal offers. Please use OAuth authorization code flow to grant access to your Allegro account.';
+        } else {
+          userFriendlyMessage = 'Access denied by Allegro API. Your API credentials may not have the required permissions (scopes) to access offers. To access your offers, you need to authorize the application via OAuth authorization code flow, not just client credentials.';
+        }
+      } else if (errorStatus === 401) {
+        userFriendlyMessage = 'Authentication failed with Allegro API. Please check your API credentials in Settings.';
+      }
+      
       throw new HttpException(
         {
           success: false,
           error: {
             code: 'PREVIEW_ERROR',
-            message: error.response?.data?.error_description || error.response?.data?.error || error.message || 'Failed to preview offers from Allegro API',
-            status: error.response?.status || HttpStatus.INTERNAL_SERVER_ERROR,
+            message: userFriendlyMessage,
+            status: errorStatus,
+            details: errorData,
           },
         },
-        error.response?.status || HttpStatus.INTERNAL_SERVER_ERROR,
+        errorStatus,
       );
     }
   }
@@ -86,9 +109,52 @@ export class OffersController {
 
   @Get('import/sales-center/preview')
   @UseGuards(JwtAuthGuard)
-  async previewOffersFromSalesCenter(): Promise<{ success: boolean; data: any }> {
-    const result = await this.offersService.previewOffersFromSalesCenter();
-    return { success: true, data: result };
+  async previewOffersFromSalesCenter(@Request() req: any): Promise<{ success: boolean; data: any }> {
+    try {
+      this.logger.log('Previewing offers from Allegro Sales Center');
+      const result = await this.offersService.previewOffersFromSalesCenter();
+      return { success: true, data: result };
+    } catch (error: any) {
+      const errorStatus = error.response?.status || HttpStatus.INTERNAL_SERVER_ERROR;
+      const errorData = error.response?.data || {};
+      const errorMessage = errorData.error_description || errorData.error || errorData.message || error.message || 'Failed to preview offers from Allegro Sales Center';
+
+      this.logger.error('Failed to preview offers from Sales Center', {
+        error: error.message,
+        status: errorStatus,
+        userId: req.user?.id,
+        allegroError: errorData,
+        responseData: error.response?.data,
+      });
+
+      // Provide more helpful error messages based on status code
+      let userFriendlyMessage = errorMessage;
+      if (errorStatus === 403) {
+        // Allegro API requires OAuth authorization code flow for accessing user's offers
+        // client_credentials grant only works for public endpoints
+        const allegroError = errorData.errors?.[0];
+        if (allegroError?.code === 'AccessDenied') {
+          userFriendlyMessage = 'Access denied: To import offers from Allegro Sales Center, you need to authorize the application using OAuth. The current API credentials (client_credentials) only provide access to public endpoints, not your personal offers. Please use OAuth authorization code flow to grant access to your Allegro account.';
+        } else {
+          userFriendlyMessage = 'Access denied by Allegro API. Your API credentials may not have the required permissions (scopes) to access offers. To access your offers, you need to authorize the application via OAuth authorization code flow, not just client credentials.';
+        }
+      } else if (errorStatus === 401) {
+        userFriendlyMessage = 'Authentication failed with Allegro API. Please check your API credentials in Settings.';
+      }
+
+      throw new HttpException(
+        {
+          success: false,
+          error: {
+            code: 'PREVIEW_ERROR',
+            message: userFriendlyMessage,
+            status: errorStatus,
+            details: errorData,
+          },
+        },
+        errorStatus,
+      );
+    }
   }
 
   @Post('import/sales-center/approve')

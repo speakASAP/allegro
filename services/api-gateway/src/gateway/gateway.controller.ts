@@ -30,6 +30,15 @@ export class GatewayController {
   }
 
   /**
+   * Route OAuth callback (public, no auth required)
+   */
+  @Get('allegro/oauth/callback')
+  async allegroOAuthCallback(@Req() req: ExpressRequest, @Res() res: ExpressResponse) {
+    const path = req.url.replace('/api/allegro', '');
+    return this.routeRequest('allegro', `/allegro${path}`, req, res);
+  }
+
+  /**
    * Route allegro requests (requires auth)
    */
   @All('allegro/*')

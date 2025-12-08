@@ -6,6 +6,7 @@ import { Injectable } from '@nestjs/common';
 import { PrismaService, LoggerService } from '@allegro/shared';
 import { ConfigService } from '@nestjs/config';
 import { AllegroApiService } from '../allegro-api.service';
+import { AllegroAuthService } from '../allegro-auth.service';
 import * as crypto from 'crypto';
 
 @Injectable()
@@ -18,6 +19,7 @@ export class OffersService {
     private readonly logger: LoggerService,
     private readonly allegroApi: AllegroApiService,
     private readonly configService: ConfigService,
+    private readonly allegroAuth: AllegroAuthService,
   ) {
     this.encryptionKey = this.configService.get<string>('ENCRYPTION_KEY') || 'default-encryption-key-change-in-production-32chars!!';
   }
@@ -221,42 +223,59 @@ export class OffersService {
     const limit = 100;
     const previewOffers: any[] = [];
 
-    // Get user settings to check for user-specific credentials
-    let userClientId: string | null = null;
-    let userClientSecret: string | null = null;
-
-    try {
-      const settings = await this.prisma.userSettings.findUnique({
-        where: { userId },
-      });
-
-      if (settings?.allegroClientId && settings?.allegroClientSecret) {
-        userClientId = settings.allegroClientId;
-        try {
-          userClientSecret = this.decrypt(settings.allegroClientSecret);
-          this.logger.log('Using user-specific Allegro credentials', { userId });
-        } catch (error) {
-          this.logger.warn('Failed to decrypt user credentials, falling back to global credentials', { userId });
-        }
-      }
-    } catch (error) {
-      this.logger.warn('Failed to get user settings, using global credentials', { userId, error: error.message });
-    }
-
-    // Get first batch for preview (limit to 100 items for preview)
+    // Try to use OAuth token first (for accessing user-specific resources)
     let response;
-    if (userClientId && userClientSecret) {
-      // Use user-specific credentials
-      response = await this.allegroApi.getOffersWithCredentials(userClientId, userClientSecret, {
+    try {
+      const oauthToken = await this.allegroAuth.getUserAccessToken(userId);
+      this.logger.log('Using OAuth token for Allegro API', { userId });
+      // Use OAuth token directly in API call
+      response = await this.allegroApi.getOffersWithOAuthToken(oauthToken, {
         limit,
         offset,
       });
-    } else {
-      // Use global credentials
-      response = await this.allegroApi.getOffers({
-        limit,
-        offset,
+    } catch (oauthError: any) {
+      // OAuth not available or failed, fall back to client credentials
+      this.logger.debug('OAuth token not available, falling back to client credentials', {
+        userId,
+        error: oauthError.message,
       });
+
+      // Get user settings to check for user-specific credentials
+      let userClientId: string | null = null;
+      let userClientSecret: string | null = null;
+
+      try {
+        const settings = await this.prisma.userSettings.findUnique({
+          where: { userId },
+        });
+
+        if (settings?.allegroClientId && settings?.allegroClientSecret) {
+          userClientId = settings.allegroClientId;
+          try {
+            userClientSecret = this.decrypt(settings.allegroClientSecret);
+            this.logger.log('Using user-specific Allegro credentials', { userId });
+          } catch (error) {
+            this.logger.warn('Failed to decrypt user credentials, falling back to global credentials', { userId });
+          }
+        }
+      } catch (error) {
+        this.logger.warn('Failed to get user settings, using global credentials', { userId, error: error.message });
+      }
+
+      // Get first batch for preview (limit to 100 items for preview)
+      if (userClientId && userClientSecret) {
+        // Use user-specific credentials
+        response = await this.allegroApi.getOffersWithCredentials(userClientId, userClientSecret, {
+          limit,
+          offset,
+        });
+      } else {
+        // Use global credentials
+        response = await this.allegroApi.getOffers({
+          limit,
+          offset,
+        });
+      }
     }
 
     const offers = response.offers || [];

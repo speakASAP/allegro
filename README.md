@@ -121,10 +121,14 @@ All ports are configured in `allegro/.env`. The values shown are defaults:
 
 - `ALLEGRO_CLIENT_ID` - Allegro API client ID
 - `ALLEGRO_CLIENT_SECRET` - Allegro API client secret
-- `ALLEGRO_REDIRECT_URI` - OAuth redirect URI for authentication
+- `ALLEGRO_REDIRECT_URI` - OAuth redirect URI for authentication (e.g., `http://localhost:3410/auth/callback` for dev, `https://allegro.statex.cz/auth/callback` for prod)
+- `ALLEGRO_OAUTH_AUTHORIZE_URL` - Allegro OAuth authorization URL (default: `https://allegro.pl/auth/oauth/authorize`)
+- `ALLEGRO_OAUTH_TOKEN_URL` - Allegro OAuth token URL (default: `https://allegro.pl/auth/oauth/token`)
 - `ALLEGRO_API_URL` - Allegro API URL (<https://api.allegro.pl>)
 - `ALLEGRO_API_SANDBOX_URL` - Allegro Sandbox API URL
 - `ALLEGRO_USE_SANDBOX` - Use sandbox environment (false)
+
+**Note**: To access user-specific resources like `/sale/offers`, you must use OAuth Authorization Code Flow. The `client_credentials` grant type only provides access to public endpoints. Users need to authorize the application via OAuth in the Settings page.
 
 ### Import Configuration
 
