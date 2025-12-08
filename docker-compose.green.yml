@@ -1,5 +1,5 @@
 services:
-  api-gateway:
+  backend:
     build:
       context: .
       dockerfile: services/api-gateway/Dockerfile
@@ -136,7 +136,7 @@ services:
       retries: 2
       start_period: 20s
 
-  allegro-frontend-service:
+  frontend:
     build:
       context: .
       dockerfile: services/allegro-frontend-service/Dockerfile
