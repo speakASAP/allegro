@@ -39,10 +39,11 @@ export const authService = {
 
   async login(data: LoginData): Promise<AuthResponse> {
     console.log('[Auth Service] login called', { email: data.email });
+    const baseURL = api.defaults.baseURL || '';
     console.log('[Auth Service] login - API instance:', {
-      baseURL: (api as any).defaults?.baseURL,
+      baseURL: baseURL,
       url: '/auth/login',
-      expectedFullUrl: `${(api as any).defaults?.baseURL || ''}/auth/login`,
+      expectedFullUrl: `${baseURL}/auth/login`,
     });
     const response = await api.post('/auth/login', data);
     console.log('[Auth Service] login success', { status: response.status });
