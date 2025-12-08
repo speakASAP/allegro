@@ -3,8 +3,12 @@ FROM node:20-alpine AS builder
 
 WORKDIR /app
 
-# Copy shared package and build it first
+# Copy shared package and prisma schema
 COPY shared/ ./shared/
+COPY prisma ./shared/prisma
+WORKDIR /app/shared/prisma
+# Generate Prisma client into shared/node_modules/.prisma/client
+RUN npx prisma@5.7.1 generate
 WORKDIR /app/shared
 RUN npm ci && npm run build
 
@@ -13,16 +17,12 @@ WORKDIR /app
 COPY services/import-service/package*.json ./services/import-service/
 COPY services/import-service/tsconfig.json ./services/import-service/
 COPY services/import-service/src ./services/import-service/src
-COPY prisma ./prisma
 COPY tsconfig.json ./
 COPY package*.json ./
 
-# Install dependencies, generate Prisma client, and build
+# Install dependencies and build
 WORKDIR /app/services/import-service
 RUN npm ci
-WORKDIR /app
-RUN npx prisma@5.7.1 generate
-WORKDIR /app/services/import-service
 RUN npm run build
 
 # Production stage
@@ -30,11 +30,8 @@ FROM node:20-alpine
 
 WORKDIR /app
 
-# Copy entire shared package (needed for file: reference to work)
+# Copy entire shared package (needed for file: reference to work, includes generated Prisma client)
 COPY --from=builder /app/shared ./shared
-
-# Copy Prisma schema (needed for Prisma client initialization)
-COPY --from=builder /app/prisma ./prisma
 
 # Copy service files maintaining directory structure for file: references
 COPY --from=builder /app/services/import-service ./services/import-service
