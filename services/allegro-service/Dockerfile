@@ -3,14 +3,17 @@ FROM node:20-alpine AS builder
 
 WORKDIR /app
 
-# Copy shared package and prisma schema
+# Copy shared package and install dependencies first
 COPY shared/ ./shared/
+WORKDIR /app/shared
+RUN npm ci
+# Copy prisma schema and generate Prisma client into shared/node_modules/.prisma/client
+WORKDIR /app
 COPY prisma ./shared/prisma
 WORKDIR /app/shared/prisma
-# Generate Prisma client into shared/node_modules/.prisma/client
 RUN npx prisma@5.7.1 generate
 WORKDIR /app/shared
-RUN npm ci && npm run build
+RUN npm run build
 
 # Copy service files
 WORKDIR /app
