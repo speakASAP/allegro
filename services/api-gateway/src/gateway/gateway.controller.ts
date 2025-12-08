@@ -69,7 +69,14 @@ export class GatewayController {
 
   /**
    * Route auth requests (no auth required for register/login)
+   * Match both /api/auth and /api/auth/*
    */
+  @All('auth')
+  async authBaseRoute(@Req() req: ExpressRequest, @Res() res: ExpressResponse) {
+    const path = req.url.replace('/api/auth', '') || '';
+    return this.routeRequest('auth', `/auth${path}`, req, res);
+  }
+
   @All('auth/*')
   async authRoute(@Req() req: ExpressRequest, @Res() res: ExpressResponse) {
     const path = req.url.replace('/api/auth', '');
@@ -78,9 +85,18 @@ export class GatewayController {
 
   /**
    * Catch-all for /api/ root - return helpful error
+   * This must be last to not interfere with specific routes
    */
   @All()
   async apiRoot(@Req() req: ExpressRequest, @Res() res: ExpressResponse) {
+    // Log the request for debugging
+    this.sharedLogger.warn(`[API Root] Unmatched request: ${req.method} ${req.url}`, {
+      method: req.method,
+      url: req.url,
+      originalUrl: req.originalUrl,
+      path: req.path,
+    });
+    
     res.status(404).json({
       success: false,
       error: {
@@ -88,6 +104,7 @@ export class GatewayController {
         message: `Cannot ${req.method} ${req.url}. Available endpoints: /api/auth/*, /api/allegro/*, /api/import/*, /api/settings/*`,
       },
       path: req.url,
+      originalUrl: req.originalUrl,
       timestamp: new Date().toISOString(),
     });
   }
