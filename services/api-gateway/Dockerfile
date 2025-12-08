@@ -32,6 +32,9 @@ RUN npm run build
 # Production stage
 FROM node:20-alpine
 
+# Install OpenSSL for Prisma query engine
+RUN apk add --no-cache openssl1.1-compat || apk add --no-cache openssl
+
 WORKDIR /app
 
 # Copy entire shared package (needed for file: reference to work, includes generated Prisma client)
