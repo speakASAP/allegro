@@ -76,7 +76,7 @@ RUN --mount=type=cache,target=/root/.npm \
 COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
 
 # Copy compiled code from builder (NO source code, NO dev deps)
-COPY --from=builder /app/services/import-service/dist ./dist
+COPY --from=builder /app/services/import-service/dist ./services/import-service/dist
 COPY --from=builder /app/shared/dist ./shared/dist
 COPY --from=builder /app/shared/package.json ./shared/package.json
 
@@ -88,13 +88,11 @@ RUN --mount=type=cache,target=/root/.npm \
     (sleep 10 && npm install --omit=dev --fetch-retries=5 --fetch-retry-mintimeout=20000 --fetch-retry-maxtimeout=120000) || \
     (sleep 20 && npm install --omit=dev --fetch-retries=5 --fetch-retry-mintimeout=20000 --fetch-retry-maxtimeout=120000)
 
-WORKDIR /app
-
 # Set NODE_PATH for module resolution
 ENV NODE_PATH=/app/shared/node_modules:/app/node_modules
 
 # Expose port
 EXPOSE 3406
 
-# Start service
+# Start service from service directory where node_modules are
 CMD ["node", "dist/main.js"]
