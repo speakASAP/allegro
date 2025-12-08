@@ -205,21 +205,13 @@ api.interceptors.response.use(
 // Helper functions
 function getServiceNameFromUrl(url: string): string {
   const apiGatewayPort = process.env.API_GATEWAY_PORT || '3411';
-  const productServicePort = process.env.PRODUCT_SERVICE_PORT || '3402';
   const allegroServicePort = process.env.ALLEGRO_SERVICE_PORT || '3403';
-  const syncServicePort = process.env.SYNC_SERVICE_PORT || '3404';
-  const webhookServicePort = process.env.WEBHOOK_SERVICE_PORT || '3405';
   const importServicePort = process.env.IMPORT_SERVICE_PORT || '3406';
-  const schedulerServicePort = process.env.SCHEDULER_SERVICE_PORT || '3407';
   const settingsServicePort = process.env.ALLEGRO_SETTINGS_SERVICE_PORT || '3408';
   
   if (url.includes(`:${apiGatewayPort}`)) return 'API Gateway';
-  if (url.includes(`:${productServicePort}`)) return 'Product Service';
   if (url.includes(`:${allegroServicePort}`)) return 'Allegro Service';
-  if (url.includes(`:${syncServicePort}`)) return 'Sync Service';
-  if (url.includes(`:${webhookServicePort}`)) return 'Webhook Service';
   if (url.includes(`:${importServicePort}`)) return 'Import Service';
-  if (url.includes(`:${schedulerServicePort}`)) return 'Scheduler Service';
   if (url.includes(`:${settingsServicePort}`)) return 'Settings Service';
   return 'Unknown Service';
 }

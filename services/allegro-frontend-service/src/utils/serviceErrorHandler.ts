@@ -25,20 +25,6 @@ const SERVICE_MAP: Record<string, ServiceErrorInfo> = {
     startCommand: 'cd services/api-gateway && npm run start:dev',
     description: 'Routes requests to backend services',
   },
-  '/sync/jobs': {
-    serviceName: 'API Gateway',
-    servicePort: API_GATEWAY_PORT,
-    servicePath: 'services/api-gateway',
-    startCommand: 'cd services/api-gateway && npm run start:dev',
-    description: 'Routes requests to backend services',
-  },
-  '/products': {
-    serviceName: 'API Gateway',
-    servicePort: API_GATEWAY_PORT,
-    servicePath: 'services/api-gateway',
-    startCommand: 'cd services/api-gateway && npm run start:dev',
-    description: 'Routes requests to backend services',
-  },
   '/allegro': {
     serviceName: 'API Gateway',
     servicePort: API_GATEWAY_PORT,
@@ -47,13 +33,6 @@ const SERVICE_MAP: Record<string, ServiceErrorInfo> = {
     description: 'Routes requests to backend services',
   },
   '/import': {
-    serviceName: 'API Gateway',
-    servicePort: API_GATEWAY_PORT,
-    servicePath: 'services/api-gateway',
-    startCommand: 'cd services/api-gateway && npm run start:dev',
-    description: 'Routes requests to backend services',
-  },
-  '/webhooks': {
     serviceName: 'API Gateway',
     servicePort: API_GATEWAY_PORT,
     servicePath: 'services/api-gateway',

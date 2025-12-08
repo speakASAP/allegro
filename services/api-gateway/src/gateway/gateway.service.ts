@@ -39,12 +39,8 @@ export class GatewayService {
     };
 
     this.serviceUrls = {
-      products: getServiceUrl('PRODUCT_SERVICE_URL', process.env.PRODUCT_SERVICE_PORT || '3402'),
       allegro: getServiceUrl('ALLEGRO_SERVICE_URL', process.env.ALLEGRO_SERVICE_PORT || '3403'),
-      sync: getServiceUrl('SYNC_SERVICE_URL', process.env.SYNC_SERVICE_PORT || '3404'),
-      webhooks: this.configService.get<string>('WEBHOOK_SERVICE_URL') || this.throwConfigError('WEBHOOK_SERVICE_URL'),
       import: getServiceUrl('IMPORT_SERVICE_URL', process.env.IMPORT_SERVICE_PORT || '3406'),
-      scheduler: this.configService.get<string>('SCHEDULER_SERVICE_URL') || this.throwConfigError('SCHEDULER_SERVICE_URL'),
       settings: getServiceUrl('SETTINGS_SERVICE_PORT', process.env.ALLEGRO_SETTINGS_SERVICE_PORT || '3408'),
       auth: this.configService.get<string>('AUTH_SERVICE_URL') || this.throwConfigError('AUTH_SERVICE_URL'),
     };

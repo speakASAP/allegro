@@ -1,100 +1,52 @@
-# Builder stage - dev deps only for building, not in final image
-FROM node:lts-slim AS builder
-
-# Install build dependencies
-RUN apt-get update -y && apt-get install -y openssl libssl-dev curl && rm -rf /var/lib/apt/lists/*
+# Multi-stage build for Settings Service
+FROM node:20-alpine AS builder
 
 WORKDIR /app
 
-# Copy package files for better caching
-COPY package.json package-lock.json* ./
-COPY shared/package.json shared/package-lock.json* ./shared/
-COPY services/allegro-settings-service/package.json ./services/allegro-settings-service/
-
-# Install all dependencies (including dev) in builder only
-RUN --mount=type=cache,target=/root/.npm \
-    npm ci --fetch-retries=5 --fetch-retry-mintimeout=20000 --fetch-retry-maxtimeout=120000 || \
-    (sleep 10 && npm ci --fetch-retries=5 --fetch-retry-mintimeout=20000 --fetch-retry-maxtimeout=120000) || \
-    (sleep 20 && npm ci --fetch-retries=5 --fetch-retry-mintimeout=20000 --fetch-retry-maxtimeout=120000)
-
-# Install shared dependencies
+# Copy shared package and build it first
+COPY shared/ ./shared/
 WORKDIR /app/shared
-RUN --mount=type=cache,target=/root/.npm \
-    npm ci --legacy-peer-deps --fetch-retries=5 --fetch-retry-mintimeout=20000 --fetch-retry-maxtimeout=120000 || \
-    (sleep 10 && npm ci --legacy-peer-deps --fetch-retries=5 --fetch-retry-mintimeout=20000 --fetch-retry-maxtimeout=120000) || \
-    (sleep 20 && npm ci --legacy-peer-deps --fetch-retries=5 --fetch-retry-mintimeout=20000 --fetch-retry-maxtimeout=120000)
+RUN npm ci && npm run build
 
-# Copy source code
+# Copy service files
 WORKDIR /app
-COPY shared ./shared
-COPY services/allegro-settings-service ./services/allegro-settings-service
+COPY services/allegro-settings-service/package*.json ./services/allegro-settings-service/
+COPY services/allegro-settings-service/tsconfig.json ./services/allegro-settings-service/
+COPY services/allegro-settings-service/src ./services/allegro-settings-service/src
 COPY prisma ./prisma
 COPY tsconfig.json ./
+COPY package*.json ./
 
-# Generate Prisma client once in root node_modules
-RUN ./node_modules/.bin/prisma generate --schema=./prisma/schema.prisma
-
-# Build shared module
-WORKDIR /app/shared
-RUN npm run build
-
-# Install service dev dependencies and build
+# Install dependencies, generate Prisma client, and build
 WORKDIR /app/services/allegro-settings-service
-RUN --mount=type=cache,target=/root/.npm \
-    npm ci --include=dev --fetch-retries=5 --fetch-retry-mintimeout=20000 --fetch-retry-maxtimeout=120000 || \
-    npm install --include=dev --fetch-retries=5 --fetch-retry-mintimeout=20000 --fetch-retry-maxtimeout=120000
+RUN npm ci
+WORKDIR /app
+RUN npx prisma generate
+WORKDIR /app/services/allegro-settings-service
 RUN npm run build
-RUN cp -r ../../shared/dist ./dist/shared || true
 
-# Production stage - NO dev dependencies
-FROM node:lts-slim
-
-# Install runtime dependencies only
-RUN apt-get update -y && apt-get install -y openssl curl && rm -rf /var/lib/apt/lists/*
+# Production stage
+FROM node:20-alpine
 
 WORKDIR /app
 
-# Copy package files
-COPY package.json package-lock.json* ./
-COPY shared/package.json shared/package-lock.json* ./shared/
-COPY services/allegro-settings-service/package.json ./services/allegro-settings-service/
-
-# Install production dependencies only
-RUN --mount=type=cache,target=/root/.npm \
-    npm ci --omit=dev --fetch-retries=5 --fetch-retry-mintimeout=20000 --fetch-retry-maxtimeout=120000 || \
-    (sleep 10 && npm ci --omit=dev --fetch-retries=5 --fetch-retry-mintimeout=20000 --fetch-retry-maxtimeout=120000) || \
-    (sleep 20 && npm ci --omit=dev --fetch-retries=5 --fetch-retry-mintimeout=20000 --fetch-retry-maxtimeout=120000)
-
-# Install shared production dependencies
-WORKDIR /app/shared
-RUN --mount=type=cache,target=/root/.npm \
-    npm ci --omit=dev --legacy-peer-deps --fetch-retries=5 --fetch-retry-mintimeout=20000 --fetch-retry-maxtimeout=120000 || \
-    (sleep 10 && npm ci --omit=dev --legacy-peer-deps --fetch-retries=5 --fetch-retry-mintimeout=20000 --fetch-retry-maxtimeout=120000) || \
-    (sleep 20 && npm ci --omit=dev --legacy-peer-deps --fetch-retries=5 --fetch-retry-mintimeout=20000 --fetch-retry-maxtimeout=120000)
-
-# Copy Prisma client from builder
-WORKDIR /app
-COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
-
-# Copy shared directory with dist, package.json, and node_modules
+# Copy built shared package
 COPY --from=builder /app/shared/dist ./shared/dist
-COPY --from=builder /app/shared/package.json ./shared/package.json
+COPY --from=builder /app/shared/package*.json ./shared/
 COPY --from=builder /app/shared/node_modules ./shared/node_modules
 
-# Install service dependencies to resolve file:../../shared reference
-WORKDIR /app/services/allegro-settings-service
-COPY --from=builder /app/services/allegro-settings-service/package.json ./package.json
+# Copy built service
 COPY --from=builder /app/services/allegro-settings-service/dist ./dist
-RUN --mount=type=cache,target=/root/.npm \
-    npm install --omit=dev --fetch-retries=5 --fetch-retry-mintimeout=20000 --fetch-retry-maxtimeout=120000 || \
-    (sleep 10 && npm install --omit=dev --fetch-retries=5 --fetch-retry-mintimeout=20000 --fetch-retry-maxtimeout=120000) || \
-    (sleep 20 && npm install --omit=dev --fetch-retries=5 --fetch-retry-mintimeout=20000 --fetch-retry-maxtimeout=120000)
+COPY --from=builder /app/services/allegro-settings-service/package*.json ./
+COPY --from=builder /app/services/allegro-settings-service/node_modules ./node_modules
 
-# Set NODE_PATH for module resolution
-ENV NODE_PATH=/app/shared/node_modules:/app/node_modules
+# Copy root package.json for shared dependencies
+COPY --from=builder /app/package*.json ./
 
-# Expose port
 EXPOSE 3408
 
-# Start service from service directory where node_modules are
+HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
+  CMD node -e "require('http').get('http://localhost:3408/health', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"
+
 CMD ["node", "dist/main.js"]
+

@@ -30,16 +30,6 @@ export class GatewayController {
   }
 
   /**
-   * Route product requests
-   * Handle both /api/products and /api/products/*
-   */
-  @All(['products', 'products/*'])
-  async productsRoute(@Req() req: ExpressRequest, @Res() res: ExpressResponse) {
-    const path = req.url.replace('/api/products', '') || '';
-    return this.routeRequest('products', `/products${path}`, req, res);
-  }
-
-  /**
    * Route allegro requests (requires auth)
    */
   @All('allegro/*')
@@ -47,25 +37,6 @@ export class GatewayController {
   async allegroRoute(@Req() req: ExpressRequest, @Res() res: ExpressResponse) {
     const path = req.url.replace('/api/allegro', '');
     return this.routeRequest('allegro', `/allegro${path}`, req, res);
-  }
-
-  /**
-   * Route sync requests (requires auth)
-   */
-  @All('sync/*')
-  @UseGuards(JwtAuthGuard)
-  async syncRoute(@Req() req: ExpressRequest, @Res() res: ExpressResponse) {
-    const path = req.url.replace('/api/sync', '');
-    return this.routeRequest('sync', `/sync${path}`, req, res);
-  }
-
-  /**
-   * Route webhook requests (no auth - webhook secret validation)
-   */
-  @All('webhooks/*')
-  async webhooksRoute(@Req() req: ExpressRequest, @Res() res: ExpressResponse) {
-    const path = req.url.replace('/api/webhooks', '');
-    return this.routeRequest('webhooks', `/webhooks${path}`, req, res);
   }
 
   /**

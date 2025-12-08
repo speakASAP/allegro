@@ -51,8 +51,6 @@ const ImportJobsPage: React.FC = () => {
   const [showExportPreview, setShowExportPreview] = useState(false);
   const [exportPreviewData, setExportPreviewData] = useState<any[]>([]);
   const [selectedExportIds, setSelectedExportIds] = useState<Set<string>>(new Set());
-  const [exportType, setExportType] = useState<'products' | 'offers' | null>(null);
-  const [loadingExportProducts, setLoadingExportProducts] = useState(false);
   const [loadingExportOffers, setLoadingExportOffers] = useState(false);
   const [processingExport, setProcessingExport] = useState(false);
 
@@ -193,18 +191,12 @@ const ImportJobsPage: React.FC = () => {
     }
   };
 
-  const handlePreviewExport = async (type: 'products' | 'offers') => {
-    if (type === 'products') {
-      setLoadingExportProducts(true);
-    } else {
-      setLoadingExportOffers(true);
-    }
+  const handlePreviewExport = async () => {
+    setLoadingExportOffers(true);
     setError(null);
-    setExportType(type);
 
     try {
-      const endpoint = type === 'products' ? '/products' : '/allegro/offers';
-      const response = await api.get(`${endpoint}?limit=1000`);
+      const response = await api.get('/allegro/offers?limit=1000');
       
       if (response.data.success) {
         const items = response.data.data.items || [];
@@ -224,11 +216,7 @@ const ImportJobsPage: React.FC = () => {
         setError('Failed to preview export');
       }
     } finally {
-      if (type === 'products') {
-        setLoadingExportProducts(false);
-      } else {
-        setLoadingExportOffers(false);
-      }
+      setLoadingExportOffers(false);
     }
   };
 
@@ -242,27 +230,21 @@ const ImportJobsPage: React.FC = () => {
     setError(null);
 
     try {
-      const endpoint = exportType === 'products'
-        ? '/products/export/csv'
-        : '/allegro/offers/export/csv';
-      
-      const response = await api.get(endpoint, {
+      const response = await api.get('/allegro/offers/export/csv', {
         responseType: 'blob',
       });
       
       const url = window.URL.createObjectURL(new Blob([response.data]));
       const link = document.createElement('a');
       link.href = url;
-      const filename = exportType === 'products'
-        ? `products_${new Date().toISOString().split('T')[0]}.csv`
-        : `offers_${new Date().toISOString().split('T')[0]}.csv`;
+      const filename = `offers_${new Date().toISOString().split('T')[0]}.csv`;
       link.setAttribute('download', filename);
       document.body.appendChild(link);
       link.click();
       link.remove();
       window.URL.revokeObjectURL(url);
       
-      setSuccess(`${exportType === 'products' ? 'Products' : 'Offers'} exported successfully`);
+      setSuccess('Offers exported successfully');
       setShowExportPreview(false);
       setExportPreviewData([]);
       setSelectedExportIds(new Set());
@@ -356,16 +338,8 @@ const ImportJobsPage: React.FC = () => {
           </div>
           <div className="flex space-x-2">
             <Button
-              onClick={() => handlePreviewExport('products')}
-              disabled={loadingExportProducts || loadingExportOffers || processingExport}
-              variant="secondary"
-              size="small"
-            >
-              {loadingExportProducts ? 'Loading...' : '📤 Export Products'}
-            </Button>
-            <Button
-              onClick={() => handlePreviewExport('offers')}
-              disabled={loadingExportProducts || loadingExportOffers || processingExport}
+              onClick={handlePreviewExport}
+              disabled={loadingExportOffers || processingExport}
               variant="secondary"
               size="small"
             >
@@ -523,7 +497,7 @@ const ImportJobsPage: React.FC = () => {
           setExportPreviewData([]);
           setSelectedExportIds(new Set());
         }}
-        title={`Review Export - ${exportType === 'products' ? 'Products' : 'Offers'}`}
+        title="Review Export - Offers"
         size="xlarge"
       >
         <div className="space-y-4">
@@ -553,21 +527,10 @@ const ImportJobsPage: React.FC = () => {
                       className="rounded"
                     />
                   </th>
-                  {exportType === 'products' ? (
-                    <>
-                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Code</th>
-                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Name</th>
-                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Stock</th>
-                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Price</th>
-                    </>
-                  ) : (
-                    <>
-                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Title</th>
-                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Price</th>
-                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Stock</th>
-                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
-                    </>
-                  )}
+                  <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Title</th>
+                  <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Price</th>
+                  <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Stock</th>
+                  <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
@@ -583,21 +546,10 @@ const ImportJobsPage: React.FC = () => {
                           className="rounded"
                         />
                       </td>
-                      {exportType === 'products' ? (
-                        <>
-                          <td className="px-4 py-2 text-sm text-gray-900">{item.code}</td>
-                          <td className="px-4 py-2 text-sm text-gray-900">{item.name}</td>
-                          <td className="px-4 py-2 text-sm text-gray-900">{item.stockQuantity || 0}</td>
-                          <td className="px-4 py-2 text-sm text-gray-900">{item.sellingPrice || '-'}</td>
-                        </>
-                      ) : (
-                        <>
-                          <td className="px-4 py-2 text-sm text-gray-900">{item.title}</td>
-                          <td className="px-4 py-2 text-sm text-gray-900">{item.price} {item.currency || 'PLN'}</td>
-                          <td className="px-4 py-2 text-sm text-gray-900">{item.stockQuantity || 0}</td>
-                          <td className="px-4 py-2 text-sm text-gray-900">{item.status}</td>
-                        </>
-                      )}
+                      <td className="px-4 py-2 text-sm text-gray-900">{item.title}</td>
+                      <td className="px-4 py-2 text-sm text-gray-900">{item.price} {item.currency || 'PLN'}</td>
+                      <td className="px-4 py-2 text-sm text-gray-900">{item.stockQuantity || 0}</td>
+                      <td className="px-4 py-2 text-sm text-gray-900">{item.status}</td>
                     </tr>
                   );
                 })}

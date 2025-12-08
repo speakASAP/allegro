@@ -8,24 +8,18 @@ This system provides complete automation for:
 
 - Importing existing Allegro offers into our database
 - Importing products from BizBox CSV files, transforming to Allegro format, and publishing
-- Bidirectional synchronization between our database and Allegro
-- Polling events from Allegro API (orders, stock changes, offer updates)
-- Running scheduled sync jobs for periodic updates
+- Managing Allegro offers, orders, and categories
 - Integrating with external shared microservices (database, logging, auth, notifications)
 
 ## Architecture
 
-The system consists of 9 microservices:
+The system consists of 5 microservices:
 
 1. **API Gateway** (Port ${API_GATEWAY_PORT:-3411}) - Request routing and authentication
-2. **Product Service** (Port ${PRODUCT_SERVICE_PORT:-3402}) - Product catalog management
-3. **Allegro Service** (Port ${ALLEGRO_SERVICE_PORT:-3403}) - Allegro API integration
-4. **Sync Service** (Port ${SYNC_SERVICE_PORT:-3404}) - Bidirectional synchronization
-5. **Webhook Service** (Port ${WEBHOOK_SERVICE_PORT:-3405}) - Allegro event polling and processing
-6. **Import Service** (Port ${IMPORT_SERVICE_PORT:-3406}) - CSV import and transformation
-7. **Scheduler Service** (Port ${SCHEDULER_SERVICE_PORT:-3407}) - Scheduled cron jobs
-8. **Settings Service** (Port ${ALLEGRO_SETTINGS_SERVICE_PORT:-3408}) - User settings and API key management
-9. **Frontend Service** (Port ${ALLEGRO_FRONTEND_SERVICE_PORT:-3410}) - Web interface for users
+2. **Allegro Service** (Port ${ALLEGRO_SERVICE_PORT:-3403}) - Allegro API integration
+3. **Import Service** (Port ${IMPORT_SERVICE_PORT:-3406}) - CSV import and transformation
+4. **Settings Service** (Port ${ALLEGRO_SETTINGS_SERVICE_PORT:-3408}) - User settings and API key management
+5. **Frontend Service** (Port ${ALLEGRO_FRONTEND_SERVICE_PORT:-3410}) - Web interface for users
 
 **Note**: All ports are configured in `allegro/.env`. The values shown are defaults.
 
@@ -38,12 +32,8 @@ All services use the same host and container ports for consistency:
 | Service | Host Port | Container Port | .env Variable | Description |
 |---------|-----------|----------------|---------------|-------------|
 | **API Gateway** | `${API_GATEWAY_PORT:-3411}` | `${API_GATEWAY_PORT:-3411}` | `API_GATEWAY_PORT` (allegro/.env) | Request routing and authentication |
-| **Product Service** | `${PRODUCT_SERVICE_PORT:-3402}` | `${PRODUCT_SERVICE_PORT:-3402}` | `PRODUCT_SERVICE_PORT` (allegro/.env) | Product catalog management |
 | **Allegro Service** | `${ALLEGRO_SERVICE_PORT:-3403}` | `${ALLEGRO_SERVICE_PORT:-3403}` | `ALLEGRO_SERVICE_PORT` (allegro/.env) | Allegro API integration |
-| **Sync Service** | `${SYNC_SERVICE_PORT:-3404}` | `${SYNC_SERVICE_PORT:-3404}` | `SYNC_SERVICE_PORT` (allegro/.env) | Bidirectional synchronization |
-| **Webhook Service** | `${WEBHOOK_SERVICE_PORT:-3405}` | `${WEBHOOK_SERVICE_PORT:-3405}` | `WEBHOOK_SERVICE_PORT` (allegro/.env) | Allegro event polling and processing |
 | **Import Service** | `${IMPORT_SERVICE_PORT:-3406}` | `${IMPORT_SERVICE_PORT:-3406}` | `IMPORT_SERVICE_PORT` (allegro/.env) | CSV import and transformation |
-| **Scheduler Service** | `${SCHEDULER_SERVICE_PORT:-3407}` | `${SCHEDULER_SERVICE_PORT:-3407}` | `SCHEDULER_SERVICE_PORT` (allegro/.env) | Scheduled cron jobs |
 | **Settings Service** | `${ALLEGRO_SETTINGS_SERVICE_PORT:-3408}` | `${ALLEGRO_SETTINGS_SERVICE_PORT:-3408}` | `ALLEGRO_SETTINGS_SERVICE_PORT` (allegro/.env) | User settings and API key management |
 | **Frontend Service** | `${ALLEGRO_FRONTEND_SERVICE_PORT:-3410}` | `${ALLEGRO_FRONTEND_SERVICE_PORT:-3410}` | `ALLEGRO_FRONTEND_SERVICE_PORT` (allegro/.env) | Web interface for users |
 
@@ -122,12 +112,8 @@ Create a `.env` file in the root directory with the following variables:
 All ports are configured in `allegro/.env`. The values shown are defaults:
 
 - `API_GATEWAY_PORT` - API Gateway port (default: 3411)
-- `PRODUCT_SERVICE_PORT` - Product Service port (default: 3402)
 - `ALLEGRO_SERVICE_PORT` - Allegro Service port (default: 3403)
-- `SYNC_SERVICE_PORT` - Sync Service port (default: 3404)
-- `WEBHOOK_SERVICE_PORT` - Webhook Service port (default: 3405)
 - `IMPORT_SERVICE_PORT` - Import Service port (default: 3406)
-- `SCHEDULER_SERVICE_PORT` - Scheduler Service port (default: 3407)
 - `ALLEGRO_SETTINGS_SERVICE_PORT` - Settings Service port (default: 3408)
 - `ALLEGRO_FRONTEND_SERVICE_PORT` - Frontend Service port (default: 3410)
 
@@ -139,14 +125,6 @@ All ports are configured in `allegro/.env`. The values shown are defaults:
 - `ALLEGRO_API_URL` - Allegro API URL (<https://api.allegro.pl>)
 - `ALLEGRO_API_SANDBOX_URL` - Allegro Sandbox API URL
 - `ALLEGRO_USE_SANDBOX` - Use sandbox environment (false)
-
-### Sync Configuration
-
-- `SYNC_DB_TO_ALLEGRO_INTERVAL` - Cron expression for DB→Allegro sync (`*/15 * * * *`)
-- `SYNC_ALLEGRO_TO_DB_INTERVAL` - Cron expression for Allegro→DB sync (`*/30 * * * *`)
-- `SYNC_INVENTORY_INTERVAL` - Cron expression for inventory sync (`*/10 * * * *`)
-- `SYNC_BATCH_SIZE` - Number of items per batch (100)
-- `SYNC_CONFLICT_STRATEGY` - Conflict resolution strategy (TIMESTAMP, DB_WINS, ALLEGRO_WINS, MANUAL)
 
 ### Import Configuration
 
@@ -160,12 +138,6 @@ All ports are configured in `allegro/.env`. The values shown are defaults:
 - `NOTIFICATION_STOCK_LOW` - Send notifications on low stock (true)
 - `NOTIFICATION_EMAIL_TO` - Admin email for notifications
 
-### Webhook Configuration
-
-- `WEBHOOK_SECRET` - Secret for webhook verification
-- `WEBHOOK_TIMEOUT` - Webhook processing timeout in ms (10000)
-- `WEBHOOK_MAX_RETRIES` - Maximum retry attempts (3)
-
 For a complete list of all environment variables, see the `.env.example` file in the root directory or check `docs/IMPLEMENTATION_PLAN.md` section "Environment Configuration".
 
 **Important**: All configuration values must be set in the `.env` file. The application will fail to start if required variables are missing. No hardcoded defaults are used in the codebase.
@@ -173,17 +145,6 @@ For a complete list of all environment variables, see the `.env.example` file in
 ## API Endpoints
 
 All requests go through API Gateway at `http://localhost:${API_GATEWAY_PORT:-3411}/api` (port configured in `allegro/.env`)
-
-### Product Service Endpoints
-
-- `GET /api/products` - List products (query params: page, limit, search, active)
-- `GET /api/products/:id` - Get product by ID
-- `GET /api/products/code/:code` - Get product by code
-- `POST /api/products` - Create product (auth required)
-- `PUT /api/products/:id` - Update product (auth required)
-- `DELETE /api/products/:id` - Delete product (auth required)
-- `GET /api/products/:id/stock` - Get stock level
-- `PUT /api/products/:id/stock` - Update stock level
 
 ### Allegro Service Endpoints
 
@@ -207,22 +168,6 @@ All requests go through API Gateway at `http://localhost:${API_GATEWAY_PORT:-341
 - `GET /api/import/jobs/:id/status` - Get import job status (auth required)
 - `POST /api/import/jobs/:id/retry` - Retry failed import (auth required)
 
-### Sync Service Endpoints
-
-- `POST /api/sync/db-to-allegro` - Sync database to Allegro (auth required)
-- `POST /api/sync/allegro-to-db` - Sync Allegro to database (auth required)
-- `POST /api/sync/bidirectional` - Bidirectional sync (auth required)
-- `POST /api/sync/product/:id` - Sync specific product (auth required)
-- `GET /api/sync/jobs` - List sync jobs (auth required)
-- `GET /api/sync/jobs/:id` - Get sync job details (auth required)
-
-### Webhook Service Endpoints (Event Polling)
-
-- `POST /api/webhooks/poll-events` - Manually trigger event polling from Allegro API
-- `GET /api/webhooks/events` - List processed events (auth required)
-- `GET /api/webhooks/events/:id` - Get event details (auth required)
-- `POST /api/webhooks/events/:id/retry` - Retry processing event (auth required)
-
 ### Settings Service Endpoints
 
 - `GET /api/settings` - Get current user settings (auth required)
@@ -237,16 +182,6 @@ All requests go through API Gateway at `http://localhost:${API_GATEWAY_PORT:-341
 - `POST /api/auth/register` - Register new user
 - `POST /api/auth/login` - Login user
 - `POST /api/auth/refresh` - Refresh access token
-
-## Scheduled Jobs
-
-The Scheduler Service runs the following cron jobs:
-
-- **DB → Allegro sync**: Every 15 minutes
-- **Allegro → DB sync**: Every 30 minutes
-- **Inventory sync**: Every 10 minutes
-- **Event polling**: Every 37 minutes (polls Allegro for new offer and order events)
-- **Cleanup old jobs**: Daily at 2 AM
 
 ## Database Schema
 
@@ -283,12 +218,8 @@ docker compose down
 All services expose `/health` endpoints for monitoring (ports configured in `allegro/.env`):
 
 - API Gateway: `http://localhost:${API_GATEWAY_PORT:-3411}/health`
-- Product Service: `http://localhost:${PRODUCT_SERVICE_PORT:-3402}/health`
 - Allegro Service: `http://localhost:${ALLEGRO_SERVICE_PORT:-3403}/health`
-- Sync Service: `http://localhost:${SYNC_SERVICE_PORT:-3404}/health`
-- Webhook Service: `http://localhost:${WEBHOOK_SERVICE_PORT:-3405}/health`
 - Import Service: `http://localhost:${IMPORT_SERVICE_PORT:-3406}/health`
-- Scheduler Service: `http://localhost:${SCHEDULER_SERVICE_PORT:-3407}/health`
 - Settings Service: `http://localhost:${ALLEGRO_SETTINGS_SERVICE_PORT:-3408}/health`
 - Frontend Service: `http://localhost:${ALLEGRO_FRONTEND_SERVICE_PORT:-3410}/health`
 
@@ -380,7 +311,6 @@ See [TESTING_EVENT_POLLING.md](./docs/TESTING_EVENT_POLLING.md) for comprehensiv
 ### End-to-End Tests
 
 - Test complete import flow
-- Test complete sync flow
 - Test order processing flow
 
 ## Troubleshooting
@@ -396,14 +326,7 @@ See [TESTING_EVENT_POLLING.md](./docs/TESTING_EVENT_POLLING.md) for comprehensiv
 - Verify `ALLEGRO_CLIENT_ID` and `ALLEGRO_CLIENT_SECRET`
 - Check token expiration and refresh logic
 - Verify API endpoint URLs
-- Check event polling logs - events are polled every 37 minutes by default
 - Verify event format matches Allegro API response structure
-
-### Sync Issues
-
-- Check sync job status via `/api/sync/jobs`
-- Review conflict resolution strategy
-- Verify product data integrity
 
 ## Frontend Access
 
@@ -418,10 +341,8 @@ The web interface is available at:
 - **User Registration/Login**: Integrated with auth-microservice
 - **Dashboard**: Secure dashboard for authenticated users with:
   - Settings page for managing Allegro and supplier API keys
-  - Sync status monitoring
   - Import jobs overview
   - Orders management
-  - Products overview
 
 ## Documentation
 
