@@ -73,6 +73,7 @@ RUN --mount=type=cache,target=/root/.npm \
     (sleep 20 && npm ci --omit=dev --legacy-peer-deps --fetch-retries=5 --fetch-retry-mintimeout=20000 --fetch-retry-maxtimeout=120000)
 
 # Copy Prisma client from builder
+WORKDIR /app
 COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
 
 # Copy shared directory with dist, package.json, and node_modules
