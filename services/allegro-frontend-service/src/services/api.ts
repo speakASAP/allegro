@@ -28,6 +28,19 @@ const getApiUrl = (): string => {
 
 const API_URL = getApiUrl();
 
+// Log API configuration (production logging)
+console.log('[API Config]', {
+  API_URL,
+  origin: typeof window !== 'undefined' ? window.location.origin : 'N/A',
+  env: {
+    VITE_API_URL: import.meta.env.VITE_API_URL || 'not set',
+    MODE: import.meta.env.MODE,
+    DEV: import.meta.env.DEV,
+    PROD: import.meta.env.PROD,
+  },
+  timestamp: new Date().toISOString(),
+});
+
 const api: AxiosInstance = axios.create({
   baseURL: API_URL,
   headers: {
@@ -50,11 +63,34 @@ function isValidJWT(token: string): boolean {
 // Request interceptor to add auth token
 api.interceptors.request.use(
   (config: InternalAxiosRequestConfig) => {
+    // Log request details for debugging (production logging)
+    const fullUrl = config.baseURL && config.url 
+      ? `${config.baseURL}${config.url.startsWith('/') ? '' : '/'}${config.url}`
+      : config.url || 'unknown';
+    
+    console.log('[API Request]', {
+      method: config.method?.toUpperCase() || 'UNKNOWN',
+      baseURL: config.baseURL,
+      url: config.url,
+      fullUrl: fullUrl,
+      hasToken: !!localStorage.getItem('accessToken'),
+      timestamp: new Date().toISOString(),
+    });
+    
+    // Ensure URL is properly constructed
+    if (config.url && !config.url.startsWith('http')) {
+      // If baseURL ends with /api and url starts with /, ensure proper combination
+      if (config.baseURL && config.baseURL.endsWith('/api') && config.url.startsWith('/')) {
+        // Axios will handle this correctly, but ensure no double slashes
+        config.url = config.url.replace(/^\/+/, '/');
+      }
+    }
+    
     const token = localStorage.getItem('accessToken');
     if (token) {
       // Validate token format before using it
       if (!isValidJWT(token)) {
-        console.warn('Invalid token format detected, clearing storage');
+        console.warn('[API] Invalid token format detected, clearing storage');
         localStorage.removeItem('accessToken');
         localStorage.removeItem('refreshToken');
         localStorage.removeItem('user');
@@ -66,6 +102,7 @@ api.interceptors.request.use(
     return config;
   },
   (error) => {
+    console.error('[API Request Error]', error);
     return Promise.reject(error);
   }
 );
@@ -83,9 +120,36 @@ let refreshPromise: Promise<string> | null = null;
 
 // Response interceptor to handle errors
 api.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    // Log successful responses (production logging)
+    console.log('[API Response]', {
+      method: response.config.method?.toUpperCase() || 'UNKNOWN',
+      url: response.config.url,
+      baseURL: response.config.baseURL,
+      status: response.status,
+      statusText: response.statusText,
+      timestamp: new Date().toISOString(),
+    });
+    return response;
+  },
   async (error: AxiosError) => {
     const connectionError = error as ConnectionAxiosError;
+    
+    // Log error details (production logging)
+    console.error('[API Error]', {
+      method: error.config?.method?.toUpperCase() || 'UNKNOWN',
+      url: error.config?.url,
+      baseURL: error.config?.baseURL,
+      fullUrl: error.config?.baseURL && error.config?.url 
+        ? `${error.config.baseURL}${error.config.url.startsWith('/') ? '' : '/'}${error.config.url}`
+        : error.config?.url || 'unknown',
+      status: error.response?.status,
+      statusText: error.response?.statusText,
+      message: error.message,
+      code: connectionError.code,
+      responseData: error.response?.data,
+      timestamp: new Date().toISOString(),
+    });
     
     // Handle connection errors with helpful messages
     if (isConnectionError(error)) {
