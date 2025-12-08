@@ -74,7 +74,6 @@ RUN --mount=type=cache,target=/root/.npm \
 
 # Copy Prisma client from builder
 COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
-COPY --from=builder /app/shared/node_modules/.prisma ./node_modules/.prisma || true
 
 # Copy compiled code from builder (NO source code, NO dev deps)
 COPY --from=builder /app/services/allegro-settings-service/dist ./dist
