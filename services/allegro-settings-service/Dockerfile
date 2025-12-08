@@ -75,9 +75,10 @@ RUN --mount=type=cache,target=/root/.npm \
 # Copy Prisma client from builder
 COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
 
-# Copy shared dist and package.json
+# Copy shared directory with dist, package.json, and node_modules
 COPY --from=builder /app/shared/dist ./shared/dist
 COPY --from=builder /app/shared/package.json ./shared/package.json
+COPY --from=builder /app/shared/node_modules ./shared/node_modules
 
 # Install service dependencies to resolve file:../../shared reference
 WORKDIR /app/services/allegro-settings-service
