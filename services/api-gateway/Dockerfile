@@ -30,10 +30,8 @@ FROM node:20-alpine
 
 WORKDIR /app
 
-# Copy built shared package
-COPY --from=builder /app/shared/dist ./shared/dist
-COPY --from=builder /app/shared/package*.json ./shared/
-COPY --from=builder /app/shared/node_modules ./shared/node_modules
+# Copy entire shared package (needed for file: reference to work)
+COPY --from=builder /app/shared ./shared
 
 # Copy built service
 COPY --from=builder /app/services/api-gateway/dist ./dist
