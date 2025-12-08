@@ -69,10 +69,27 @@ export class GatewayController {
 
   /**
    * Route auth requests (no auth required for register/login)
-   * Use a more specific pattern that matches /api/auth/login, /api/auth/register, etc.
+   * Must be before catch-all to match correctly
+   * Log all incoming requests for debugging
    */
-  @All('auth/:path*')
+  @All('auth')
+  async authBaseRoute(@Req() req: ExpressRequest, @Res() res: ExpressResponse) {
+    this.sharedLogger.info(`[Auth Base Route] Matched: ${req.method} ${req.originalUrl}`, {
+      url: req.url,
+      originalUrl: req.originalUrl,
+      path: req.path,
+    });
+    const path = req.url.replace('/api/auth', '') || '';
+    return this.routeRequest('auth', `/auth${path}`, req, res);
+  }
+
+  @All('auth/*')
   async authRoute(@Req() req: ExpressRequest, @Res() res: ExpressResponse) {
+    this.sharedLogger.info(`[Auth Route] Matched: ${req.method} ${req.originalUrl}`, {
+      url: req.url,
+      originalUrl: req.originalUrl,
+      path: req.path,
+    });
     const path = req.url.replace('/api/auth', '');
     return this.routeRequest('auth', `/auth${path}`, req, res);
   }
@@ -83,13 +100,22 @@ export class GatewayController {
    */
   @All()
   async apiRoot(@Req() req: ExpressRequest, @Res() res: ExpressResponse) {
-    // Log the request for debugging
+    // Log the request for debugging (production logging)
     this.sharedLogger.warn(`[API Root] Unmatched request: ${req.method} ${req.url}`, {
       method: req.method,
       url: req.url,
       originalUrl: req.originalUrl,
       path: req.path,
+      baseUrl: req.baseUrl,
+      query: req.query,
+      params: req.params,
+      headers: {
+        host: req.headers.host,
+        'x-forwarded-for': req.headers['x-forwarded-for'],
+        'x-real-ip': req.headers['x-real-ip'],
+      },
     });
+    this.logger.warn(`[API Root] Unmatched: ${req.method} ${req.originalUrl} | url: ${req.url} | path: ${req.path}`);
     
     res.status(404).json({
       success: false,
@@ -99,6 +125,7 @@ export class GatewayController {
       },
       path: req.url,
       originalUrl: req.originalUrl,
+      requestPath: req.path,
       timestamp: new Date().toISOString(),
     });
   }
