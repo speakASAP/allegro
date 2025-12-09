@@ -159,19 +159,24 @@ export class OAuthController {
       }
 
       this.logger.log('Found OAuth state for user', { userId: settings.userId, state });
+      console.log('[OAuth Callback] Found OAuth state for user', { userId: settings.userId, state, hasCodeVerifier: !!settings.allegroOAuthCodeVerifier });
 
       // Validate state
       if (!this.oauthService.validateState(state, settings.allegroOAuthState || '')) {
         this.logger.error('OAuth state validation failed', { state, storedState: settings.allegroOAuthState });
+        console.error('[OAuth Callback] State validation failed', { state, storedState: settings.allegroOAuthState });
         return res.redirect(`${this.getFrontendUrl()}/auth/callback?error=state_mismatch`);
       }
 
       // Get code verifier
       let codeVerifier: string;
       try {
+        console.log('[OAuth Callback] Attempting to decrypt code verifier', { userId: settings.userId, codeVerifierLength: settings.allegroOAuthCodeVerifier?.length });
         codeVerifier = this.decrypt(settings.allegroOAuthCodeVerifier || '');
+        console.log('[OAuth Callback] Successfully decrypted code verifier', { userId: settings.userId });
       } catch (error) {
         this.logger.error('Failed to decrypt code verifier', { userId: settings.userId, error: error.message });
+        console.error('[OAuth Callback] Failed to decrypt code verifier', { userId: settings.userId, error: error.message, errorStack: error.stack });
         // Clear the invalid OAuth state so user can try again
         await this.prisma.userSettings.update({
           where: { userId: settings.userId },
