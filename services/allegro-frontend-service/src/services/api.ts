@@ -16,19 +16,29 @@ const getApiUrl = (): string => {
     return import.meta.env.VITE_API_URL;
   }
   
-  // Auto-detect production URL from current origin
+  // In development, always use API Gateway port (not origin-based)
+  const isDev = import.meta.env.DEV || import.meta.env.MODE === 'development';
+  if (isDev) {
+    const apiGatewayPort = import.meta.env.VITE_API_GATEWAY_PORT || 
+      import.meta.env.API_GATEWAY_PORT;
+    
+    if (!apiGatewayPort) {
+      console.error('[API Config] API_GATEWAY_PORT not configured. Please set it in .env file.');
+      throw new Error('API_GATEWAY_PORT must be configured in .env file');
+    }
+    
+    return `http://localhost:${apiGatewayPort}/api`;
+  }
+  
+  // Production: Auto-detect from current origin
   const origin = typeof window !== 'undefined' ? window.location.origin : '';
   if (origin) {
     const normalizedOrigin = origin.endsWith('/') ? origin.slice(0, -1) : origin;
     return `${normalizedOrigin}/api`;
   }
   
-  // Development fallback
-  // In Vite, use import.meta.env for environment variables (must be prefixed with VITE_)
-  const apiGatewayPort = import.meta.env.VITE_API_GATEWAY_PORT || 
-    import.meta.env.API_GATEWAY_PORT || 
-    '3411';
-  return `http://localhost:${apiGatewayPort}/api`;
+  // Fallback (should not happen)
+  throw new Error('Unable to determine API URL');
 };
 
 const API_URL = getApiUrl();
