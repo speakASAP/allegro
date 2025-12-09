@@ -3,6 +3,7 @@
  */
 
 import React, { useState, useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import { AxiosError } from 'axios';
 import api, { oauthApi } from '../services/api';
 import { Button } from '../components/Button';
@@ -48,11 +49,32 @@ const SettingsPage: React.FC = () => {
     scopes?: string;
   } | null>(null);
   const [loadingOAuth, setLoadingOAuth] = useState(false);
+  const location = useLocation();
 
   useEffect(() => {
     loadSettings();
     loadOAuthStatus();
   }, []);
+
+  // Refresh OAuth status when navigating back to this page (e.g., after OAuth callback)
+  useEffect(() => {
+    // Reload OAuth status when the page is focused or location changes
+    const handleFocus = () => {
+      loadOAuthStatus();
+    };
+
+    window.addEventListener('focus', handleFocus);
+    return () => window.removeEventListener('focus', handleFocus);
+  }, []);
+
+  // Also reload when location changes (e.g., coming back from callback)
+  useEffect(() => {
+    loadOAuthStatus();
+    // If we have oauth_refresh parameter, remove it from URL after loading
+    if (location.search.includes('oauth_refresh=true')) {
+      window.history.replaceState({}, '', location.pathname);
+    }
+  }, [location.pathname, location.search]);
 
   const loadSettings = async () => {
     try {

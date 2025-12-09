@@ -15,10 +15,12 @@ const AllegroOAuthCallbackPage: React.FC = () => {
   const [message, setMessage] = useState('');
 
   useEffect(() => {
+    const success = searchParams.get('success');
+    const error = searchParams.get('error');
     const code = searchParams.get('code');
     const state = searchParams.get('state');
-    const error = searchParams.get('error');
 
+    // Handle error case
     if (error) {
       setStatus('error');
       setMessage(error === 'access_denied' 
@@ -27,24 +29,31 @@ const AllegroOAuthCallbackPage: React.FC = () => {
       return;
     }
 
-    if (!code || !state) {
-      setStatus('error');
-      setMessage('Missing authorization code or state. Please try again.');
+    // Handle success case (backend redirects with success=true after processing)
+    if (success === 'true') {
+      setStatus('success');
+      setMessage('Authorization successful! Redirecting to settings...');
+
+      // Redirect to settings after 2 seconds with refresh parameter
+      const timer = setTimeout(() => {
+        navigate('/dashboard/settings?oauth_refresh=true');
+      }, 2000);
+
+      return () => clearTimeout(timer);
+    }
+
+    // Handle direct callback from Allegro (with code and state)
+    // This should be handled by the backend, but if it reaches here, show loading
+    if (code && state) {
+      setStatus('loading');
+      setMessage('Processing authorization...');
+      // The backend will redirect with success=true, so we'll handle it in the next render
       return;
     }
 
-    // The backend callback endpoint handles the token exchange
-    // We just need to show a success message and redirect
-    // The actual callback is handled server-side via redirect
-    setStatus('success');
-    setMessage('Authorization successful! Redirecting to settings...');
-
-    // Redirect to settings after 3 seconds
-    const timer = setTimeout(() => {
-      navigate('/dashboard/settings');
-    }, 3000);
-
-    return () => clearTimeout(timer);
+    // No valid parameters
+    setStatus('error');
+    setMessage('Invalid callback parameters. Please try again.');
   }, [searchParams, navigate]);
 
   const handleGoToSettings = () => {
