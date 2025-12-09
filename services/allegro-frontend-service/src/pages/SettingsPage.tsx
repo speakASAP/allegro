@@ -267,25 +267,38 @@ const SettingsPage: React.FC = () => {
     setSuccess('');
 
     try {
+      console.log('[OAuth] Starting authorization request...');
       const response = await oauthApi.authorize();
+      console.log('[OAuth] Authorization response:', response.data);
       if (response.data.success && response.data.data?.authorizationUrl) {
         // Redirect to Allegro authorization page
+        console.log('[OAuth] Redirecting to:', response.data.data.authorizationUrl);
         window.location.href = response.data.data.authorizationUrl;
+        // Don't set loading to false here as we're redirecting
+        return;
       } else {
         setError('Failed to generate authorization URL');
+        setLoadingOAuth(false);
       }
     } catch (err: unknown) {
+      console.error('[OAuth] Authorization error:', err);
       if (err instanceof AxiosError) {
         const axiosError = err as AxiosError & { isConnectionError?: boolean; serviceErrorMessage?: string };
         if (axiosError.isConnectionError && axiosError.serviceErrorMessage) {
           setError(axiosError.serviceErrorMessage);
         } else {
-          setError(err.response?.data?.error?.message || 'Failed to start OAuth authorization');
+          const errorMessage = err.response?.data?.error?.message || 'Failed to start OAuth authorization';
+          setError(errorMessage);
+          console.error('[OAuth] Error details:', {
+            status: err.response?.status,
+            data: err.response?.data,
+            message: errorMessage,
+          });
         }
       } else {
         setError('Failed to start OAuth authorization');
+        console.error('[OAuth] Unknown error:', err);
       }
-    } finally {
       setLoadingOAuth(false);
     }
   };
