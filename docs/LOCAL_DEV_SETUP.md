@@ -120,6 +120,7 @@ The tunnels will:
 **Note**: Make sure your `.env` file has `LOGGING_SERVICE_URL=http://localhost:3367` to match the tunnel configuration.
 
 **Port Consistency:**
+
 - Both development and production now use **port 3367** for consistency
 - In production, Docker services use `http://logging-microservice:3367` (internal Docker network)
 - In development, SSH tunnels use `http://localhost:3367` (host port mapping)
