@@ -278,33 +278,69 @@ export class OAuthController {
   @UseGuards(JwtAuthGuard)
   async getStatus(@Req() req: any) {
     const userId = String(req.user.id);
+    const startTime = Date.now();
 
-    const settings = await this.prisma.userSettings.findUnique({
-      where: { userId },
-      select: {
-        allegroAccessToken: true,
-        allegroTokenExpiresAt: true,
-        allegroTokenScopes: true,
-      },
-    });
+    this.logger.log('Getting OAuth status', { userId });
 
-    if (!settings?.allegroAccessToken) {
+    try {
+      const queryStartTime = Date.now();
+      const settings = await this.prisma.userSettings.findUnique({
+        where: { userId },
+        select: {
+          allegroAccessToken: true,
+          allegroTokenExpiresAt: true,
+          allegroTokenScopes: true,
+        },
+      });
+      const queryDuration = Date.now() - queryStartTime;
+
+      if (queryDuration > 1000) {
+        this.logger.warn('OAuth status query took longer than expected', {
+          userId,
+          queryDuration: `${queryDuration}ms`,
+        });
+      } else {
+        this.logger.debug('OAuth status query completed', {
+          userId,
+          queryDuration: `${queryDuration}ms`,
+        });
+      }
+
+      const totalDuration = Date.now() - startTime;
+      this.logger.log('OAuth status retrieved', {
+        userId,
+        authorized: !!settings?.allegroAccessToken,
+        totalDuration: `${totalDuration}ms`,
+        queryDuration: `${queryDuration}ms`,
+      });
+
+      if (!settings?.allegroAccessToken) {
+        return {
+          success: true,
+          data: {
+            authorized: false,
+          },
+        };
+      }
+
       return {
         success: true,
         data: {
-          authorized: false,
+          authorized: true,
+          expiresAt: settings.allegroTokenExpiresAt || undefined,
+          scopes: settings.allegroTokenScopes || undefined,
         },
       };
+    } catch (error: any) {
+      const totalDuration = Date.now() - startTime;
+      this.logger.error('Failed to get OAuth status', {
+        userId,
+        error: error.message,
+        errorStack: error.stack,
+        totalDuration: `${totalDuration}ms`,
+      });
+      throw error;
     }
-
-    return {
-      success: true,
-      data: {
-        authorized: true,
-        expiresAt: settings.allegroTokenExpiresAt || undefined,
-        scopes: settings.allegroTokenScopes || undefined,
-      },
-    };
   }
 
   /**
