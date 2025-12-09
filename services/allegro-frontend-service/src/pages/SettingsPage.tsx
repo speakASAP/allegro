@@ -61,7 +61,10 @@ const SettingsPage: React.FC = () => {
         const data = response.data.data;
         setSettings(data);
         setAllegroClientId(data.allegroClientId || '');
-        setAllegroClientSecret(data.allegroClientSecret || '');
+        // Display Client Secret if it exists (even if null from decryption failure)
+        // The backend returns the decrypted value, or null if decryption failed
+        // We should display the actual value if it exists
+        setAllegroClientSecret(data.allegroClientSecret ?? '');
       }
     } catch (err: unknown) {
       if (err instanceof AxiosError) {
