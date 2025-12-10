@@ -741,7 +741,24 @@ export class OffersService {
               where: { allegroOfferId: allegroOffer.id },
             });
 
-            const offerData = this.extractOfferData(allegroOffer);
+            // Fetch full offer details to ensure we have ALL fields
+            // The list endpoint might return simplified data, so we fetch the complete offer
+            let fullOfferData = allegroOffer;
+            try {
+              const fullOffer = await this.allegroApi.getOfferWithOAuthToken(oauthToken, allegroOffer.id);
+              if (fullOffer) {
+                fullOfferData = fullOffer;
+                this.logger.log('[importApprovedOffers] Fetched full offer details', { offerId: allegroOffer.id });
+              }
+            } catch (fetchError: any) {
+              // If fetching full details fails, use the list data
+              this.logger.warn('[importApprovedOffers] Failed to fetch full offer details, using list data', {
+                offerId: allegroOffer.id,
+                error: fetchError.message,
+              });
+            }
+
+            const offerData = this.extractOfferData(fullOfferData);
 
             if (existingOffer) {
               // Update existing offer
@@ -918,7 +935,24 @@ export class OffersService {
         
         for (const allegroOffer of offers) {
           try {
-            const offerData = this.extractOfferData(allegroOffer);
+            // Fetch full offer details to ensure we have ALL fields
+            // The list endpoint might return simplified data, so we fetch the complete offer
+            let fullOfferData = allegroOffer;
+            try {
+              const fullOffer = await this.allegroApi.getOfferWithOAuthToken(oauthToken, allegroOffer.id);
+              if (fullOffer) {
+                fullOfferData = fullOffer;
+                this.logger.log('Fetched full offer details', { offerId: allegroOffer.id });
+              }
+            } catch (fetchError: any) {
+              // If fetching full details fails, use the list data
+              this.logger.warn('Failed to fetch full offer details, using list data', {
+                offerId: allegroOffer.id,
+                error: fetchError.message,
+              });
+            }
+
+            const offerData = this.extractOfferData(fullOfferData);
             const offer = await this.prisma.allegroOffer.upsert({
               where: { allegroOfferId: allegroOffer.id },
               update: {
@@ -1176,7 +1210,24 @@ export class OffersService {
               currency: allegroOffer.sellingMode?.price?.currency,
             });
 
-            const offerData = this.extractOfferData(allegroOffer);
+            // Fetch full offer details to ensure we have ALL fields
+            // The list endpoint might return simplified data, so we fetch the complete offer
+            let fullOfferData = allegroOffer;
+            try {
+              const fullOffer = await this.allegroApi.getOfferWithOAuthToken(oauthToken, allegroOffer.id);
+              if (fullOffer) {
+                fullOfferData = fullOffer;
+                this.logger.log('[importApprovedOffersFromSalesCenter] Fetched full offer details', { offerId: allegroOffer.id });
+              }
+            } catch (fetchError: any) {
+              // If fetching full details fails, use the list data
+              this.logger.warn('[importApprovedOffersFromSalesCenter] Failed to fetch full offer details, using list data', {
+                offerId: allegroOffer.id,
+                error: fetchError.message,
+              });
+            }
+
+            const offerData = this.extractOfferData(fullOfferData);
             const offer = await this.prisma.allegroOffer.upsert({
               where: { allegroOfferId: allegroOffer.id },
               update: {

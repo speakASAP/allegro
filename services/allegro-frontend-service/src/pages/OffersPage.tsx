@@ -436,6 +436,23 @@ const OffersPage: React.FC = () => {
 
     if (!hasServices) return null;
 
+    // Helper to safely render value (handles strings, objects, arrays)
+    const renderValue = (value: any): string => {
+      if (value === null || value === undefined) return '-';
+      if (typeof value === 'string') return value;
+      if (typeof value === 'number' || typeof value === 'boolean') return String(value);
+      if (Array.isArray(value)) return value.map(v => renderValue(v)).join(', ');
+      if (typeof value === 'object') {
+        // For objects, try to extract meaningful fields
+        if (value.type) return value.type;
+        if (value.period) return value.period;
+        if (value.name) return value.name;
+        // Fallback to JSON string
+        return JSON.stringify(value, null, 2);
+      }
+      return String(value);
+    };
+
     return (
       <div className="mt-4">
         <h4 className="font-semibold mb-2">After-Sales Services</h4>
@@ -443,19 +460,19 @@ const OffersPage: React.FC = () => {
           {services.impatient && (
             <div>
               <div className="text-sm text-gray-600">Impatient</div>
-              <div className="text-sm">{services.impatient}</div>
+              <div className="text-sm">{renderValue(services.impatient)}</div>
             </div>
           )}
           {services.returnPolicy && (
             <div>
               <div className="text-sm text-gray-600">Return Policy</div>
-              <div className="text-sm">{services.returnPolicy}</div>
+              <div className="text-sm">{renderValue(services.returnPolicy)}</div>
             </div>
           )}
           {services.warranty && (
             <div>
               <div className="text-sm text-gray-600">Warranty</div>
-              <div className="text-sm">{services.warranty}</div>
+              <div className="text-sm">{renderValue(services.warranty)}</div>
             </div>
           )}
         </div>
