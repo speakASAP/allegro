@@ -124,10 +124,13 @@ const SettingsPage: React.FC = () => {
 
   const handleSaveAllegro = async () => {
     console.log('[SettingsPage] handleSaveAllegro START', {
-      allegroClientId,
-      allegroClientSecretLength: allegroClientSecret?.length,
+      allegroClientId: allegroClientId || 'EMPTY',
+      allegroClientIdLength: allegroClientId?.length || 0,
+      allegroClientSecret: allegroClientSecret ? (allegroClientSecret.substring(0, 10) + '...') : 'EMPTY',
+      allegroClientSecretLength: allegroClientSecret?.length || 0,
       allegroClientSecretIsMasked: allegroClientSecret === '********',
-      allegroClientSecretFirstChars: allegroClientSecret?.substring(0, 5),
+      allegroClientSecretIsEmpty: !allegroClientSecret || allegroClientSecret.length === 0,
+      allegroClientSecretType: typeof allegroClientSecret,
     });
     
     setSaving(true);
