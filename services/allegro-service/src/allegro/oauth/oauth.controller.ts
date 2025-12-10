@@ -290,12 +290,35 @@ export class OAuthController {
       let clientSecret: string;
       try {
         if (!settings.allegroClientSecret) {
-          this.logger.error('Client Secret is missing for OAuth token exchange', { userId: settings.userId });
+          this.logger.error('Client Secret is missing for OAuth token exchange', { 
+            userId: settings.userId,
+            hasClientSecret: !!settings.allegroClientSecret,
+            clientSecretLength: settings.allegroClientSecret?.length,
+          });
           return res.redirect(`${this.getFrontendUrl()}/auth/callback?error=client_secret_missing`);
         }
         clientSecret = this.decrypt(settings.allegroClientSecret);
+        
+        // Validate decrypted secret is not empty
+        if (!clientSecret || clientSecret.trim().length === 0) {
+          this.logger.error('Client Secret is empty after decryption', { 
+            userId: settings.userId,
+            encryptedLength: settings.allegroClientSecret?.length,
+          });
+          return res.redirect(`${this.getFrontendUrl()}/auth/callback?error=client_secret_empty`);
+        }
+        
+        this.logger.log('Client Secret decrypted successfully', {
+          userId: settings.userId,
+          decryptedLength: clientSecret.length,
+        });
       } catch (error) {
-        this.logger.error('Failed to decrypt client secret', { userId: settings.userId, error: error.message });
+        this.logger.error('Failed to decrypt client secret', { 
+          userId: settings.userId, 
+          error: error.message,
+          errorStack: error.stack,
+          encryptedLength: settings.allegroClientSecret?.length,
+        });
         return res.redirect(`${this.getFrontendUrl()}/auth/callback?error=decryption_failed`);
       }
 
