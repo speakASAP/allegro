@@ -953,6 +953,21 @@ export class OffersService {
             }
 
             const offerData = this.extractOfferData(fullOfferData);
+            
+            // Log before saving
+            this.logger.log('[importAllOffers] Saving offer to database', {
+              offerId: allegroOffer.id,
+              dataToSave: {
+                hasDescription: !!offerData.description,
+                descriptionPreview: offerData.description ? (typeof offerData.description === 'string' ? offerData.description.substring(0, 100) : 'non-string') : null,
+                hasImages: !!offerData.images,
+                imagesCount: Array.isArray(offerData.images) ? offerData.images.length : 0,
+                hasDeliveryOptions: !!offerData.deliveryOptions,
+                hasPaymentOptions: !!offerData.paymentOptions,
+                hasRawData: !!offerData.rawData,
+              },
+            });
+
             const offer = await this.prisma.allegroOffer.upsert({
               where: { allegroOfferId: allegroOffer.id },
               update: {
@@ -968,6 +983,23 @@ export class OffersService {
                 lastSyncedAt: new Date(),
               } as any,
             });
+
+            // Log after saving to verify what was actually saved
+            this.logger.log('[importAllOffers] Offer saved to database', {
+              offerId: offer.allegroOfferId,
+              dbId: offer.id,
+              savedFields: {
+                hasDescription: !!offer.description,
+                descriptionLength: offer.description ? (typeof offer.description === 'string' ? offer.description.length : 'non-string') : 0,
+                hasImages: !!offer.images,
+                imagesCount: Array.isArray(offer.images) ? offer.images.length : (offer.images ? 1 : 0),
+                hasDeliveryOptions: !!offer.deliveryOptions,
+                hasPaymentOptions: !!offer.paymentOptions,
+                hasRawData: !!offer.rawData,
+                title: offer.title?.substring(0, 50) || 'N/A',
+              },
+            });
+
             // Run validation
             const validation = this.validateOfferReadiness(offer);
             await this.prisma.allegroOffer.update({
@@ -978,6 +1010,13 @@ export class OffersService {
                 lastValidatedAt: new Date(),
               } as any,
             });
+            
+            this.logger.log('[importAllOffers] Offer validation completed', {
+              offerId: offer.allegroOfferId,
+              validationStatus: validation.status,
+              validationErrorsCount: validation.errors.length,
+            });
+            
             totalImported++;
           } catch (error: any) {
             this.logger.error('Failed to import offer', {
@@ -1493,7 +1532,7 @@ export class OffersService {
     const priceAmount = allegroOffer.sellingMode?.price?.amount || '0';
     const currency = allegroOffer.sellingMode?.price?.currency || this.getDefaultCurrency();
 
-    return {
+    const extractedData = {
       allegroOfferId: allegroOffer.id,
       allegroListingId: allegroOffer.listing?.id || allegroOffer.external?.id || null,
       title: allegroOffer.name || '',
@@ -1510,6 +1549,38 @@ export class OffersService {
       paymentOptions: allegroOffer.payments || allegroOffer.paymentOptions || null,
       rawData: allegroOffer as any,
     };
+
+    // Detailed logging for field extraction
+    this.logger.log('[extractOfferData] Extracted offer data', {
+      offerId: allegroOffer.id,
+      fields: {
+        hasTitle: !!extractedData.title && extractedData.title.length > 0,
+        titleLength: extractedData.title?.length || 0,
+        hasDescription: !!extractedData.description,
+        descriptionLength: extractedData.description ? (typeof extractedData.description === 'string' ? extractedData.description.length : 'non-string') : 0,
+        hasImages: !!extractedData.images,
+        imagesCount: Array.isArray(extractedData.images) ? extractedData.images.length : 0,
+        hasDeliveryOptions: !!extractedData.deliveryOptions,
+        deliveryOptionsType: extractedData.deliveryOptions ? typeof extractedData.deliveryOptions : 'null',
+        hasPaymentOptions: !!extractedData.paymentOptions,
+        paymentOptionsType: extractedData.paymentOptions ? typeof extractedData.paymentOptions : 'null',
+        hasRawData: !!extractedData.rawData,
+        hasCategoryId: !!extractedData.categoryId,
+        hasPrice: extractedData.price > 0,
+        hasStock: extractedData.stockQuantity >= 0,
+        hasListingId: !!extractedData.allegroListingId,
+      },
+      sourceFields: {
+        hasAllegroDescription: !!allegroOffer.description,
+        hasAllegroImages: !!allegroOffer.images,
+        hasAllegroDelivery: !!allegroOffer.delivery,
+        hasAllegroDeliveryOptions: !!allegroOffer.deliveryOptions,
+        hasAllegroPayments: !!allegroOffer.payments,
+        hasAllegroPaymentOptions: !!allegroOffer.paymentOptions,
+      },
+    });
+
+    return extractedData;
   }
 
   /**
@@ -1519,22 +1590,39 @@ export class OffersService {
   private extractImages(allegroOffer: any): any {
     // Check direct images field first
     if (allegroOffer.images && Array.isArray(allegroOffer.images)) {
-      return allegroOffer.images.map((img: any) => {
+      const extracted = allegroOffer.images.map((img: any) => {
         if (typeof img === 'string') {
           return img;
         }
         return img.url || img.path || img;
       });
+      this.logger.debug('[extractImages] Extracted images from direct field', {
+        offerId: allegroOffer.id,
+        imagesCount: extracted.length,
+        firstImage: extracted[0]?.substring(0, 50) || 'N/A',
+      });
+      return extracted;
     }
     // Check rawData.images as fallback
     if (allegroOffer.rawData?.images && Array.isArray(allegroOffer.rawData.images)) {
-      return allegroOffer.rawData.images.map((img: any) => {
+      const extracted = allegroOffer.rawData.images.map((img: any) => {
         if (typeof img === 'string') {
           return img;
         }
         return img.url || img.path || img;
       });
+      this.logger.debug('[extractImages] Extracted images from rawData', {
+        offerId: allegroOffer.id,
+        imagesCount: extracted.length,
+        firstImage: extracted[0]?.substring(0, 50) || 'N/A',
+      });
+      return extracted;
     }
+    this.logger.warn('[extractImages] No images found', {
+      offerId: allegroOffer.id,
+      hasDirectImages: !!allegroOffer.images,
+      hasRawDataImages: !!allegroOffer.rawData?.images,
+    });
     return null;
   }
 
