@@ -1585,14 +1585,26 @@ export class OffersService {
     }
 
     // Check delivery options - check both direct field and rawData
+    // Delivery can be an object with shippingRates array or other structure
     const deliveryOptions = offer.deliveryOptions || offer.rawData?.delivery;
-    if (!deliveryOptions || (Array.isArray(deliveryOptions) && deliveryOptions.length === 0)) {
+    const hasDelivery = deliveryOptions && (
+      (Array.isArray(deliveryOptions) && deliveryOptions.length > 0) ||
+      (typeof deliveryOptions === 'object' && Object.keys(deliveryOptions).length > 0) ||
+      (deliveryOptions.shippingRates && Array.isArray(deliveryOptions.shippingRates) && deliveryOptions.shippingRates.length > 0)
+    );
+    if (!hasDelivery) {
       errors.push({ type: 'MISSING_DELIVERY', message: 'At least one delivery option is recommended', severity: 'warning' });
     }
 
     // Check payment options - check both direct field and rawData
+    // Payment can be an object with invoice or other structure
     const paymentOptions = offer.paymentOptions || offer.rawData?.payments;
-    if (!paymentOptions || (Array.isArray(paymentOptions) && paymentOptions.length === 0)) {
+    const hasPayment = paymentOptions && (
+      (Array.isArray(paymentOptions) && paymentOptions.length > 0) ||
+      (typeof paymentOptions === 'object' && Object.keys(paymentOptions).length > 0) ||
+      (paymentOptions.invoice || paymentOptions.cashOnDelivery || paymentOptions.online)
+    );
+    if (!hasPayment) {
       errors.push({ type: 'MISSING_PAYMENT', message: 'At least one payment option is recommended', severity: 'warning' });
     }
 
