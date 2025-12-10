@@ -115,9 +115,10 @@ export class OffersService {
 
   /**
    * Get offer by ID
+   * Called when user clicks "View Details" button on offers page
    */
   async getOffer(id: string): Promise<any> {
-    this.logger.log('Fetching offer by ID from database', { offerId: id });
+    this.logger.log('[getOffer] Fetching offer by ID from database for View Details', { offerId: id });
 
     const offer = await this.prisma.allegroOffer.findUnique({
       where: { id },
@@ -127,15 +128,39 @@ export class OffersService {
     });
 
     if (!offer) {
-      this.logger.warn('Offer not found', { offerId: id });
+      this.logger.warn('[getOffer] Offer not found', { offerId: id });
       throw new Error(`Offer with ID ${id} not found`);
     }
 
-    this.logger.log('Offer fetched from database', {
+    // Log images and description data that will be sent to frontend
+    this.logger.log('[getOffer] Offer fetched from database - Images and Description data', {
       offerId: id,
       allegroOfferId: offer.allegroOfferId,
+      title: offer.title?.substring(0, 50),
+      images: {
+        hasDirectImages: !!offer.images,
+        directImagesCount: Array.isArray(offer.images) ? offer.images.length : 0,
+        directImagesUrls: Array.isArray(offer.images) ? offer.images.map((url: string) => url.substring(0, 80)) : [],
+        hasRawDataImages: !!(offer.rawData as any)?.images,
+        rawDataImagesCount: Array.isArray((offer.rawData as any)?.images) ? (offer.rawData as any).images.length : 0,
+        rawDataImagesUrls: Array.isArray((offer.rawData as any)?.images) ? (offer.rawData as any).images.map((img: any) => {
+          const url = typeof img === 'string' ? img : (img.url || img.path || String(img));
+          return url.substring(0, 80);
+        }) : [],
+      },
+      description: {
+        hasDirectDescription: !!offer.description,
+        directDescriptionType: offer.description ? typeof offer.description : 'null',
+        directDescriptionLength: offer.description ? (typeof offer.description === 'string' ? offer.description.length : 'non-string') : 0,
+        directDescriptionPreview: offer.description && typeof offer.description === 'string' ? offer.description.substring(0, 300) : 'N/A',
+        hasRawDataDescription: !!(offer.rawData as any)?.description,
+        rawDataDescriptionType: (offer.rawData as any)?.description ? typeof (offer.rawData as any).description : 'null',
+        rawDataDescriptionLength: (offer.rawData as any)?.description ? (typeof (offer.rawData as any).description === 'string' ? (offer.rawData as any).description.length : 'non-string') : 0,
+        rawDataDescriptionPreview: (offer.rawData as any)?.description && typeof (offer.rawData as any).description === 'string' ? (offer.rawData as any).description.substring(0, 300) : 'N/A',
+      },
       hasRawData: !!offer.rawData,
       hasProduct: !!offer.product,
+      rawDataKeys: offer.rawData ? Object.keys(offer.rawData) : [],
     });
 
     return offer;
@@ -506,10 +531,56 @@ export class OffersService {
       // Update rawData
       dbUpdateData.rawData = updatedRawData;
 
+      // Log before updating database
+      this.logger.log('[updateOffer] Updating offer in database with form data', {
+        userId,
+        offerId: id,
+        allegroOfferId: offer.allegroOfferId,
+        updateFields: Object.keys(dbUpdateData),
+        images: {
+          updating: dto.images !== undefined,
+          newCount: dto.images ? dto.images.length : 0,
+          newUrls: dto.images ? dto.images.map((url: string) => url.substring(0, 80)) : [],
+          extractedFromRawData: dto.images === undefined && !!dbUpdateData.images,
+          extractedCount: dbUpdateData.images ? (Array.isArray(dbUpdateData.images) ? dbUpdateData.images.length : 0) : 0,
+        },
+        description: {
+          updating: dto.description !== undefined,
+          newType: dto.description ? typeof dto.description : 'null',
+          newLength: dto.description ? (typeof dto.description === 'string' ? dto.description.length : 'non-string') : 0,
+          newPreview: dto.description && typeof dto.description === 'string' ? dto.description.substring(0, 200) : 'N/A',
+        },
+      });
+      
       // Update in database
       const updated = await this.prisma.allegroOffer.update({
         where: { id },
         data: dbUpdateData,
+      });
+      
+      // Log after updating database
+      this.logger.log('[updateOffer] Offer updated in database successfully', {
+        userId,
+        offerId: id,
+        allegroOfferId: updated.allegroOfferId,
+        dbImages: {
+          count: Array.isArray(updated.images) ? updated.images.length : 0,
+          urls: Array.isArray(updated.images) ? updated.images.map((url: string) => url.substring(0, 80)) : [],
+        },
+        dbDescription: {
+          hasDescription: !!updated.description,
+          type: updated.description ? typeof updated.description : 'null',
+          length: updated.description ? (typeof updated.description === 'string' ? updated.description.length : 'non-string') : 0,
+          preview: updated.description && typeof updated.description === 'string' ? updated.description.substring(0, 200) : 'N/A',
+        },
+        rawDataImages: {
+          count: Array.isArray((updated.rawData as any)?.images) ? (updated.rawData as any).images.length : 0,
+        },
+        rawDataDescription: {
+          hasDescription: !!(updated.rawData as any)?.description,
+          type: (updated.rawData as any)?.description ? typeof (updated.rawData as any).description : 'null',
+          length: (updated.rawData as any)?.description ? (typeof (updated.rawData as any).description === 'string' ? (updated.rawData as any).description.length : 'non-string') : 0,
+        },
       });
 
       // Re-validate offer
@@ -523,7 +594,8 @@ export class OffersService {
         } as any,
       });
 
-      this.logger.log('Offer updated successfully', {
+      this.logger.log('[updateOffer] Offer updated successfully', {
+        userId,
         id,
         allegroOfferId: offer.allegroOfferId,
         validationStatus: validation.status,
@@ -759,6 +831,23 @@ export class OffersService {
             }
 
             const offerData = this.extractOfferData(fullOfferData);
+            
+            // Log before saving to database
+            this.logger.log('[importApprovedOffers] Saving offer to database', {
+              userId,
+              offerId: allegroOffer.id,
+              operation: existingOffer ? 'update' : 'create',
+              images: {
+                count: Array.isArray(offerData.images) ? offerData.images.length : 0,
+                urls: Array.isArray(offerData.images) ? offerData.images.map((url: string) => url.substring(0, 80)) : [],
+              },
+              description: {
+                hasDescription: !!offerData.description,
+                type: offerData.description ? typeof offerData.description : 'null',
+                length: offerData.description ? (typeof offerData.description === 'string' ? offerData.description.length : 'non-string') : 0,
+                preview: offerData.description && typeof offerData.description === 'string' ? offerData.description.substring(0, 200) : 'N/A',
+              },
+            });
 
             if (existingOffer) {
               // Update existing offer
@@ -770,6 +859,23 @@ export class OffersService {
                   syncSource: 'ALLEGRO_API',
                   lastSyncedAt: new Date(),
                 } as any,
+              });
+              
+              // Log after updating
+              this.logger.log('[importApprovedOffers] Offer updated in database', {
+                userId,
+                offerId: updated.id,
+                allegroOfferId: updated.allegroOfferId,
+                dbImages: {
+                  count: Array.isArray(updated.images) ? updated.images.length : 0,
+                  urls: Array.isArray(updated.images) ? updated.images.map((url: string) => url.substring(0, 80)) : [],
+                },
+                dbDescription: {
+                  hasDescription: !!updated.description,
+                  type: updated.description ? typeof updated.description : 'null',
+                  length: updated.description ? (typeof updated.description === 'string' ? updated.description.length : 'non-string') : 0,
+                  preview: updated.description && typeof updated.description === 'string' ? updated.description.substring(0, 200) : 'N/A',
+                },
               });
               // Run validation
               const validation = this.validateOfferReadiness(updated);
@@ -796,6 +902,23 @@ export class OffersService {
                   syncSource: 'ALLEGRO_API',
                   lastSyncedAt: new Date(),
                 } as any,
+              });
+              
+              // Log after creating
+              this.logger.log('[importApprovedOffers] Offer created in database', {
+                userId,
+                offerId: created.id,
+                allegroOfferId: created.allegroOfferId,
+                dbImages: {
+                  count: Array.isArray(created.images) ? created.images.length : 0,
+                  urls: Array.isArray(created.images) ? created.images.map((url: string) => url.substring(0, 80)) : [],
+                },
+                dbDescription: {
+                  hasDescription: !!created.description,
+                  type: created.description ? typeof created.description : 'null',
+                  length: created.description ? (typeof created.description === 'string' ? created.description.length : 'non-string') : 0,
+                  preview: created.description && typeof created.description === 'string' ? created.description.substring(0, 200) : 'N/A',
+                },
               });
               // Run validation
               const validation = this.validateOfferReadiness(created);
@@ -933,8 +1056,32 @@ export class OffersService {
 
         const offers = response.offers || [];
         
+        // Log after receiving data from Allegro API
+        this.logger.log('[importAllOffers] Received data from Allegro API', {
+          totalOffers: offers.length,
+          offset,
+          limit,
+          responseKeys: Object.keys(response),
+        });
+        
         for (const allegroOffer of offers) {
           try {
+            // Log raw data received from Allegro API
+            this.logger.log('[importAllOffers] Processing offer from Allegro API', {
+              offerId: allegroOffer.id,
+              title: allegroOffer.name?.substring(0, 50),
+              rawDataKeys: Object.keys(allegroOffer),
+              rawDataHasDescription: !!allegroOffer.description,
+              rawDataDescriptionType: allegroOffer.description ? typeof allegroOffer.description : 'null',
+              rawDataDescriptionLength: allegroOffer.description ? (typeof allegroOffer.description === 'string' ? allegroOffer.description.length : 'non-string') : 0,
+              rawDataHasImages: !!allegroOffer.images,
+              rawDataImagesCount: Array.isArray(allegroOffer.images) ? allegroOffer.images.length : 0,
+              rawDataImagesUrls: Array.isArray(allegroOffer.images) ? allegroOffer.images.map((img: any) => {
+                const url = typeof img === 'string' ? img : (img.url || img.path || String(img));
+                return url.substring(0, 80);
+              }) : [],
+            });
+            
             // Fetch full offer details to ensure we have ALL fields
             // The list endpoint might return simplified data, so we fetch the complete offer
             let fullOfferData = allegroOffer;
@@ -942,15 +1089,42 @@ export class OffersService {
               const fullOffer = await this.allegroApi.getOfferWithOAuthToken(oauthToken, allegroOffer.id);
               if (fullOffer) {
                 fullOfferData = fullOffer;
-                this.logger.log('Fetched full offer details', { offerId: allegroOffer.id });
+                this.logger.log('[importAllOffers] Fetched full offer details from Allegro API', {
+                  offerId: allegroOffer.id,
+                  fullOfferKeys: Object.keys(fullOffer),
+                  fullOfferHasDescription: !!fullOffer.description,
+                  fullOfferDescriptionType: fullOffer.description ? typeof fullOffer.description : 'null',
+                  fullOfferDescriptionLength: fullOffer.description ? (typeof fullOffer.description === 'string' ? fullOffer.description.length : 'non-string') : 0,
+                  fullOfferHasImages: !!fullOffer.images,
+                  fullOfferImagesCount: Array.isArray(fullOffer.images) ? fullOffer.images.length : 0,
+                  fullOfferImagesUrls: Array.isArray(fullOffer.images) ? fullOffer.images.map((img: any) => {
+                    const url = typeof img === 'string' ? img : (img.url || img.path || String(img));
+                    return url.substring(0, 80);
+                  }) : [],
+                });
               }
             } catch (fetchError: any) {
               // If fetching full details fails, use the list data
-              this.logger.warn('Failed to fetch full offer details, using list data', {
+              this.logger.warn('[importAllOffers] Failed to fetch full offer details, using list data', {
                 offerId: allegroOffer.id,
                 error: fetchError.message,
               });
             }
+            
+            // Log after parsing raw data
+            this.logger.log('[importAllOffers] Parsing raw data from Allegro API', {
+              offerId: allegroOffer.id,
+              rawDataKeys: Object.keys(fullOfferData),
+              rawDataHasDescription: !!fullOfferData.description,
+              rawDataDescriptionType: fullOfferData.description ? typeof fullOfferData.description : 'null',
+              rawDataDescriptionLength: fullOfferData.description ? (typeof fullOfferData.description === 'string' ? fullOfferData.description.length : 'non-string') : 0,
+              rawDataHasImages: !!fullOfferData.images,
+              rawDataImagesCount: Array.isArray(fullOfferData.images) ? fullOfferData.images.length : 0,
+              rawDataImagesUrls: Array.isArray(fullOfferData.images) ? fullOfferData.images.map((img: any) => {
+                const url = typeof img === 'string' ? img : (img.url || img.path || String(img));
+                return url.substring(0, 80);
+              }) : [],
+            });
 
             const offerData = this.extractOfferData(fullOfferData);
             
@@ -1266,7 +1440,57 @@ export class OffersService {
               });
             }
 
+            // Log after parsing raw data
+            this.logger.log('[importApprovedOffersFromSalesCenter] Parsing raw data from Allegro API', {
+              userId,
+              offerId: allegroOffer.id,
+              rawDataKeys: Object.keys(fullOfferData),
+              rawDataHasDescription: !!fullOfferData.description,
+              rawDataDescriptionType: fullOfferData.description ? typeof fullOfferData.description : 'null',
+              rawDataDescriptionLength: fullOfferData.description ? (typeof fullOfferData.description === 'string' ? fullOfferData.description.length : 'non-string') : 0,
+              rawDataHasImages: !!fullOfferData.images,
+              rawDataImagesCount: Array.isArray(fullOfferData.images) ? fullOfferData.images.length : 0,
+              rawDataImagesUrls: Array.isArray(fullOfferData.images) ? fullOfferData.images.map((img: any) => {
+                const url = typeof img === 'string' ? img : (img.url || img.path || String(img));
+                return url.substring(0, 80);
+              }) : [],
+            });
+            
             const offerData = this.extractOfferData(fullOfferData);
+            
+            // Log after parsing - what was extracted
+            this.logger.log('[importApprovedOffersFromSalesCenter] Raw data parsed successfully', {
+              userId,
+              offerId: allegroOffer.id,
+              parsedImages: {
+                count: Array.isArray(offerData.images) ? offerData.images.length : 0,
+                urls: Array.isArray(offerData.images) ? offerData.images.map((url: string) => url.substring(0, 80)) : [],
+              },
+              parsedDescription: {
+                hasDescription: !!offerData.description,
+                type: offerData.description ? typeof offerData.description : 'null',
+                length: offerData.description ? (typeof offerData.description === 'string' ? offerData.description.length : 'non-string') : 0,
+                preview: offerData.description && typeof offerData.description === 'string' ? offerData.description.substring(0, 200) : 'N/A',
+              },
+            });
+            
+            // Log before saving to database
+            this.logger.log('[importApprovedOffersFromSalesCenter] Saving parsed data to database', {
+              userId,
+              offerId: allegroOffer.id,
+              operation: 'upsert',
+              images: {
+                count: Array.isArray(offerData.images) ? offerData.images.length : 0,
+                urls: Array.isArray(offerData.images) ? offerData.images.map((url: string) => url.substring(0, 80)) : [],
+              },
+              description: {
+                hasDescription: !!offerData.description,
+                type: offerData.description ? typeof offerData.description : 'null',
+                length: offerData.description ? (typeof offerData.description === 'string' ? offerData.description.length : 'non-string') : 0,
+                preview: offerData.description && typeof offerData.description === 'string' ? offerData.description.substring(0, 200) : 'N/A',
+              },
+            });
+            
             const offer = await this.prisma.allegroOffer.upsert({
               where: { allegroOfferId: allegroOffer.id },
               update: {
@@ -1281,6 +1505,31 @@ export class OffersService {
                 syncSource: 'SALES_CENTER',
                 lastSyncedAt: new Date(),
               } as any,
+            });
+            
+            // Log after saving to database
+            this.logger.log('[importApprovedOffersFromSalesCenter] Data saved to database successfully', {
+              userId,
+              offerId: offer.id,
+              allegroOfferId: offer.allegroOfferId,
+              dbImages: {
+                count: Array.isArray(offer.images) ? offer.images.length : 0,
+                urls: Array.isArray(offer.images) ? offer.images.map((url: string) => url.substring(0, 80)) : [],
+              },
+              dbDescription: {
+                hasDescription: !!offer.description,
+                type: offer.description ? typeof offer.description : 'null',
+                length: offer.description ? (typeof offer.description === 'string' ? offer.description.length : 'non-string') : 0,
+                preview: offer.description && typeof offer.description === 'string' ? offer.description.substring(0, 200) : 'N/A',
+              },
+              rawDataImages: {
+                count: Array.isArray((offer.rawData as any)?.images) ? (offer.rawData as any).images.length : 0,
+              },
+              rawDataDescription: {
+                hasDescription: !!(offer.rawData as any)?.description,
+                type: (offer.rawData as any)?.description ? typeof (offer.rawData as any).description : 'null',
+                length: (offer.rawData as any)?.description ? (typeof (offer.rawData as any).description === 'string' ? (offer.rawData as any).description.length : 'non-string') : 0,
+              },
             });
             // Run validation
             const validation = this.validateOfferReadiness(offer);
@@ -1532,11 +1781,23 @@ export class OffersService {
     const priceAmount = allegroOffer.sellingMode?.price?.amount || '0';
     const currency = allegroOffer.sellingMode?.price?.currency || this.getDefaultCurrency();
 
+    // Extract description with detailed logging
+    const description = allegroOffer.description || null;
+    this.logger.log('[extractOfferData] Extracting description', {
+      offerId: allegroOffer.id,
+      hasDescription: !!description,
+      descriptionType: description ? typeof description : 'null',
+      descriptionLength: description ? (typeof description === 'string' ? description.length : 'non-string') : 0,
+      descriptionPreview: description && typeof description === 'string' ? description.substring(0, 200) : 'N/A',
+      sourceHasDescription: !!allegroOffer.description,
+      sourceDescriptionType: allegroOffer.description ? typeof allegroOffer.description : 'null',
+    });
+
     const extractedData = {
       allegroOfferId: allegroOffer.id,
       allegroListingId: allegroOffer.listing?.id || allegroOffer.external?.id || null,
       title: allegroOffer.name || '',
-      description: allegroOffer.description || null,
+      description: description,
       categoryId: allegroOffer.category?.id || '',
       price: parseFloat(priceAmount),
       currency: currency,
@@ -1580,6 +1841,22 @@ export class OffersService {
       },
     });
 
+    // Log images and description summary
+    this.logger.log('[extractOfferData] Images and Description summary', {
+      offerId: allegroOffer.id,
+      images: {
+        extracted: !!extractedData.images,
+        count: Array.isArray(extractedData.images) ? extractedData.images.length : 0,
+        urls: Array.isArray(extractedData.images) ? extractedData.images.map((url: string) => url.substring(0, 80)) : [],
+      },
+      description: {
+        extracted: !!extractedData.description,
+        type: extractedData.description ? typeof extractedData.description : 'null',
+        length: extractedData.description ? (typeof extractedData.description === 'string' ? extractedData.description.length : 'non-string') : 0,
+        preview: extractedData.description && typeof extractedData.description === 'string' ? extractedData.description.substring(0, 300) : 'N/A',
+      },
+    });
+
     return extractedData;
   }
 
@@ -1588,41 +1865,87 @@ export class OffersService {
    * Checks both direct images field and rawData.images
    */
   private extractImages(allegroOffer: any): any {
+    const offerId = allegroOffer.id || allegroOffer.allegroOfferId || 'unknown';
+    
     // Check direct images field first
     if (allegroOffer.images && Array.isArray(allegroOffer.images)) {
-      const extracted = allegroOffer.images.map((img: any) => {
+      const extracted = allegroOffer.images.map((img: any, idx: number) => {
+        let imageUrl: string;
         if (typeof img === 'string') {
-          return img;
+          imageUrl = img;
+        } else {
+          imageUrl = img.url || img.path || String(img);
         }
-        return img.url || img.path || img;
+        
+        // Log each image extraction
+        this.logger.log('[extractImages] Extracting image from direct field', {
+          offerId,
+          imageIndex: idx,
+          imageUrl: imageUrl.substring(0, 100),
+          imageUrlLength: imageUrl.length,
+          sourceType: typeof img,
+          hasUrl: !!img.url,
+          hasPath: !!img.path,
+        });
+        
+        return imageUrl;
       });
-      this.logger.debug('[extractImages] Extracted images from direct field', {
-        offerId: allegroOffer.id,
+      
+      this.logger.log('[extractImages] Successfully extracted images from direct field', {
+        offerId,
         imagesCount: extracted.length,
-        firstImage: extracted[0]?.substring(0, 50) || 'N/A',
+        imageUrls: extracted.map((url: string) => url.substring(0, 80)),
+        firstImagePreview: extracted[0]?.substring(0, 100) || 'N/A',
       });
+      
       return extracted;
     }
+    
     // Check rawData.images as fallback
     if (allegroOffer.rawData?.images && Array.isArray(allegroOffer.rawData.images)) {
-      const extracted = allegroOffer.rawData.images.map((img: any) => {
+      const extracted = allegroOffer.rawData.images.map((img: any, idx: number) => {
+        let imageUrl: string;
         if (typeof img === 'string') {
-          return img;
+          imageUrl = img;
+        } else {
+          imageUrl = img.url || img.path || String(img);
         }
-        return img.url || img.path || img;
+        
+        // Log each image extraction
+        this.logger.log('[extractImages] Extracting image from rawData', {
+          offerId,
+          imageIndex: idx,
+          imageUrl: imageUrl.substring(0, 100),
+          imageUrlLength: imageUrl.length,
+          sourceType: typeof img,
+          hasUrl: !!img.url,
+          hasPath: !!img.path,
+        });
+        
+        return imageUrl;
       });
-      this.logger.debug('[extractImages] Extracted images from rawData', {
-        offerId: allegroOffer.id,
+      
+      this.logger.log('[extractImages] Successfully extracted images from rawData', {
+        offerId,
         imagesCount: extracted.length,
-        firstImage: extracted[0]?.substring(0, 50) || 'N/A',
+        imageUrls: extracted.map((url: string) => url.substring(0, 80)),
+        firstImagePreview: extracted[0]?.substring(0, 100) || 'N/A',
       });
+      
       return extracted;
     }
-    this.logger.warn('[extractImages] No images found', {
-      offerId: allegroOffer.id,
+    
+    this.logger.warn('[extractImages] No images found in offer', {
+      offerId,
       hasDirectImages: !!allegroOffer.images,
+      directImagesType: allegroOffer.images ? typeof allegroOffer.images : 'null',
+      directImagesIsArray: Array.isArray(allegroOffer.images),
+      hasRawData: !!allegroOffer.rawData,
       hasRawDataImages: !!allegroOffer.rawData?.images,
+      rawDataImagesType: allegroOffer.rawData?.images ? typeof allegroOffer.rawData.images : 'null',
+      rawDataImagesIsArray: Array.isArray(allegroOffer.rawData?.images),
     });
+    
     return null;
   }
 
@@ -1642,7 +1965,7 @@ export class OffersService {
     }
 
     // Required: Description - check both direct field and rawData
-    const description = offer.description || offer.rawData?.description || '';
+    const description = offer.description || (offer.rawData as any)?.description || '';
     if (!description || (typeof description === 'string' && description.trim().length === 0)) {
       errors.push({ type: 'MISSING_DESCRIPTION', message: 'Description is required', severity: 'error' });
     }
@@ -1738,17 +2061,69 @@ export class OffersService {
 
   /**
    * Validate and update validation status for an offer
+   * If offer has incomplete data, fetches fresh data from Allegro API first
    */
-  async validateOffer(offerId: string): Promise<{
+  async validateOffer(offerId: string, userId?: string): Promise<{
     status: 'READY' | 'WARNINGS' | 'ERRORS';
     errors: Array<{ type: string; message: string; severity: 'error' | 'warning' }>;
   }> {
-    const offer = await this.prisma.allegroOffer.findUnique({
+    let offer = await this.prisma.allegroOffer.findUnique({
       where: { id: offerId },
     });
 
     if (!offer) {
       throw new HttpException('Offer not found', HttpStatus.NOT_FOUND);
+    }
+
+    // Check if offer has incomplete data (missing description, images, or rawData)
+    const rawData = offer.rawData as any;
+    const hasIncompleteData = !rawData || 
+      !rawData.description || 
+      !rawData.images || 
+      (Array.isArray(rawData.images) && rawData.images.length === 0);
+
+    // If data is incomplete and we have userId, fetch fresh data from Allegro API
+    if (hasIncompleteData && userId) {
+      try {
+        this.logger.log('Offer has incomplete data, fetching fresh data from Allegro API', {
+          offerId,
+          allegroOfferId: offer.allegroOfferId,
+          hasRawData: !!offer.rawData,
+          hasDescription: !!(offer.rawData as any)?.description,
+          hasImages: !!(offer.rawData as any)?.images,
+        });
+
+        const oauthToken = await this.getUserOAuthToken(userId);
+        const fullOffer = await this.allegroApi.getOfferWithOAuthToken(oauthToken, offer.allegroOfferId);
+        
+        if (fullOffer) {
+          // Update offer with fresh data
+          const offerData = this.extractOfferData(fullOffer);
+          offer = await this.prisma.allegroOffer.update({
+            where: { id: offerId },
+            data: {
+              ...offerData,
+              syncStatus: 'SYNCED',
+              syncSource: 'ALLEGRO_API',
+              lastSyncedAt: new Date(),
+            } as any,
+          });
+
+          this.logger.log('Offer updated with fresh data from Allegro API', {
+            offerId,
+            allegroOfferId: offer.allegroOfferId,
+            hasRawData: !!offer.rawData,
+            hasDescription: !!(offer.rawData as any)?.description,
+            hasImages: !!(offer.rawData as any)?.images,
+          });
+        }
+      } catch (error: any) {
+        this.logger.warn('Failed to fetch fresh data from Allegro API, validating with existing data', {
+          offerId,
+          error: error.message,
+        });
+        // Continue with existing data if fetch fails
+      }
     }
 
     const validation = this.validateOfferReadiness(offer);

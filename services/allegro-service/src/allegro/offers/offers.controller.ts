@@ -449,7 +449,7 @@ export class OffersController {
         userId,
         offerId: id,
       });
-      const validation = await this.offersService.validateOffer(id);
+      const validation = await this.offersService.validateOffer(id, userId);
       this.metricsService.incrementValidationRequests();
       this.logger.log('Offer validation completed', {
         userId,
