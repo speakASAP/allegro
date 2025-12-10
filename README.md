@@ -248,6 +248,31 @@ All services use centralized logging via the logging-microservice. Logs are also
 
 ## Usage Examples
 
+### Import Offers from Allegro
+
+**Via Frontend (Recommended)**:
+1. Navigate to the **Import Jobs** page in the web interface
+2. Click **"📥 Import All Offers from Allegro"** button
+3. All offers will be imported automatically
+
+**Via API**:
+```bash
+# Port configured in allegro/.env: API_GATEWAY_PORT (default: 3411)
+# Requires OAuth authorization (see Settings page)
+curl -X GET http://localhost:${API_GATEWAY_PORT:-3411}/api/allegro/offers/import \
+  -H "Authorization: Bearer YOUR_TOKEN"
+```
+
+**Response**:
+```json
+{
+  "success": true,
+  "data": {
+    "totalImported": 29
+  }
+}
+```
+
 ### Import Products from CSV
 
 ```bash
@@ -344,9 +369,36 @@ The web interface is available at:
 - **Landing Page**: Public page with features, pricing, and registration
 - **User Registration/Login**: Integrated with auth-microservice
 - **Dashboard**: Secure dashboard for authenticated users with:
-  - Settings page for managing Allegro and supplier API keys
-  - Import jobs overview
-  - Orders management
+  - **Settings Page**: Manage Allegro and supplier API keys, OAuth authorization
+  - **Import Jobs Page**: Import and export offers with the following features:
+    - **Import All Offers from Allegro**: One-click button to import all existing offers from your Allegro account directly into the database. Requires OAuth authorization (see Settings page).
+    - **Preview & Select from Allegro API**: Preview offers from Allegro API and selectively import specific offers.
+    - **Preview from Sales Center**: Preview offers from Sales Center for import.
+    - **Export Offers**: Export offers to CSV format.
+  - **Orders Management**: View and manage orders from Allegro
+
+#### Importing Offers from Allegro
+
+To import offers from Allegro:
+
+1. **OAuth Authorization Required**: First, authorize the application with Allegro:
+   - Go to **Settings** page
+   - Enter your Allegro Client ID and Client Secret
+   - Click **"Authorize with Allegro"** to complete OAuth flow
+   - You'll be redirected to Allegro to grant permissions
+
+2. **Import All Offers**:
+   - Navigate to **Import Jobs** page
+   - Click the **"📥 Import All Offers from Allegro"** button
+   - All existing offers from your Allegro account will be imported into the database
+   - A success message will show the number of offers imported
+
+3. **Selective Import**:
+   - Click **"📋 Preview & Select from Allegro API"** to preview offers
+   - Select which offers you want to import
+   - Click **"Import Selected"** to import only the chosen offers
+
+**Note**: The "Import All Offers" button requires OAuth authorization. If you haven't authorized yet, you'll see an error message with a button to start the authorization process.
 
 ## Documentation
 
