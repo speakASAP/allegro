@@ -123,10 +123,19 @@ export class OAuthController {
       );
     }
 
+    // Normalize redirect URI to ensure consistency (remove trailing slashes)
+    const normalizedRedirectUri = redirectUri.trim().replace(/\/+$/, '');
+
+    this.logger.log('Generating authorization URL with normalized redirect URI', {
+      userId,
+      redirectUri: normalizedRedirectUri,
+      originalRedirectUri: redirectUri,
+    });
+
     // Generate authorization URL with PKCE
     const { url, state, codeVerifier } = this.oauthService.generateAuthorizationUrl(
       settings.allegroClientId,
-      redirectUri,
+      normalizedRedirectUri,
     );
 
     // Clear any old OAuth state first to prevent conflicts with old encrypted data
@@ -220,9 +229,13 @@ export class OAuthController {
         throw new Error('ALLEGRO_REDIRECT_URI not configured');
       }
 
+      // Normalize redirect URI to ensure consistency (remove trailing slashes)
+      const normalizedRedirectUri = redirectUri.trim().replace(/\/+$/, '');
+
       this.logger.log('Exchanging code for token', {
         userId: settings.userId,
-        redirectUri,
+        redirectUri: normalizedRedirectUri,
+        originalRedirectUri: redirectUri,
         codeLength: code?.length,
         codeVerifierLength: codeVerifier?.length,
         clientId: settings.allegroClientId?.substring(0, 8) + '...',
@@ -237,11 +250,11 @@ export class OAuthController {
         return res.redirect(`${this.getFrontendUrl()}/auth/callback?error=decryption_failed`);
       }
 
-      // Exchange code for tokens
+      // Exchange code for tokens - use normalized redirect URI
       const tokenResponse = await this.oauthService.exchangeCodeForToken(
         code,
         codeVerifier,
-        redirectUri,
+        normalizedRedirectUri,
         settings.allegroClientId || '',
         clientSecret,
       );

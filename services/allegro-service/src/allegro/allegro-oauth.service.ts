@@ -63,6 +63,9 @@ export class AllegroOAuthService {
     redirectUri: string,
     scopes?: string[],
   ): { url: string; state: string; codeVerifier: string } {
+    // Normalize redirect URI - remove trailing slashes and ensure exact match
+    const normalizedRedirectUri = redirectUri.trim().replace(/\/+$/, '');
+    
     // Generate state for CSRF protection
     const state = crypto.randomBytes(16).toString('hex');
     
@@ -82,7 +85,7 @@ export class AllegroOAuthService {
     const params = new URLSearchParams({
       response_type: 'code',
       client_id: clientId,
-      redirect_uri: redirectUri,
+      redirect_uri: normalizedRedirectUri,
       state: state,
       code_challenge: codeChallenge,
       code_challenge_method: 'S256',
@@ -97,7 +100,8 @@ export class AllegroOAuthService {
 
     this.logger.debug('Generated Allegro OAuth authorization URL', {
       clientId: clientId.substring(0, 8) + '...',
-      redirectUri,
+      redirectUri: normalizedRedirectUri,
+      originalRedirectUri: redirectUri,
       scopes: finalScopes || 'none (scope parameter omitted)',
     });
 
@@ -114,6 +118,16 @@ export class AllegroOAuthService {
     clientId: string,
     clientSecret: string,
   ): Promise<TokenResponse> {
+    // Normalize redirect URI - remove trailing slashes and ensure exact match
+    const normalizedRedirectUri = redirectUri.trim().replace(/\/+$/, '');
+    
+    this.logger.debug('Exchanging authorization code for token', {
+      redirectUri: normalizedRedirectUri,
+      codeLength: code?.length,
+      codeVerifierLength: codeVerifier?.length,
+      clientId: clientId.substring(0, 8) + '...',
+    });
+
     try {
       const response = await firstValueFrom(
         this.httpService.post<TokenResponse>(
@@ -121,7 +135,7 @@ export class AllegroOAuthService {
           new URLSearchParams({
             grant_type: 'authorization_code',
             code: code,
-            redirect_uri: redirectUri,
+            redirect_uri: normalizedRedirectUri,
             code_verifier: codeVerifier,
           }),
           {
@@ -155,7 +169,8 @@ export class AllegroOAuthService {
         errorCode,
         errorDescription,
         errorData: JSON.stringify(errorData),
-        redirectUri: redirectUri.substring(0, 50) + '...',
+        redirectUri: normalizedRedirectUri,
+        originalRedirectUri: redirectUri,
         clientId: clientId.substring(0, 8) + '...',
         hasCodeVerifier: !!codeVerifier,
         codeVerifierLength: codeVerifier?.length,
