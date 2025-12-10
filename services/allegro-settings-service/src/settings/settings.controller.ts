@@ -16,11 +16,15 @@ import {
 } from '@nestjs/common';
 import { SettingsService } from './settings.service';
 import { JwtAuthGuard } from '@allegro/shared';
+import { LoggerService } from '@allegro/shared';
 import { UpdateSettingsDto, AddSupplierConfigDto, UpdateSupplierConfigDto, ValidateAllegroKeysDto } from './dto/update-settings.dto';
 
 @Controller('settings')
 export class SettingsController {
-  constructor(private readonly settingsService: SettingsService) {}
+  constructor(
+    private readonly settingsService: SettingsService,
+    private readonly logger: LoggerService,
+  ) {}
 
   @Get()
   @UseGuards(JwtAuthGuard)
@@ -37,7 +41,30 @@ export class SettingsController {
     @Body() dto: UpdateSettingsDto,
   ): Promise<{ success: boolean; data: any }> {
     const userId = String(req.user.id); // Convert to string as Prisma expects String
+    
+    this.logger.log('SettingsController.updateSettings called', {
+      userId,
+      hasClientId: !!dto.allegroClientId,
+      clientIdLength: dto.allegroClientId?.length,
+      hasClientSecret: !!dto.allegroClientSecret,
+      clientSecretLength: dto.allegroClientSecret?.length,
+      clientSecretFirstChars: dto.allegroClientSecret?.substring(0, 5) + '...',
+      dtoKeys: Object.keys(dto),
+    });
+    
     const settings = await this.settingsService.updateSettings(userId, dto);
+    
+    this.logger.log('SettingsController.updateSettings completed', {
+      userId,
+      resultSuccess: settings?.success !== false,
+      hasResultData: !!settings,
+      resultKeys: settings ? Object.keys(settings) : [],
+      hasClientId: !!settings?.allegroClientId,
+      hasClientSecret: !!settings?.allegroClientSecret,
+      clientSecretLength: settings?.allegroClientSecret?.length,
+      hasDecryptionError: !!settings?._allegroClientSecretDecryptionError,
+    });
+    
     return { success: true, data: settings };
   }
 
