@@ -189,20 +189,24 @@ const OffersPage: React.FC = () => {
   const handleViewDetails = async (offer: Offer) => {
     setSelectedOffer(offer);
     setShowDetailModal(true);
+    setError(null);
+    setLoadingDetail(true);
     
-    // If rawData is not loaded, fetch full offer details
-    if (!offer.rawData) {
-      setLoadingDetail(true);
-      try {
-        const response = await api.get(`/allegro/offers/${offer.id}`);
-        if (response.data.success) {
-          setSelectedOffer(response.data.data);
-        }
-      } catch (err) {
-        console.error('Failed to load offer details', err);
-      } finally {
-        setLoadingDetail(false);
+    // Always fetch full offer details to ensure we have rawData
+    try {
+      const response = await api.get(`/allegro/offers/${offer.id}`);
+      if (response.data.success && response.data.data) {
+        setSelectedOffer(response.data.data);
+      } else {
+        setError('Failed to load offer details: Invalid response');
       }
+    } catch (err) {
+      console.error('Failed to load offer details', err);
+      const axiosError = err as AxiosError & { response?: { data?: { error?: { message?: string } } } };
+      const errorMessage = axiosError.response?.data?.error?.message || (err as Error).message || 'Failed to load offer details';
+      setError(errorMessage);
+    } finally {
+      setLoadingDetail(false);
     }
   };
 
@@ -761,7 +765,9 @@ const OffersPage: React.FC = () => {
         size="xlarge"
       >
         {loadingDetail ? (
-          <div>Loading offer details...</div>
+          <div className="flex items-center justify-center py-8">
+            <div className="text-gray-600">Loading offer details...</div>
+          </div>
         ) : selectedOffer ? (
           <div className="space-y-4">
             {/* Edit/View Mode Toggle */}
@@ -1044,12 +1050,12 @@ const OffersPage: React.FC = () => {
             )}
 
             {/* Description */}
-            {selectedOffer.description && (
+            {(selectedOffer.description || selectedOffer.rawData?.description) && (
               <div>
                 <h3 className="font-semibold mb-2">Description</h3>
                 <div 
                   className="prose max-w-none text-sm"
-                  dangerouslySetInnerHTML={{ __html: selectedOffer.description }}
+                  dangerouslySetInnerHTML={{ __html: selectedOffer.description || selectedOffer.rawData?.description || '' }}
                 />
               </div>
             )}
