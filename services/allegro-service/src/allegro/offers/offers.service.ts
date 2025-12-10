@@ -1989,7 +1989,6 @@ export class OffersService {
       hasDirectImages: !!allegroOffer.images,
       directImagesType: allegroOffer.images ? typeof allegroOffer.images : 'null',
       directImagesIsArray: Array.isArray(allegroOffer.images),
-      hasRawData: !!allegroOffer.rawData,
       hasPrimaryImage: !!allegroOffer.primaryImage,
       hasRawData: !!allegroOffer.rawData,
       hasRawDataImages: !!allegroOffer.rawData?.images,
