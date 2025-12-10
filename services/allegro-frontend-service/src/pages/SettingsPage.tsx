@@ -157,26 +157,31 @@ const SettingsPage: React.FC = () => {
         });
       }
       
-      console.log('[SettingsPage] Sending PUT /settings request', {
+      console.log('[SettingsPage] Sending PUT /settings request', JSON.stringify({
         payloadKeys: Object.keys(payload),
         hasClientId: !!payload.allegroClientId,
-        clientIdLength: payload.allegroClientId?.length,
+        clientId: payload.allegroClientId || 'EMPTY',
+        clientIdLength: payload.allegroClientId?.length || 0,
         hasClientSecret: !!payload.allegroClientSecret,
-        clientSecretLength: payload.allegroClientSecret?.length,
-      });
+        clientSecretLength: payload.allegroClientSecret?.length || 0,
+        clientSecretFirstChars: payload.allegroClientSecret ? (payload.allegroClientSecret.substring(0, 10) + '...') : 'EMPTY',
+      }, null, 2));
       
       const response = await api.put('/settings', payload);
       
-      console.log('[SettingsPage] Received PUT /settings response', {
+      console.log('[SettingsPage] Received PUT /settings response', JSON.stringify({
         success: response.data?.success,
         hasData: !!response.data?.data,
         responseKeys: response.data ? Object.keys(response.data) : [],
         dataKeys: response.data?.data ? Object.keys(response.data.data) : [],
         hasClientId: !!response.data?.data?.allegroClientId,
+        clientId: response.data?.data?.allegroClientId || 'EMPTY',
         hasClientSecret: !!response.data?.data?.allegroClientSecret,
-        clientSecretLength: response.data?.data?.allegroClientSecret?.length,
+        clientSecretLength: response.data?.data?.allegroClientSecret?.length || 0,
+        clientSecretFirstChars: response.data?.data?.allegroClientSecret ? (response.data?.data?.allegroClientSecret.substring(0, 10) + '...') : 'EMPTY',
         hasDecryptionError: !!response.data?.data?._allegroClientSecretDecryptionError,
-      });
+        decryptionError: response.data?.data?._allegroClientSecretDecryptionError || 'NONE',
+      }, null, 2));
 
       if (response.data.success) {
         setSuccess('Allegro settings saved successfully');
