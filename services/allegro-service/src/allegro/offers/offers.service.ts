@@ -1802,8 +1802,45 @@ export class OffersService {
     const priceAmount = allegroOffer.sellingMode?.price?.amount || '0';
     const currency = allegroOffer.sellingMode?.price?.currency || this.getDefaultCurrency();
 
-    // Extract description with detailed logging
-    const description = allegroOffer.description || null;
+    // Extract description - check multiple possible locations
+    // Allegro API might return description in different formats or locations
+    let description = allegroOffer.description || null;
+    
+    // If description is an object, try to extract text from it
+    if (description && typeof description === 'object') {
+      // Some Allegro API responses have description as an object with sections/items
+      if (description.sections && Array.isArray(description.sections)) {
+        // Extract text from sections
+        const textParts: string[] = [];
+        description.sections.forEach((section: any) => {
+          if (section.items && Array.isArray(section.items)) {
+            section.items.forEach((item: any) => {
+              if (item.type === 'TEXT' && item.content) {
+                textParts.push(item.content);
+              }
+            });
+          }
+        });
+        description = textParts.length > 0 ? textParts.join('\n\n') : null;
+      } else if (description.text) {
+        description = description.text;
+      } else if (description.content) {
+        description = description.content;
+      } else {
+        // If it's an object but we can't extract text, log it and set to null
+        this.logger.warn('[extractOfferData] Description is object but cannot extract text', {
+          offerId: allegroOffer.id,
+          descriptionKeys: Object.keys(description),
+        });
+        description = null;
+      }
+    }
+    
+    // Ensure description is a string or null
+    if (description && typeof description !== 'string') {
+      description = String(description);
+    }
+    
     this.logger.log('[extractOfferData] Extracting description', {
       offerId: allegroOffer.id,
       hasDescription: !!description,
@@ -1813,6 +1850,12 @@ export class OffersService {
       sourceHasDescription: !!allegroOffer.description,
       sourceDescriptionType: allegroOffer.description ? typeof allegroOffer.description : 'null',
     });
+
+    // Extract delivery options - check multiple possible locations
+    let deliveryOptions = allegroOffer.delivery || allegroOffer.deliveryOptions || null;
+    
+    // Extract payment options - check multiple possible locations
+    let paymentOptions = allegroOffer.payments || allegroOffer.paymentOptions || allegroOffer.sellingMode?.payments || null;
 
     const extractedData = {
       allegroOfferId: allegroOffer.id,
@@ -1827,8 +1870,8 @@ export class OffersService {
       status: publicationStatus,
       publicationStatus: publicationStatus,
       images: images,
-      deliveryOptions: allegroOffer.delivery || allegroOffer.deliveryOptions || null,
-      paymentOptions: allegroOffer.payments || allegroOffer.paymentOptions || null,
+      deliveryOptions: deliveryOptions,
+      paymentOptions: paymentOptions,
       rawData: allegroOffer as any,
     };
 

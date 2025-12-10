@@ -184,11 +184,14 @@ export class AuthService {
         error: error.message,
         errorCode: error.code,
         errorStatus: error.response?.status,
+        errorResponseData: error.response?.data,
         timeout: error.code === 'ECONNABORTED' || error.message?.includes('timeout'),
         validationTimeout,
         authServiceUrl: this.authServiceUrl,
+        stack: error.stack,
       });
 
+      // Return invalid token response
       return { valid: false };
     }
   }
