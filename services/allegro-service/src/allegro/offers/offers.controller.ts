@@ -184,9 +184,20 @@ export class OffersController {
   @Get('import')
   @UseGuards(JwtAuthGuard)
   async importOffers(@Request() req: any): Promise<{ success: boolean; data: any }> {
+    this.logger.log('[importOffers] Import request received', {
+      userId: req.user?.id,
+      hasUser: !!req.user,
+      userKeys: req.user ? Object.keys(req.user) : [],
+    });
+    
     try {
       const userId = String(req.user.id);
+      this.logger.log('[importOffers] Starting importAllOffers', { userId });
       const result = await this.offersService.importAllOffers(userId);
+      this.logger.log('[importOffers] Import completed successfully', {
+        userId,
+        totalImported: result?.totalImported || 0,
+      });
       return { success: true, data: result };
     } catch (error: any) {
       this.metricsService.incrementErrors();
