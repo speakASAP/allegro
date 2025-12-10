@@ -138,13 +138,36 @@ export class AuthService {
 
   /**
    * Validate JWT token
+   * Uses reasonable timeout and retries to handle network latency and service load
    */
   async validateToken(token: string): Promise<ValidateTokenResponse> {
-    const callFn = async () => this.callAuthService<ValidateTokenResponse>('/auth/validate', { token });
+    // Use AUTH_VALIDATE_TIMEOUT if set, otherwise fall back to AUTH_SERVICE_TIMEOUT or HTTP_TIMEOUT, default to 10 seconds
+    const validationTimeout = parseInt(
+      this.configService.get<string>('AUTH_VALIDATE_TIMEOUT') ||
+      this.configService.get<string>('AUTH_SERVICE_TIMEOUT') ||
+      this.configService.get<string>('HTTP_TIMEOUT') ||
+      '10000'
+    );
+    const callFn = async () => {
+      const response = await firstValueFrom(
+        this.httpService.post<ValidateTokenResponse>(
+          `${this.authServiceUrl}/auth/validate`,
+          { token },
+          {
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            timeout: validationTimeout,
+          },
+        ),
+      );
+      return response.data;
+    };
 
     try {
-      const maxRetries = parseInt(this.configService.get<string>('AUTH_RETRY_MAX_ATTEMPTS') || this.configService.get<string>('RETRY_MAX_ATTEMPTS') || '2');
-      const retryDelay = parseInt(this.configService.get<string>('AUTH_RETRY_DELAY_MS') || this.configService.get<string>('RETRY_DELAY_MS') || '500');
+      // Use 2 retries with exponential backoff to handle transient network issues
+      const maxRetries = 2;
+      const retryDelay = 500; // 500ms initial delay
       const response = await this.retryService.retry(
         callFn,
         maxRetries,
@@ -156,8 +179,14 @@ export class AuthService {
     } catch (error: any) {
       this.resilienceMonitor.recordCall('auth-service', false);
 
+      // Log the actual error to help debug token validation issues
       this.logger.error('Failed to validate token', {
         error: error.message,
+        errorCode: error.code,
+        errorStatus: error.response?.status,
+        timeout: error.code === 'ECONNABORTED' || error.message?.includes('timeout'),
+        validationTimeout,
+        authServiceUrl: this.authServiceUrl,
       });
 
       return { valid: false };
