@@ -2,7 +2,10 @@
  * Script to verify which offers have descriptions, images, delivery, and payment options
  */
 
-const { PrismaClient } = require('@prisma/client');
+// Use Prisma from shared directory
+const path = require('path');
+const prismaPath = path.join(__dirname, '../shared/node_modules/.prisma/client');
+const { PrismaClient } = require(prismaPath);
 const prisma = new PrismaClient();
 
 async function verifyOffers() {
@@ -68,11 +71,11 @@ async function verifyOffers() {
       take: 5
     });
     
-    const missingImages = await prisma.allegroOffer.findMany({
-      where: { images: null },
-      select: { allegroOfferId: true, title: true },
-      take: 5
+    // For JSON fields, we need to check differently - get all and filter
+    const allOffersForImages = await prisma.allegroOffer.findMany({
+      select: { allegroOfferId: true, title: true, images: true },
     });
+    const missingImages = allOffersForImages.filter(o => !o.images || (Array.isArray(o.images) && o.images.length === 0)).slice(0, 5);
     
     console.log(`\n=== SAMPLE OFFERS (Latest 10) ===\n`);
     sampleOffers.forEach((offer, idx) => {
@@ -95,7 +98,7 @@ async function verifyOffers() {
     if (missingImages.length > 0) {
       console.log(`\n=== OFFERS MISSING IMAGES (Sample) ===\n`);
       missingImages.forEach(offer => {
-        console.log(`  - ${offer.allegroOfferId}: ${offer.title.substring(0, 50)}...`);
+        console.log(`  - ${offer.allegroOfferId}: ${offer.title ? offer.title.substring(0, 50) : 'N/A'}...`);
       });
     }
     
