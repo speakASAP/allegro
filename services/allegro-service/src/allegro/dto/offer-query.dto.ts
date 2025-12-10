@@ -2,8 +2,8 @@
  * Offer Query DTO
  */
 
-import { IsOptional, IsNumber, IsString, Type } from 'class-validator';
-import { Transform } from 'class-transformer';
+import { IsOptional, IsNumber, IsString } from 'class-validator';
+import { Type } from 'class-transformer';
 
 export class OfferQueryDto {
   @IsOptional()
