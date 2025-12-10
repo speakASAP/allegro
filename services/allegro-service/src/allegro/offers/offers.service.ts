@@ -354,6 +354,7 @@ export class OffersService {
               where: { allegroOfferId: allegroOffer.id },
             });
 
+            const images = this.extractImages(allegroOffer);
             const offerData = {
               title: allegroOffer.name,
               description: allegroOffer.description,
@@ -364,6 +365,7 @@ export class OffersService {
               stockQuantity: allegroOffer.stock?.available || 0,
               status: allegroOffer.publication?.status || 'INACTIVE',
               publicationStatus: allegroOffer.publication?.status || 'INACTIVE',
+              images: images,
               rawData: allegroOffer as any,
               syncStatus: 'SYNCED' as const,
               lastSyncedAt: new Date(),
@@ -517,6 +519,7 @@ export class OffersService {
         
         for (const allegroOffer of offers) {
           try {
+            const images = this.extractImages(allegroOffer);
             await this.prisma.allegroOffer.upsert({
               where: { allegroOfferId: allegroOffer.id },
               update: {
@@ -528,6 +531,8 @@ export class OffersService {
                 quantity: allegroOffer.stock?.available || 0,
                 stockQuantity: allegroOffer.stock?.available || 0,
                 status: allegroOffer.publication?.status || 'INACTIVE',
+                images: images,
+                // @ts-expect-error - rawData exists in Prisma schema but IDE types may not be reloaded
                 rawData: allegroOffer as any,
                 syncStatus: 'SYNCED',
                 lastSyncedAt: new Date(),
@@ -542,6 +547,8 @@ export class OffersService {
                 quantity: allegroOffer.stock?.available || 0,
                 stockQuantity: allegroOffer.stock?.available || 0,
                 status: allegroOffer.publication?.status || 'INACTIVE',
+                images: images,
+                // @ts-expect-error - rawData exists in Prisma schema but IDE types may not be reloaded
                 rawData: allegroOffer as any,
                 syncStatus: 'SYNCED',
                 lastSyncedAt: new Date(),
@@ -756,6 +763,7 @@ export class OffersService {
         }
 
         try {
+          const images = this.extractImages(allegroOffer);
           await this.prisma.allegroOffer.upsert({
             where: { allegroOfferId: allegroOffer.id },
             update: {
@@ -768,7 +776,9 @@ export class OffersService {
               stockQuantity: allegroOffer.stock?.available || 0,
               status: allegroOffer.publication?.status || 'INACTIVE',
               publicationStatus: allegroOffer.publication?.status || 'INACTIVE',
-              rawData: allegroOffer,
+              images: images,
+              // @ts-expect-error - rawData exists in Prisma schema but IDE types may not be reloaded
+              rawData: allegroOffer as any,
               syncStatus: 'SYNCED',
               lastSyncedAt: new Date(),
             },
@@ -783,7 +793,9 @@ export class OffersService {
               stockQuantity: allegroOffer.stock?.available || 0,
               status: allegroOffer.publication?.status || 'INACTIVE',
               publicationStatus: allegroOffer.publication?.status || 'INACTIVE',
-              rawData: allegroOffer,
+              images: images,
+              // @ts-expect-error - rawData exists in Prisma schema but IDE types may not be reloaded
+              rawData: allegroOffer as any,
               syncStatus: 'SYNCED',
               lastSyncedAt: new Date(),
             },
@@ -858,6 +870,7 @@ export class OffersService {
       
       for (const allegroOffer of offers) {
         try {
+          const images = this.extractImages(allegroOffer);
             await this.prisma.allegroOffer.upsert({
             where: { allegroOfferId: allegroOffer.id },
             update: {
@@ -870,7 +883,9 @@ export class OffersService {
               stockQuantity: allegroOffer.stock?.available || 0,
               status: allegroOffer.publication?.status || 'INACTIVE',
               publicationStatus: allegroOffer.publication?.status || 'INACTIVE',
-              rawData: allegroOffer,
+              images: images,
+              // @ts-expect-error - rawData exists in Prisma schema but IDE types may not be reloaded
+              rawData: allegroOffer as any,
               syncStatus: 'SYNCED',
               lastSyncedAt: new Date(),
             },
@@ -885,7 +900,9 @@ export class OffersService {
               stockQuantity: allegroOffer.stock?.available || 0,
               status: allegroOffer.publication?.status || 'INACTIVE',
               publicationStatus: allegroOffer.publication?.status || 'INACTIVE',
-              rawData: allegroOffer,
+              images: images,
+              // @ts-expect-error - rawData exists in Prisma schema but IDE types may not be reloaded
+              rawData: allegroOffer as any,
               syncStatus: 'SYNCED',
               lastSyncedAt: new Date(),
             },
@@ -941,6 +958,21 @@ export class OffersService {
 
   private getDefaultCurrency(): string {
     return this.configService.get('PRICE_CURRENCY_TARGET') || 'CZK';
+  }
+
+  /**
+   * Extract images from Allegro offer payload
+   */
+  private extractImages(allegroOffer: any): any {
+    if (allegroOffer.images && Array.isArray(allegroOffer.images)) {
+      return allegroOffer.images.map((img: any) => {
+        if (typeof img === 'string') {
+          return img;
+        }
+        return img.url || img.path || img;
+      });
+    }
+    return null;
   }
 }
 
