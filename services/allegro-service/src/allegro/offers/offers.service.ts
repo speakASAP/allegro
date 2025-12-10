@@ -276,19 +276,47 @@ export class OffersService {
       }
 
       // Get first batch for preview (limit to 100 items for preview)
-      if (userClientId && userClientSecret) {
-        // Use user-specific credentials
-        response = await this.allegroApi.getOffersWithCredentials(userClientId, userClientSecret, {
-          limit,
-          offset,
+      try {
+        if (userClientId && userClientSecret) {
+          // Use user-specific credentials
+          response = await this.allegroApi.getOffersWithCredentials(userClientId, userClientSecret, {
+            limit,
+            offset,
+          });
+        } else {
+          // Use global credentials
+          response = await this.allegroApi.getOffers({
+            limit,
+            offset,
+          });
+        }
+      } catch (apiError: any) {
+        // Client credentials cannot access /sale/offers endpoint - OAuth is required
+        const errorStatus = apiError.response?.status;
+        const errorData = apiError.response?.data || {};
+        
+        if (errorStatus === 403 || errorStatus === 401) {
+          this.logger.warn('Client credentials cannot access user offers - OAuth required', {
+            userId,
+            errorStatus,
+            errorData,
+          });
+          throw new Error('OAuth authorization required. The /sale/offers endpoint requires OAuth authorization code flow. Please authorize the application in Settings to access your Allegro offers.');
+        }
+        
+        // Re-throw other errors
+        this.logger.error('Failed to get offers with client credentials', {
+          userId,
+          error: apiError.message,
+          errorStatus,
+          errorData,
         });
-      } else {
-        // Use global credentials
-        response = await this.allegroApi.getOffers({
-          limit,
-          offset,
-        });
+        throw apiError;
       }
+    }
+
+    if (!response) {
+      throw new Error('Failed to retrieve offers from Allegro API');
     }
 
     const offers = response.offers || [];
