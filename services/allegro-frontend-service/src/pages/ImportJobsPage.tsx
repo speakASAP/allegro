@@ -449,30 +449,12 @@ const ImportJobsPage: React.FC = () => {
     setSelectedImportIds(newSet);
   };
 
-  const toggleExportSelection = (id: string) => {
-    const newSet = new Set(selectedExportIds);
-    if (newSet.has(id)) {
-      newSet.delete(id);
-    } else {
-      newSet.add(id);
-    }
-    setSelectedExportIds(newSet);
-  };
-
   const selectAllImports = () => {
     setSelectedImportIds(new Set(importPreviewData.map(item => item.allegroOfferId)));
   };
 
   const deselectAllImports = () => {
     setSelectedImportIds(new Set());
-  };
-
-  const selectAllExports = () => {
-    setSelectedExportIds(new Set(exportPreviewData.map((item: any) => item.id || item.allegroOfferId)));
-  };
-
-  const deselectAllExports = () => {
-    setSelectedExportIds(new Set());
   };
 
   const getStatusColor = (status: string) => {
