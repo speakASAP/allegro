@@ -163,6 +163,7 @@ export class OffersService {
         stockQuantity: dto.quantity,
         status: 'ACTIVE',
         syncStatus: 'SYNCED',
+        syncSource: 'MANUAL',
         lastSyncedAt: new Date(),
       },
     });
@@ -193,6 +194,7 @@ export class OffersService {
       data: {
         ...dto,
         syncStatus: 'SYNCED',
+        syncSource: 'MANUAL',
         lastSyncedAt: new Date(),
       },
     });
@@ -247,6 +249,7 @@ export class OffersService {
         stockQuantity: quantity,
         quantity,
         syncStatus: 'SYNCED',
+        syncSource: 'MANUAL',
         lastSyncedAt: new Date(),
       },
     });
@@ -394,6 +397,7 @@ export class OffersService {
               images: images,
               rawData: allegroOffer as any,
               syncStatus: 'SYNCED' as const,
+              syncSource: 'ALLEGRO_API' as const,
               lastSyncedAt: new Date(),
             };
 
@@ -415,6 +419,7 @@ export class OffersService {
                 data: {
                   allegroOfferId: allegroOffer.id,
                   ...offerData,
+                  syncSource: 'ALLEGRO_API',
                 },
               });
               totalCreated++;
@@ -561,6 +566,7 @@ export class OffersService {
                 // @ts-expect-error - rawData exists in Prisma schema but IDE types may not be reloaded
                 rawData: allegroOffer as any,
                 syncStatus: 'SYNCED',
+                syncSource: 'ALLEGRO_API',
                 lastSyncedAt: new Date(),
               },
               create: {
@@ -577,6 +583,7 @@ export class OffersService {
                 // @ts-expect-error - rawData exists in Prisma schema but IDE types may not be reloaded
                 rawData: allegroOffer as any,
                 syncStatus: 'SYNCED',
+                syncSource: 'ALLEGRO_API',
                 lastSyncedAt: new Date(),
               },
             });
@@ -829,6 +836,7 @@ export class OffersService {
                 // @ts-expect-error - rawData exists in Prisma schema but IDE types may not be reloaded
                 rawData: allegroOffer as any,
                 syncStatus: 'SYNCED',
+                syncSource: 'SALES_CENTER',
                 lastSyncedAt: new Date(),
               },
               create: {
@@ -846,6 +854,7 @@ export class OffersService {
                 // @ts-expect-error - rawData exists in Prisma schema but IDE types may not be reloaded
                 rawData: allegroOffer as any,
                 syncStatus: 'SYNCED',
+                syncSource: 'SALES_CENTER',
                 lastSyncedAt: new Date(),
               },
             });
@@ -1016,6 +1025,7 @@ export class OffersService {
               // @ts-expect-error - rawData exists in Prisma schema but IDE types may not be reloaded
               rawData: allegroOffer as any,
               syncStatus: 'SYNCED',
+              syncSource: 'SALES_CENTER',
               lastSyncedAt: new Date(),
             },
               create: {
@@ -1033,6 +1043,7 @@ export class OffersService {
               // @ts-expect-error - rawData exists in Prisma schema but IDE types may not be reloaded
               rawData: allegroOffer as any,
               syncStatus: 'SYNCED',
+              syncSource: 'SALES_CENTER',
               lastSyncedAt: new Date(),
             },
           });

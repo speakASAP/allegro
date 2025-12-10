@@ -91,6 +91,7 @@ interface Offer {
   status: string;
   publicationStatus?: string;
   lastSyncedAt?: string;
+  syncSource?: string;
   images?: ImageArray;
   rawData?: AllegroRawData;
   product?: {
@@ -678,6 +679,12 @@ const OffersPage: React.FC = () => {
                   <div>
                     <div className="text-sm text-gray-600">Last Synced</div>
                     <div className="font-medium">{new Date(selectedOffer.lastSyncedAt).toLocaleString()}</div>
+                  </div>
+                )}
+                {selectedOffer.syncSource && (
+                  <div>
+                    <div className="text-sm text-gray-600">Sync Source</div>
+                    <div className="font-medium">{selectedOffer.syncSource}</div>
                   </div>
                 )}
                 {selectedOffer.product && (

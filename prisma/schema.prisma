@@ -120,6 +120,7 @@ model AllegroOffer {
   lastSyncedAt DateTime? @db.Timestamp(6)
   syncStatus   String    @default("PENDING") @db.VarChar(50) // PENDING, SYNCED, ERROR
   syncError    String?   @db.Text
+  syncSource   String?   @db.VarChar(50) // ALLEGRO_API, SALES_CENTER, MANUAL, etc.
 
   // Timestamps
   createdAt DateTime @default(now()) @db.Timestamp(6)
