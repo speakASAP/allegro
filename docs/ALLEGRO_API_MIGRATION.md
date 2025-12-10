@@ -50,6 +50,22 @@ Allegro deprecated the `/sale/offers/{offerId}` endpoint for creating and editin
 ## Current Status
 
 - ✅ Research completed
-- ⏳ Code migration pending
-- ⏳ Testing pending
+- ✅ Code migration completed
+- ✅ Required fields fix completed
+- ⏳ Testing pending (ready for manual testing)
+
+## Fixes Applied
+
+1. **Endpoint Migration**: Changed from `/sale/offers/{offerId}` to `/sale/product-offers/{offerId}`
+2. **HTTP Method**: Changed from PUT to PATCH for partial updates
+3. **Images Requirement**: Always include images in PATCH requests (from DTO or existing offer)
+4. **Required Parameters**: Always include all required fields from existing offer:
+   - Category (required)
+   - Parameters/attributes (required - all existing parameters are included)
+   - Images (required - at least 1)
+   - Selling mode (if exists)
+   - Stock (if exists)
+   - Publication (if exists)
+   - Delivery options (if exists)
+   - Payment options (if exists)
 
