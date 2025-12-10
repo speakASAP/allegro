@@ -284,6 +284,8 @@ export class OffersService {
     const limit = 100;
     let hasMore = true;
     let totalImported = 0;
+    let totalCreated = 0;
+    let totalUpdated = 0;
     const approvedSet = new Set(approvedOfferIds);
 
     // Get OAuth token with detailed logging
@@ -347,44 +349,54 @@ export class OffersService {
               currency: allegroOffer.sellingMode?.price?.currency,
             });
 
-            await this.prisma.allegroOffer.upsert({
+            // Check if offer already exists to track created vs updated
+            const existingOffer = await this.prisma.allegroOffer.findUnique({
               where: { allegroOfferId: allegroOffer.id },
-              update: {
-                title: allegroOffer.name,
-                description: allegroOffer.description,
-                categoryId: allegroOffer.category?.id || '',
-                price: parseFloat(allegroOffer.sellingMode?.price?.amount || '0'),
-                currency: allegroOffer.sellingMode?.price?.currency || this.getDefaultCurrency(),
-                quantity: allegroOffer.stock?.available || 0,
-                stockQuantity: allegroOffer.stock?.available || 0,
-                status: allegroOffer.publication?.status || 'INACTIVE',
-                publicationStatus: allegroOffer.publication?.status || 'INACTIVE',
-                rawData: allegroOffer,
-                syncStatus: 'SYNCED',
-                lastSyncedAt: new Date(),
-              },
-              create: {
-                allegroOfferId: allegroOffer.id,
-                title: allegroOffer.name,
-                description: allegroOffer.description,
-                categoryId: allegroOffer.category?.id || '',
-                price: parseFloat(allegroOffer.sellingMode?.price?.amount || '0'),
-                currency: allegroOffer.sellingMode?.price?.currency || this.getDefaultCurrency(),
-                quantity: allegroOffer.stock?.available || 0,
-                stockQuantity: allegroOffer.stock?.available || 0,
-                status: allegroOffer.publication?.status || 'INACTIVE',
-                publicationStatus: allegroOffer.publication?.status || 'INACTIVE',
-                rawData: allegroOffer,
-                syncStatus: 'SYNCED',
-                lastSyncedAt: new Date(),
-              },
             });
+
+            const offerData = {
+              title: allegroOffer.name,
+              description: allegroOffer.description,
+              categoryId: allegroOffer.category?.id || '',
+              price: parseFloat(allegroOffer.sellingMode?.price?.amount || '0'),
+              currency: allegroOffer.sellingMode?.price?.currency || this.getDefaultCurrency(),
+              quantity: allegroOffer.stock?.available || 0,
+              stockQuantity: allegroOffer.stock?.available || 0,
+              status: allegroOffer.publication?.status || 'INACTIVE',
+              publicationStatus: allegroOffer.publication?.status || 'INACTIVE',
+              rawData: allegroOffer as any,
+              syncStatus: 'SYNCED' as const,
+              lastSyncedAt: new Date(),
+            };
+
+            if (existingOffer) {
+              // Update existing offer
+              await this.prisma.allegroOffer.update({
+                where: { allegroOfferId: allegroOffer.id },
+                data: offerData,
+              });
+              totalUpdated++;
+              this.logger.log('[importApprovedOffers] Successfully updated existing offer', {
+                userId,
+                offerId: allegroOffer.id,
+                totalUpdated,
+              });
+            } else {
+              // Create new offer
+              await this.prisma.allegroOffer.create({
+                data: {
+                  allegroOfferId: allegroOffer.id,
+                  ...offerData,
+                },
+              });
+              totalCreated++;
+              this.logger.log('[importApprovedOffers] Successfully created new offer', {
+                userId,
+                offerId: allegroOffer.id,
+                totalCreated,
+              });
+            }
             totalImported++;
-            this.logger.log('[importApprovedOffers] Successfully imported offer', {
-              userId,
-              offerId: allegroOffer.id,
-              totalImported,
-            });
           } catch (error: any) {
             this.logger.error('[importApprovedOffers] Failed to import approved offer', {
               userId,
@@ -471,9 +483,11 @@ export class OffersService {
     this.logger.log('[importApprovedOffers] Finished importing approved offers', {
       userId,
       totalImported,
+      totalCreated,
+      totalUpdated,
       requestedCount: approvedOfferIds.length,
     });
-    return { totalImported };
+    return { totalImported, totalCreated, totalUpdated };
   }
 
   /**
@@ -514,7 +528,7 @@ export class OffersService {
                 quantity: allegroOffer.stock?.available || 0,
                 stockQuantity: allegroOffer.stock?.available || 0,
                 status: allegroOffer.publication?.status || 'INACTIVE',
-                rawData: allegroOffer,
+                rawData: allegroOffer as any,
                 syncStatus: 'SYNCED',
                 lastSyncedAt: new Date(),
               },
@@ -528,7 +542,7 @@ export class OffersService {
                 quantity: allegroOffer.stock?.available || 0,
                 stockQuantity: allegroOffer.stock?.available || 0,
                 status: allegroOffer.publication?.status || 'INACTIVE',
-                rawData: allegroOffer,
+                rawData: allegroOffer as any,
                 syncStatus: 'SYNCED',
                 lastSyncedAt: new Date(),
               },
