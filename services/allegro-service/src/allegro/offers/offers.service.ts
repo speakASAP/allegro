@@ -334,8 +334,8 @@ export class OffersService {
   /**
    * Update offer
    */
-  async updateOffer(id: string, dto: any): Promise<any> {
-    this.logger.log('Updating Allegro offer', { id, fields: Object.keys(dto) });
+  async updateOffer(id: string, dto: any, userId?: string): Promise<any> {
+    this.logger.log('Updating Allegro offer', { id, fields: Object.keys(dto), userId });
 
     const offer = await this.prisma.allegroOffer.findUnique({
       where: { id },
@@ -349,12 +349,22 @@ export class OffersService {
       // Transform DTO to Allegro API format
       const allegroPayload = this.transformDtoToAllegroFormat(dto, offer);
 
-      // Update via Allegro API
+      // Get user's OAuth token for updating offers (required for user-specific operations)
+      let oauthToken: string;
+      if (userId) {
+        oauthToken = await this.getUserOAuthToken(userId);
+      } else {
+        // Fallback to client credentials token (may not work for all operations)
+        oauthToken = await this.allegroAuth.getAccessToken();
+      }
+
+      // Update via Allegro API with OAuth token
       this.logger.log('Updating offer via Allegro API', {
         allegroOfferId: offer.allegroOfferId,
         payloadKeys: Object.keys(allegroPayload),
+        usingOAuthToken: !!userId,
       });
-      await this.allegroApi.updateOffer(offer.allegroOfferId, allegroPayload);
+      await this.allegroApi.updateOfferWithOAuthToken(oauthToken, offer.allegroOfferId, allegroPayload);
 
       // Merge updates into rawData
       const updatedRawData = this.mergeRawDataUpdates(offer.rawData as any, allegroPayload, dto);

@@ -406,7 +406,7 @@ export class OffersController {
         offerId: id,
         fields: Object.keys(dto),
       });
-      const offer = await this.offersService.updateOffer(id, dto);
+      const offer = await this.offersService.updateOffer(id, dto, userId);
       this.logger.log('Offer updated successfully', {
         userId,
         offerId: id,

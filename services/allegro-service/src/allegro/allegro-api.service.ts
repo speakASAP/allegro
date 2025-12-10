@@ -190,6 +190,38 @@ export class AllegroApiService {
   }
 
   /**
+   * Update offer with OAuth token (for user-specific resources)
+   */
+  async updateOfferWithOAuthToken(accessToken: string, offerId: string, data: any) {
+    const endpoint = `/sale/offers/${offerId}`;
+    const url = `${this.apiUrl}${endpoint}`;
+
+    try {
+      const config = {
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+          'Content-Type': 'application/vnd.allegro.public.v1+json',
+          'Accept': 'application/vnd.allegro.public.v1+json',
+        },
+      };
+
+      const response = await firstValueFrom(this.httpService.put(url, data, config));
+      return response.data;
+    } catch (error: any) {
+      const errorData = error.response?.data || {};
+      this.logger.error('Allegro API request failed with OAuth token', {
+        endpoint,
+        error: error.message,
+        status: error.response?.status,
+        statusText: error.response?.statusText,
+        errorData: errorData,
+        responseHeaders: error.response?.headers,
+      });
+      throw error;
+    }
+  }
+
+  /**
    * Delete offer
    */
   async deleteOffer(offerId: string) {

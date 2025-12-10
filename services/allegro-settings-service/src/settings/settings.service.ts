@@ -24,29 +24,48 @@ export class SettingsService {
     private readonly configService: ConfigService,
   ) {
     // Get encryption key from environment - required for security
-    // Read directly from .env file to avoid dotenv parsing issues with special characters (#, $, etc.)
-    const fs = require('fs');
-    const path = require('path');
-    const envPath = path.join(process.cwd(), '../../.env');
-    let encryptionKey = this.configService.get<string>('ENCRYPTION_KEY');
+    // In production (Docker), ENCRYPTION_KEY is passed as environment variable
+    // In development, it should be loaded by ConfigModule from .env file
+    // Try multiple sources to match production behavior
+    let encryptionKey = this.configService.get<string>('ENCRYPTION_KEY') || process.env.ENCRYPTION_KEY;
     
-    // If key is too short (likely truncated by dotenv), read directly from .env file
+    // If key is missing or too short, try reading directly from .env file (fallback for dev)
     if (!encryptionKey || encryptionKey.length < 32) {
-      try {
-        const envContent = fs.readFileSync(envPath, 'utf8');
-        const keyMatch = envContent.match(/^ENCRYPTION_KEY=(.+)$/m);
-        if (keyMatch) {
-          // Remove quotes if present and trim
-          encryptionKey = keyMatch[1].trim().replace(/^["']|["']$/g, '');
+      const fs = require('fs');
+      const path = require('path');
+      // Try multiple possible paths
+      const possiblePaths = [
+        path.join(process.cwd(), '../../.env'), // From service directory
+        path.join(process.cwd(), '.env'), // From project root if running from there
+        path.resolve(__dirname, '../../../.env'), // Absolute path from compiled code
+      ];
+      
+      for (const envPath of possiblePaths) {
+        try {
+          if (fs.existsSync(envPath)) {
+            const envContent = fs.readFileSync(envPath, 'utf8');
+            // Match ENCRYPTION_KEY=value (handle special characters, no quotes needed)
+            const keyMatch = envContent.match(/^ENCRYPTION_KEY=(.+)$/m);
+            if (keyMatch) {
+              // Remove quotes if present and trim
+              const extractedKey = keyMatch[1].trim().replace(/^["']|["']$/g, '');
+              if (extractedKey && extractedKey.length >= 32) {
+                encryptionKey = extractedKey;
+                this.logger.log(`ENCRYPTION_KEY loaded from file: ${envPath}`);
+                break;
+              }
+            }
+          }
+        } catch (error) {
+          // Continue to next path
+          continue;
         }
-      } catch (error) {
-        this.logger.error('Failed to read ENCRYPTION_KEY from .env file', error);
       }
     }
     
     this.encryptionKey = encryptionKey;
     if (!this.encryptionKey) {
-      throw new Error('ENCRYPTION_KEY must be configured in .env file');
+      throw new Error('ENCRYPTION_KEY must be configured in .env file or as environment variable');
     }
     // Log key length for debugging (first 10 chars only for security)
     this.logger.log(`ENCRYPTION_KEY loaded, length: ${this.encryptionKey.length}, first 10 chars: ${this.encryptionKey.substring(0, 10)}`);
