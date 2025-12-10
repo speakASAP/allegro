@@ -123,6 +123,13 @@ const SettingsPage: React.FC = () => {
   };
 
   const handleSaveAllegro = async () => {
+    console.log('[SettingsPage] handleSaveAllegro START', {
+      allegroClientId,
+      allegroClientSecretLength: allegroClientSecret?.length,
+      allegroClientSecretIsMasked: allegroClientSecret === '********',
+      allegroClientSecretFirstChars: allegroClientSecret?.substring(0, 5),
+    });
+    
     setSaving(true);
     setError('');
     setSuccess('');
@@ -136,9 +143,37 @@ const SettingsPage: React.FC = () => {
       // Only include Client Secret if it's not the masked placeholder
       if (allegroClientSecret && allegroClientSecret !== '********') {
         payload.allegroClientSecret = allegroClientSecret;
+        console.log('[SettingsPage] Including Client Secret in payload', {
+          clientSecretLength: allegroClientSecret.length,
+          clientSecretFirstChars: allegroClientSecret.substring(0, 5) + '...',
+        });
+      } else {
+        console.log('[SettingsPage] NOT including Client Secret in payload', {
+          reason: allegroClientSecret === '********' ? 'masked value' : 'empty',
+          allegroClientSecret,
+        });
       }
       
+      console.log('[SettingsPage] Sending PUT /settings request', {
+        payloadKeys: Object.keys(payload),
+        hasClientId: !!payload.allegroClientId,
+        clientIdLength: payload.allegroClientId?.length,
+        hasClientSecret: !!payload.allegroClientSecret,
+        clientSecretLength: payload.allegroClientSecret?.length,
+      });
+      
       const response = await api.put('/settings', payload);
+      
+      console.log('[SettingsPage] Received PUT /settings response', {
+        success: response.data?.success,
+        hasData: !!response.data?.data,
+        responseKeys: response.data ? Object.keys(response.data) : [],
+        dataKeys: response.data?.data ? Object.keys(response.data.data) : [],
+        hasClientId: !!response.data?.data?.allegroClientId,
+        hasClientSecret: !!response.data?.data?.allegroClientSecret,
+        clientSecretLength: response.data?.data?.allegroClientSecret?.length,
+        hasDecryptionError: !!response.data?.data?._allegroClientSecretDecryptionError,
+      });
 
       if (response.data.success) {
         setSuccess('Allegro settings saved successfully');
