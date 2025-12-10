@@ -42,10 +42,15 @@ export class AllegroApiService {
     const url = `${this.apiUrl}${endpoint}`;
 
     try {
+      // Allegro API requires application/vnd.allegro.public.v1+json for PUT/POST requests
+      const contentType = (method.toUpperCase() === 'PUT' || method.toUpperCase() === 'POST')
+        ? 'application/vnd.allegro.public.v1+json'
+        : 'application/json';
+
       const config = {
         headers: {
           'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
+          'Content-Type': contentType,
           'Accept': 'application/vnd.allegro.public.v1+json',
         },
       };
