@@ -428,12 +428,24 @@ export class OffersService {
       // Transform DTO to Allegro API format
       const allegroPayload = this.transformDtoToAllegroFormat(dto, { ...offer, rawData: sourceOffer });
 
+      // Log parameter details for debugging
+      this.logger.log('Preparing Allegro API payload', {
+        allegroOfferId: offer.allegroOfferId,
+        payloadKeys: Object.keys(allegroPayload),
+        hasParameters: !!allegroPayload.parameters,
+        parametersCount: allegroPayload.parameters?.length || 0,
+        parameterIds: allegroPayload.parameters?.map((p: any) => p.id) || [],
+        hasCategory: !!allegroPayload.category,
+        hasImages: !!allegroPayload.images,
+        imagesCount: allegroPayload.images?.length || 0,
+        usingOAuthToken: !!userId,
+      });
+
       // Update via Allegro API with OAuth token
       this.logger.log('Updating offer via Allegro API', {
         allegroOfferId: offer.allegroOfferId,
-        payloadKeys: Object.keys(allegroPayload),
-        parametersCount: allegroPayload.parameters?.length || 0,
-        usingOAuthToken: !!userId,
+        endpoint: `/sale/product-offers/${offer.allegroOfferId}`,
+        method: 'PATCH',
       });
       await this.allegroApi.updateOfferWithOAuthToken(oauthToken, offer.allegroOfferId, allegroPayload);
 
