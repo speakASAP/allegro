@@ -99,12 +99,12 @@
 
 ## Sync Provenance & Validation
 
-- Track last sync time and source (Allegro import vs Sales Center) per offer; display in UI.
-- Add simple readiness/validation flag on projection (e.g., missing media/attributes) to prepare for future publish flows.
+- ✅ Track last sync time and source (Allegro import vs Sales Center) per offer via `syncSource` field; displayed in UI.
+- ⏳ Add simple readiness/validation flag on projection (e.g., missing media/attributes) to prepare for future publish flows.
 
 ## Logging & Metrics
 
-- ⏳ Log offers list/detail API calls via centralized logger; include filters, pagination, userId.
+- ✅ Log offers list/detail API calls via centralized logger; include filters, pagination, userId.
 - ⏳ Basic counters/metrics: list requests, detail requests, errors; reuse existing health/logging conventions.
 
 ## Platform Discovery Checklist (future)

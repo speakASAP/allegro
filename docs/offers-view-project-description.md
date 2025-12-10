@@ -14,12 +14,12 @@
 - ✅ Frontend: Routing added (`/dashboard/offers`) and navigation entry in sidebar
 - ✅ TypeScript: All `any` types replaced with proper interfaces
 - ✅ Logging: Added logging for offers API calls (list/detail requests) with userId, filters, pagination
-- ✅ Production: Migration applied, code deployed
+- ✅ Sync Provenance: Added `syncSource` field to track data origin (ALLEGRO_API, SALES_CENTER, MANUAL)
+- ✅ Production: Migrations applied (rawData, syncSource), code deployed
 
 ### 🔄 In Progress / Next Steps
 
-- ⏳ Add sync provenance tracking (source: import vs Sales Center) - track which import method was used
-- ⏳ Add validation/readiness flags for future publish flows
+- ⏳ Add validation/readiness flags for future publish flows (e.g., missing media/attributes validation)
 
 ## Goal
 
