@@ -35,7 +35,6 @@ const SettingsPage: React.FC = () => {
 
   const [allegroClientId, setAllegroClientId] = useState('');
   const [allegroClientSecret, setAllegroClientSecret] = useState('');
-  const [hasClientSecret, setHasClientSecret] = useState(false); // Track if Client Secret exists in DB
 
   const [newSupplierName, setNewSupplierName] = useState('');
   const [newSupplierEndpoint, setNewSupplierEndpoint] = useState('');
@@ -87,15 +86,12 @@ const SettingsPage: React.FC = () => {
             : 'Client Secret exists in database but could not be decrypted. Please re-enter your Client Secret and save it again.';
           setError(errorMessage);
           setAllegroClientSecret('********'); // Show stars because secret exists in DB
-          setHasClientSecret(true);
         } else if (secretExistsInDb) {
           // Client Secret exists in database and was successfully decrypted - show masked value
           setAllegroClientSecret('********');
-          setHasClientSecret(true);
         } else {
           // No Client Secret in database - show empty
           setAllegroClientSecret('');
-          setHasClientSecret(false);
         }
       }
     } catch (err: unknown) {
