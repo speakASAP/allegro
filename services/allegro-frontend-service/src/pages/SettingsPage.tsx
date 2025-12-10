@@ -69,6 +69,15 @@ const SettingsPage: React.FC = () => {
         const data = response.data.data;
         setSettings(data);
         setAllegroClientId(data.allegroClientId || '');
+        
+        // Debug logging
+        console.log('[SettingsPage] loadSettings response:', {
+          hasClientSecret: !!data.allegroClientSecret,
+          clientSecretLength: data.allegroClientSecret?.length,
+          hasDecryptionError: !!data._allegroClientSecretDecryptionError,
+          decryptionError: data._allegroClientSecretDecryptionError,
+        });
+        
         // Check if Client Secret exists in database (regardless of decryption success)
         // If _allegroClientSecretDecryptionError exists, it means the secret exists but decryption failed
         const secretExistsInDb = data._allegroClientSecretDecryptionError || (data.allegroClientSecret && data.allegroClientSecret.length > 0);
@@ -86,12 +95,15 @@ const SettingsPage: React.FC = () => {
             : 'Client Secret exists in database but could not be decrypted. Please re-enter your Client Secret and save it again.';
           setError(errorMessage);
           setAllegroClientSecret('********'); // Show stars because secret exists in DB
+          console.log('[SettingsPage] Setting Client Secret to stars (decryption failed)');
         } else if (secretExistsInDb) {
           // Client Secret exists in database and was successfully decrypted - show masked value
           setAllegroClientSecret('********');
+          console.log('[SettingsPage] Setting Client Secret to stars (exists and decrypted)');
         } else {
           // No Client Secret in database - show empty
           setAllegroClientSecret('');
+          console.log('[SettingsPage] Setting Client Secret to empty (does not exist)');
         }
       }
     } catch (err: unknown) {
