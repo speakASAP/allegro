@@ -138,22 +138,26 @@ The redirect URI in the token exchange request must match:
 ## Recent Fixes Applied
 
 ### 1. Redirect URI Normalization
+
 - Added automatic normalization to remove trailing slashes and trim whitespace
 - Ensures exact matching between authorization URL and token exchange
 - Applied consistently in both `generateAuthorizationUrl` and `exchangeCodeForToken`
 
 ### 2. Parameter Validation
+
 - Added validation to ensure all required parameters (code, codeVerifier, redirectUri, clientId, clientSecret) are present
 - Trims whitespace from code and state parameters to handle URL encoding issues
 - Validates parameters before making API calls
 
 ### 3. Enhanced Logging
+
 - Logs both original and normalized redirect URIs
 - Shows request body preview (without sensitive data)
 - Captures detailed error information from Allegro API
 - Logs parameter lengths and validation status
 
 ### 4. Code and State Trimming
+
 - Automatically trims code and state parameters from query string
 - Prevents issues with URL-encoded whitespace
 - Validates trimmed values are not empty

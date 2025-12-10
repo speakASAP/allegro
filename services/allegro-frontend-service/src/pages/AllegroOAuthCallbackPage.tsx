@@ -23,9 +23,21 @@ const AllegroOAuthCallbackPage: React.FC = () => {
     // Handle error case
     if (error) {
       setStatus('error');
-      setMessage(error === 'access_denied' 
-        ? 'Authorization was denied. Please try again and grant the required permissions.'
-        : `Authorization failed: ${error}`);
+      let errorMessage = '';
+      
+      if (error === 'access_denied') {
+        errorMessage = 'Authorization was denied. Please try again and grant the required permissions.';
+      } else if (error === 'client_secret_missing' || error.includes('clientSecret')) {
+        errorMessage = 'Client Secret is missing. Please go to Settings, enter your Allegro Client Secret, and click Save before authorizing.';
+      } else if (error === 'client_secret_empty') {
+        errorMessage = 'Client Secret is empty. Please go to Settings, re-enter your Allegro Client Secret, and click Save.';
+      } else if (error === 'decryption_failed') {
+        errorMessage = 'Failed to decrypt Client Secret. Please go to Settings, re-enter your Allegro Client Secret, and click Save.';
+      } else {
+        errorMessage = `Authorization failed: ${error}`;
+      }
+      
+      setMessage(errorMessage);
       return;
     }
 
