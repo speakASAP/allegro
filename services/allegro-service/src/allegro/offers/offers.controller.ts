@@ -95,8 +95,9 @@ export class OffersController {
 
   @Post('import/approve')
   @UseGuards(JwtAuthGuard)
-  async importApprovedOffers(@Body() body: { offerIds: string[] }): Promise<{ success: boolean; data: any }> {
-    const result = await this.offersService.importApprovedOffers(body.offerIds);
+  async importApprovedOffers(@Request() req: any, @Body() body: { offerIds: string[] }): Promise<{ success: boolean; data: any }> {
+    const userId = String(req.user.id);
+    const result = await this.offersService.importApprovedOffers(userId, body.offerIds);
     return { success: true, data: result };
   }
 
@@ -205,8 +206,8 @@ export class OffersController {
   ): Promise<{ success: boolean; data: any }> {
     const userId = String(req.user.id);
     const result = await this.offersService.importApprovedOffersFromSalesCenter(
-      body.offerIds,
       userId,
+      body.offerIds,
     );
     return { success: true, data: result };
   }

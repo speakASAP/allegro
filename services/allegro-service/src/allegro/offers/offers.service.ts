@@ -2,7 +2,7 @@
  * Offers Service
  */
 
-import { Injectable } from '@nestjs/common';
+import { Injectable, HttpException, HttpStatus } from '@nestjs/common';
 import { PrismaService, LoggerService } from '@allegro/shared';
 import { ConfigService } from '@nestjs/config';
 import { AllegroApiService } from '../allegro-api.service';
@@ -229,91 +229,11 @@ export class OffersService {
     const limit = 100;
     const previewOffers: any[] = [];
 
-    // Try to use OAuth token first (for accessing user-specific resources)
-    let response;
-    try {
-      const oauthToken = await this.allegroAuth.getUserAccessToken(userId);
-      this.logger.log('Using OAuth token for Allegro API', { userId });
-      // Use OAuth token directly in API call
-      response = await this.allegroApi.getOffersWithOAuthToken(oauthToken, {
-        limit,
-        offset,
-      });
-    } catch (oauthError: any) {
-      // Check if error is specifically about OAuth being required
-      if (oauthError.message && oauthError.message.includes('OAuth authorization required')) {
-        // Don't fall back to client credentials - OAuth is required
-        this.logger.warn('OAuth authorization required for accessing user offers', { userId });
-        throw new Error('OAuth authorization required. Please authorize the application in Settings to access your Allegro offers.');
-      }
-      
-      // OAuth not available or failed, fall back to client credentials
-      this.logger.debug('OAuth token not available, falling back to client credentials', {
-        userId,
-        error: oauthError.message,
-      });
-
-      // Get user settings to check for user-specific credentials
-      let userClientId: string | null = null;
-      let userClientSecret: string | null = null;
-
-      try {
-        const settings = await this.prisma.userSettings.findUnique({
-          where: { userId },
-        });
-
-        if (settings?.allegroClientId && settings?.allegroClientSecret) {
-          userClientId = settings.allegroClientId;
-          try {
-            userClientSecret = this.decrypt(settings.allegroClientSecret);
-            this.logger.log('Using user-specific Allegro credentials', { userId });
-          } catch (error) {
-            this.logger.warn('Failed to decrypt user credentials, falling back to global credentials', { userId });
-          }
-        }
-      } catch (error) {
-        this.logger.warn('Failed to get user settings, using global credentials', { userId, error: error.message });
-      }
-
-      // Get first batch for preview (limit to 100 items for preview)
-      try {
-        if (userClientId && userClientSecret) {
-          // Use user-specific credentials
-          response = await this.allegroApi.getOffersWithCredentials(userClientId, userClientSecret, {
-            limit,
-            offset,
-          });
-        } else {
-          // Use global credentials
-          response = await this.allegroApi.getOffers({
-            limit,
-            offset,
-          });
-        }
-      } catch (apiError: any) {
-        // Client credentials cannot access /sale/offers endpoint - OAuth is required
-        const errorStatus = apiError.response?.status;
-        const errorData = apiError.response?.data || {};
-        
-        if (errorStatus === 403 || errorStatus === 401) {
-          this.logger.warn('Client credentials cannot access user offers - OAuth required', {
-            userId,
-            errorStatus,
-            errorData,
-          });
-          throw new Error('OAuth authorization required. The /sale/offers endpoint requires OAuth authorization code flow. Please authorize the application in Settings to access your Allegro offers.');
-        }
-        
-        // Re-throw other errors
-        this.logger.error('Failed to get offers with client credentials', {
-          userId,
-          error: apiError.message,
-          errorStatus,
-          errorData,
-        });
-        throw apiError;
-      }
-    }
+    const oauthToken = await this.getUserOAuthToken(userId);
+    const response = await this.allegroApi.getOffersWithOAuthToken(oauthToken, {
+      limit,
+      offset,
+    });
 
     if (!response) {
       throw new Error('Failed to retrieve offers from Allegro API');
@@ -328,7 +248,7 @@ export class OffersService {
         description: allegroOffer.description,
         categoryId: allegroOffer.category?.id || '',
         price: parseFloat(allegroOffer.sellingMode?.price?.amount || '0'),
-        currency: allegroOffer.sellingMode?.price?.currency || 'PLN',
+        currency: allegroOffer.sellingMode?.price?.currency || this.getDefaultCurrency(),
         quantity: allegroOffer.stock?.available || 0,
         stockQuantity: allegroOffer.stock?.available || 0,
         status: allegroOffer.publication?.status || 'INACTIVE',
@@ -344,17 +264,18 @@ export class OffersService {
   /**
    * Import approved offers from preview
    */
-  async importApprovedOffers(approvedOfferIds: string[]) {
-    this.logger.log('Importing approved offers', { count: approvedOfferIds.length });
+  async importApprovedOffers(userId: string, approvedOfferIds: string[]) {
+    this.logger.log('Importing approved offers', { count: approvedOfferIds.length, userId });
 
     let offset = 0;
     const limit = 100;
     let hasMore = true;
     let totalImported = 0;
     const approvedSet = new Set(approvedOfferIds);
+    const oauthToken = await this.getUserOAuthToken(userId);
 
     while (hasMore) {
-      const response = await this.allegroApi.getOffers({
+      const response = await this.allegroApi.getOffersWithOAuthToken(oauthToken, {
         limit,
         offset,
       });
@@ -375,7 +296,7 @@ export class OffersService {
               description: allegroOffer.description,
               categoryId: allegroOffer.category?.id || '',
               price: parseFloat(allegroOffer.sellingMode?.price?.amount || '0'),
-              currency: allegroOffer.sellingMode?.price?.currency || 'PLN',
+              currency: allegroOffer.sellingMode?.price?.currency || this.getDefaultCurrency(),
               quantity: allegroOffer.stock?.available || 0,
               stockQuantity: allegroOffer.stock?.available || 0,
               status: allegroOffer.publication?.status || 'INACTIVE',
@@ -389,7 +310,7 @@ export class OffersService {
               description: allegroOffer.description,
               categoryId: allegroOffer.category?.id || '',
               price: parseFloat(allegroOffer.sellingMode?.price?.amount || '0'),
-              currency: allegroOffer.sellingMode?.price?.currency || 'PLN',
+              currency: allegroOffer.sellingMode?.price?.currency || this.getDefaultCurrency(),
               quantity: allegroOffer.stock?.available || 0,
               stockQuantity: allegroOffer.stock?.available || 0,
               status: allegroOffer.publication?.status || 'INACTIVE',
@@ -426,48 +347,17 @@ export class OffersService {
     let hasMore = true;
     let totalImported = 0;
 
-    // Determine if we should use OAuth token (for accessing user-specific resources)
-    let useOAuth = false;
-    
-    if (userId) {
-      try {
-        // Try to get OAuth token to check if it's available
-        await this.allegroAuth.getUserAccessToken(userId);
-        this.logger.log('Using OAuth token for Allegro API import', { userId });
-        useOAuth = true;
-      } catch (oauthError: any) {
-        // Check if error is specifically about OAuth being required
-        if (oauthError.message && oauthError.message.includes('OAuth authorization required')) {
-          this.logger.warn('OAuth authorization required for importing offers', { userId });
-          throw new Error('OAuth authorization required. To import offers from Allegro, you need to authorize the application. Please go to Settings and click "Authorize with Allegro" to grant access to your Allegro account.');
-        }
-        
-        // OAuth not available or failed, fall back to client credentials
-        this.logger.debug('OAuth token not available, falling back to client credentials', {
-          userId,
-          error: oauthError.message,
-        });
-        useOAuth = false;
-      }
+    if (!userId) {
+      throw new Error('OAuth authorization required. User context missing.');
     }
+    const oauthToken = await this.getUserOAuthToken(userId);
 
     while (hasMore) {
       try {
-        let response;
-        if (useOAuth && userId) {
-          // Use OAuth token for this batch
-          const oauthToken = await this.allegroAuth.getUserAccessToken(userId);
-          response = await this.allegroApi.getOffersWithOAuthToken(oauthToken, {
-            limit,
-            offset,
-          });
-        } else {
-          // Fall back to client credentials (may not work for /sale/offers)
-          response = await this.allegroApi.getOffers({
-            limit,
-            offset,
-          });
-        }
+        const response = await this.allegroApi.getOffersWithOAuthToken(oauthToken, {
+          limit,
+          offset,
+        });
 
         const offers = response.offers || [];
         
@@ -480,6 +370,7 @@ export class OffersService {
                 description: allegroOffer.description,
                 categoryId: allegroOffer.category?.id || '',
                 price: parseFloat(allegroOffer.sellingMode?.price?.amount || '0'),
+                currency: allegroOffer.sellingMode?.price?.currency || this.getDefaultCurrency(),
                 quantity: allegroOffer.stock?.available || 0,
                 stockQuantity: allegroOffer.stock?.available || 0,
                 status: allegroOffer.publication?.status || 'INACTIVE',
@@ -492,6 +383,7 @@ export class OffersService {
                 description: allegroOffer.description,
                 categoryId: allegroOffer.category?.id || '',
                 price: parseFloat(allegroOffer.sellingMode?.price?.amount || '0'),
+                currency: allegroOffer.sellingMode?.price?.currency || this.getDefaultCurrency(),
                 quantity: allegroOffer.stock?.available || 0,
                 stockQuantity: allegroOffer.stock?.available || 0,
                 status: allegroOffer.publication?.status || 'INACTIVE',
@@ -646,7 +538,7 @@ export class OffersService {
       stockQuantity: allegroOffer.stock?.available || 0,
       status: allegroOffer.publication?.status || 'INACTIVE',
       publicationStatus: allegroOffer.publication?.status || 'INACTIVE',
-      currency: allegroOffer.sellingMode?.price?.currency || 'PLN',
+      currency: allegroOffer.sellingMode?.price?.currency || this.getDefaultCurrency(),
       rawData: allegroOffer,
     }));
 
@@ -657,7 +549,7 @@ export class OffersService {
   /**
    * Import approved offers from Sales Center preview
    */
-  async importApprovedOffersFromSalesCenter(approvedOfferIds: string[], userId: string) {
+  async importApprovedOffersFromSalesCenter(userId: string, approvedOfferIds: string[]) {
     this.logger.log('Importing approved offers from Sales Center', { count: approvedOfferIds.length, userId });
 
     let offset = 0;
@@ -715,7 +607,7 @@ export class OffersService {
               description: allegroOffer.description,
               categoryId: allegroOffer.category?.id || '',
               price: parseFloat(allegroOffer.sellingMode?.price?.amount || '0'),
-              currency: allegroOffer.sellingMode?.price?.currency || 'PLN',
+              currency: allegroOffer.sellingMode?.price?.currency || this.getDefaultCurrency(),
               quantity: allegroOffer.stock?.available || 0,
               stockQuantity: allegroOffer.stock?.available || 0,
               status: allegroOffer.publication?.status || 'INACTIVE',
@@ -729,7 +621,7 @@ export class OffersService {
               description: allegroOffer.description,
               categoryId: allegroOffer.category?.id || '',
               price: parseFloat(allegroOffer.sellingMode?.price?.amount || '0'),
-              currency: allegroOffer.sellingMode?.price?.currency || 'PLN',
+              currency: allegroOffer.sellingMode?.price?.currency || this.getDefaultCurrency(),
               quantity: allegroOffer.stock?.available || 0,
               stockQuantity: allegroOffer.stock?.available || 0,
               status: allegroOffer.publication?.status || 'INACTIVE',
@@ -815,7 +707,7 @@ export class OffersService {
               description: allegroOffer.description,
               categoryId: allegroOffer.category?.id || '',
               price: parseFloat(allegroOffer.sellingMode?.price?.amount || '0'),
-                currency: allegroOffer.sellingMode?.price?.currency || 'PLN',
+                currency: allegroOffer.sellingMode?.price?.currency || this.getDefaultCurrency(),
               quantity: allegroOffer.stock?.available || 0,
               stockQuantity: allegroOffer.stock?.available || 0,
               status: allegroOffer.publication?.status || 'INACTIVE',
@@ -829,7 +721,7 @@ export class OffersService {
               description: allegroOffer.description,
               categoryId: allegroOffer.category?.id || '',
               price: parseFloat(allegroOffer.sellingMode?.price?.amount || '0'),
-                currency: allegroOffer.sellingMode?.price?.currency || 'PLN',
+                currency: allegroOffer.sellingMode?.price?.currency || this.getDefaultCurrency(),
               quantity: allegroOffer.stock?.available || 0,
               stockQuantity: allegroOffer.stock?.available || 0,
               status: allegroOffer.publication?.status || 'INACTIVE',
@@ -853,6 +745,32 @@ export class OffersService {
 
     this.logger.log('Finished importing offers from Sales Center', { totalImported, userId });
     return { totalImported };
+  }
+
+  private async getUserOAuthToken(userId: string): Promise<string> {
+    try {
+      return await this.allegroAuth.getUserAccessToken(userId);
+    } catch (error: any) {
+      this.logger.warn('OAuth authorization required for Allegro operations', {
+        userId,
+        error: error.message,
+      });
+      throw new HttpException(
+        {
+          success: false,
+          error: {
+            code: 'OAUTH_REQUIRED',
+            message: 'OAuth authorization required. Please authorize the application in Settings to access your Allegro offers.',
+            status: HttpStatus.FORBIDDEN,
+          },
+        },
+        HttpStatus.FORBIDDEN,
+      );
+    }
+  }
+
+  private getDefaultCurrency(): string {
+    return this.configService.get('PRICE_CURRENCY_TARGET') || 'CZK';
   }
 }
 

@@ -28,6 +28,7 @@ interface PreviewOffer {
   title: string;
   description?: string;
   price: number;
+  currency?: string;
   quantity: number;
   status: string;
   publicationStatus?: string;
@@ -291,7 +292,12 @@ const ImportJobsPage: React.FC = () => {
         if (err.response?.status === 401) {
           return; // Let the interceptor handle the redirect
         }
-        setError(err.response?.data?.error?.message || 'Failed to preview export');
+        const axiosError = err as AxiosError & { isConnectionError?: boolean; serviceErrorMessage?: string };
+        if (axiosError.isConnectionError && axiosError.serviceErrorMessage) {
+          setError(axiosError.serviceErrorMessage);
+        } else {
+          setError(err.response?.data?.error?.message || 'Failed to preview export');
+        }
       } else {
         setError('Failed to preview export');
       }
@@ -331,7 +337,12 @@ const ImportJobsPage: React.FC = () => {
     } catch (err) {
       console.error('Failed to export', err);
       if (err instanceof AxiosError) {
-        setError(err.response?.data?.error?.message || 'Failed to export');
+        const axiosError = err as AxiosError & { isConnectionError?: boolean; serviceErrorMessage?: string };
+        if (axiosError.isConnectionError && axiosError.serviceErrorMessage) {
+          setError(axiosError.serviceErrorMessage);
+        } else {
+          setError(err.response?.data?.error?.message || 'Failed to export');
+        }
       } else {
         setError('Failed to export');
       }
@@ -584,7 +595,7 @@ const ImportJobsPage: React.FC = () => {
                     </td>
                     <td className="px-4 py-2 text-sm text-gray-900">{offer.title}</td>
                     <td className="px-4 py-2 text-sm text-gray-900">
-                      {offer.price} {offer.currency || 'PLN'}
+                      {offer.price} {offer.currency || 'CZK'}
                     </td>
                     <td className="px-4 py-2 text-sm text-gray-900">{offer.quantity}</td>
                     <td className="px-4 py-2 text-sm text-gray-900">{offer.status}</td>
@@ -673,7 +684,7 @@ const ImportJobsPage: React.FC = () => {
                         />
                       </td>
                       <td className="px-4 py-2 text-sm text-gray-900">{item.title}</td>
-                      <td className="px-4 py-2 text-sm text-gray-900">{item.price} {item.currency || 'PLN'}</td>
+                      <td className="px-4 py-2 text-sm text-gray-900">{item.price} {item.currency || 'CZK'}</td>
                       <td className="px-4 py-2 text-sm text-gray-900">{item.stockQuantity || 0}</td>
                       <td className="px-4 py-2 text-sm text-gray-900">{item.status}</td>
                     </tr>

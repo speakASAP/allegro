@@ -193,8 +193,9 @@ export class ImportService {
    * List import jobs
    */
   async listImportJobs(query: any): Promise<{ items: any[]; pagination: any }> {
-    const page = query.page || 1;
-    const limit = query.limit || 20;
+    const page = Number.parseInt(query.page, 10) || 1;
+    const limitRaw = Number.parseInt(query.limit, 10) || 20;
+    const limit = Math.min(Math.max(limitRaw, 1), 200); // guard against invalid/huge limits
     const skip = (page - 1) * limit;
 
     const where: any = {};
@@ -205,25 +206,36 @@ export class ImportService {
       where.source = query.source;
     }
 
-    const [items, total] = await Promise.all([
-      this.prisma.importJob.findMany({
-        where,
-        skip,
-        take: limit,
-        orderBy: { createdAt: 'desc' },
-      }),
-      this.prisma.importJob.count({ where }),
-    ]);
+    try {
+      const [items, total] = await Promise.all([
+        this.prisma.importJob.findMany({
+          where,
+          skip,
+          take: limit,
+          orderBy: { createdAt: 'desc' },
+        }),
+        this.prisma.importJob.count({ where }),
+      ]);
 
-    return {
-      items,
-      pagination: {
+      return {
+        items,
+        pagination: {
+          page,
+          limit,
+          total,
+          totalPages: Math.ceil(total / limit),
+        },
+      };
+    } catch (error: any) {
+      this.logger.error('Failed to list import jobs', {
+        error: error.message,
         page,
         limit,
-        total,
-        totalPages: Math.ceil(total / limit),
-      },
-    };
+        skip,
+        where,
+      });
+      throw error;
+    }
   }
 }
 
