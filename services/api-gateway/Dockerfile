@@ -1,100 +1,57 @@
-# Builder stage - dev deps only for building, not in final image
-FROM node:lts-slim AS builder
-
-# Install build dependencies
-RUN apt-get update -y && apt-get install -y openssl libssl-dev curl && rm -rf /var/lib/apt/lists/*
+# Multi-stage build for API Gateway
+FROM node:20-alpine AS builder
 
 WORKDIR /app
 
-# Copy package files for better caching
-COPY package.json package-lock.json* ./
-COPY shared/package.json shared/package-lock.json* ./shared/
-COPY services/api-gateway/package.json ./services/api-gateway/
-
-# Install all dependencies (including dev) in builder only
-RUN --mount=type=cache,target=/root/.npm \
-    npm ci --fetch-retries=5 --fetch-retry-mintimeout=20000 --fetch-retry-maxtimeout=120000 || \
-    (sleep 10 && npm ci --fetch-retries=5 --fetch-retry-mintimeout=20000 --fetch-retry-maxtimeout=120000) || \
-    (sleep 20 && npm ci --fetch-retries=5 --fetch-retry-mintimeout=20000 --fetch-retry-maxtimeout=120000)
-
-# Install shared dependencies
+# Copy shared package and install dependencies first
+COPY shared/ ./shared/
 WORKDIR /app/shared
-RUN --mount=type=cache,target=/root/.npm \
-    npm ci --legacy-peer-deps --fetch-retries=5 --fetch-retry-mintimeout=20000 --fetch-retry-maxtimeout=120000 || \
-    (sleep 10 && npm ci --legacy-peer-deps --fetch-retries=5 --fetch-retry-mintimeout=20000 --fetch-retry-maxtimeout=120000) || \
-    (sleep 20 && npm ci --legacy-peer-deps --fetch-retries=5 --fetch-retry-mintimeout=20000 --fetch-retry-maxtimeout=120000)
-
-# Copy source code
+RUN npm ci
+# Copy prisma schema to original location and generate Prisma client
 WORKDIR /app
-COPY shared ./shared
-COPY services/api-gateway ./services/api-gateway
 COPY prisma ./prisma
+RUN npx prisma@5.7.1 generate --schema=./prisma/schema.prisma
+# Fix: Copy index.js to default.js so @prisma/client can find the real client (not the stub)
+RUN cp /app/shared/node_modules/.prisma/client/index.js /app/shared/node_modules/.prisma/client/default.js || true
+WORKDIR /app/shared
+RUN npm run build
+
+# Copy service files
+WORKDIR /app
+COPY services/api-gateway/package*.json ./services/api-gateway/
+COPY services/api-gateway/tsconfig.json ./services/api-gateway/
+COPY services/api-gateway/src ./services/api-gateway/src
 COPY tsconfig.json ./
+COPY package*.json ./
 
-# Generate Prisma client once in root node_modules
-RUN ./node_modules/.bin/prisma generate --schema=./prisma/schema.prisma
-
-# Build shared module
-WORKDIR /app/shared
-RUN npm run build
-
-# Install service dev dependencies and build
+# Install dependencies and build
 WORKDIR /app/services/api-gateway
-RUN --mount=type=cache,target=/root/.npm \
-    npm ci --include=dev --fetch-retries=5 --fetch-retry-mintimeout=20000 --fetch-retry-maxtimeout=120000 || \
-    npm install --include=dev --fetch-retries=5 --fetch-retry-mintimeout=20000 --fetch-retry-maxtimeout=120000
+RUN npm ci
 RUN npm run build
-RUN cp -r ../../shared/dist ./dist/shared || true
 
-# Production stage - NO dev dependencies
-FROM node:lts-slim
+# Production stage
+FROM node:20-alpine
 
-# Install runtime dependencies only
-RUN apt-get update -y && apt-get install -y openssl curl && rm -rf /var/lib/apt/lists/*
+# Install OpenSSL for Prisma query engine
+RUN apk add --no-cache openssl1.1-compat || apk add --no-cache openssl
 
 WORKDIR /app
 
-# Copy package files
-COPY package.json package-lock.json* ./
-COPY shared/package.json shared/package-lock.json* ./shared/
-COPY services/api-gateway/package.json ./services/api-gateway/
+# Copy entire shared package (needed for file: reference to work, includes generated Prisma client)
+COPY --from=builder /app/shared ./shared
 
-# Install production dependencies only
-RUN --mount=type=cache,target=/root/.npm \
-    npm ci --omit=dev --fetch-retries=5 --fetch-retry-mintimeout=20000 --fetch-retry-maxtimeout=120000 || \
-    (sleep 10 && npm ci --omit=dev --fetch-retries=5 --fetch-retry-mintimeout=20000 --fetch-retry-maxtimeout=120000) || \
-    (sleep 20 && npm ci --omit=dev --fetch-retries=5 --fetch-retry-mintimeout=20000 --fetch-retry-maxtimeout=120000)
+# Copy service files maintaining directory structure for file: references
+COPY --from=builder /app/services/api-gateway ./services/api-gateway
 
-# Install shared production dependencies
-WORKDIR /app/shared
-RUN --mount=type=cache,target=/root/.npm \
-    npm ci --omit=dev --legacy-peer-deps --fetch-retries=5 --fetch-retry-mintimeout=20000 --fetch-retry-maxtimeout=120000 || \
-    (sleep 10 && npm ci --omit=dev --legacy-peer-deps --fetch-retries=5 --fetch-retry-mintimeout=20000 --fetch-retry-maxtimeout=120000) || \
-    (sleep 20 && npm ci --omit=dev --legacy-peer-deps --fetch-retries=5 --fetch-retry-mintimeout=20000 --fetch-retry-maxtimeout=120000)
+# Copy root package.json for shared dependencies
+COPY --from=builder /app/package*.json ./
 
-# Copy Prisma client from builder
-WORKDIR /app
-COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
-
-# Copy shared directory with dist, package.json, and node_modules
-COPY --from=builder /app/shared/dist ./shared/dist
-COPY --from=builder /app/shared/package.json ./shared/package.json
-COPY --from=builder /app/shared/node_modules ./shared/node_modules
-
-# Install service dependencies to resolve file:../../shared reference
 WORKDIR /app/services/api-gateway
-COPY --from=builder /app/services/api-gateway/package.json ./package.json
-COPY --from=builder /app/services/api-gateway/dist ./dist
-RUN --mount=type=cache,target=/root/.npm \
-    npm install --omit=dev --fetch-retries=5 --fetch-retry-mintimeout=20000 --fetch-retry-maxtimeout=120000 || \
-    (sleep 10 && npm install --omit=dev --fetch-retries=5 --fetch-retry-mintimeout=20000 --fetch-retry-maxtimeout=120000) || \
-    (sleep 20 && npm install --omit=dev --fetch-retries=5 --fetch-retry-mintimeout=20000 --fetch-retry-maxtimeout=120000)
 
-# Set NODE_PATH for module resolution
-ENV NODE_PATH=/app/shared/node_modules:/app/node_modules
-
-# Expose port
 EXPOSE 3411
 
-# Start service from service directory where node_modules are
+HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
+  CMD node -e "require('http').get('http://localhost:3411/health', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"
+
 CMD ["node", "dist/main.js"]
+

@@ -14,25 +14,17 @@ export interface ServiceErrorInfo {
 /**
  * Maps API endpoints to service information
  * Port configured in allegro/.env: API_GATEWAY_PORT (default: 3411)
+ * Note: In Vite, use import.meta.env for environment variables (must be prefixed with VITE_)
  */
-const API_GATEWAY_PORT = parseInt(process.env.API_GATEWAY_PORT || '3411', 10);
+const API_GATEWAY_PORT = parseInt(
+  import.meta.env.VITE_API_GATEWAY_PORT || 
+  import.meta.env.API_GATEWAY_PORT || 
+  '3411', 
+  10
+);
 
 const SERVICE_MAP: Record<string, ServiceErrorInfo> = {
   '/settings': {
-    serviceName: 'API Gateway',
-    servicePort: API_GATEWAY_PORT,
-    servicePath: 'services/api-gateway',
-    startCommand: 'cd services/api-gateway && npm run start:dev',
-    description: 'Routes requests to backend services',
-  },
-  '/sync/jobs': {
-    serviceName: 'API Gateway',
-    servicePort: API_GATEWAY_PORT,
-    servicePath: 'services/api-gateway',
-    startCommand: 'cd services/api-gateway && npm run start:dev',
-    description: 'Routes requests to backend services',
-  },
-  '/products': {
     serviceName: 'API Gateway',
     servicePort: API_GATEWAY_PORT,
     servicePath: 'services/api-gateway',
@@ -47,13 +39,6 @@ const SERVICE_MAP: Record<string, ServiceErrorInfo> = {
     description: 'Routes requests to backend services',
   },
   '/import': {
-    serviceName: 'API Gateway',
-    servicePort: API_GATEWAY_PORT,
-    servicePath: 'services/api-gateway',
-    startCommand: 'cd services/api-gateway && npm run start:dev',
-    description: 'Routes requests to backend services',
-  },
-  '/webhooks': {
     serviceName: 'API Gateway',
     servicePort: API_GATEWAY_PORT,
     servicePath: 'services/api-gateway',

@@ -19,10 +19,8 @@ const Dashboard: React.FC = () => {
 
   const navigation = [
     { name: 'Settings', path: '/dashboard/settings', icon: '⚙️' },
-    { name: 'Sync Status', path: '/dashboard/sync', icon: '🔄' },
     { name: 'Import Jobs', path: '/dashboard/import', icon: '📥' },
     { name: 'Orders', path: '/dashboard/orders', icon: '📦' },
-    { name: 'Products', path: '/dashboard/products', icon: '📊' },
   ];
 
   return (

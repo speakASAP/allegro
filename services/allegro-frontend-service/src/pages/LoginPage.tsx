@@ -18,13 +18,17 @@ const LoginPage: React.FC = () => {
   const { login } = useAuth();
   const navigate = useNavigate();
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setError('');
     setLoading(true);
 
     try {
-      await login(email, password);
+      const formData = new FormData(e.currentTarget);
+      const formEmail = (formData.get('email') as string | null)?.trim() || '';
+      const formPassword = (formData.get('password') as string | null) || '';
+      console.log('[LoginPage] submitting login', { email: formEmail, passwordPresent: !!formPassword });
+      await login(formEmail, formPassword);
       navigate('/dashboard');
     } catch (err: unknown) {
       if (err instanceof AxiosError) {
@@ -68,6 +72,7 @@ const LoginPage: React.FC = () => {
             <Input
               label="Email address"
               type="email"
+              name="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
@@ -77,6 +82,7 @@ const LoginPage: React.FC = () => {
             <Input
               label="Password"
               type="password"
+              name="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required

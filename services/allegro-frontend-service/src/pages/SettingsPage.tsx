@@ -4,7 +4,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { AxiosError } from 'axios';
-import api from '../services/api';
+import api, { oauthApi } from '../services/api';
 import { Button } from '../components/Button';
 import { Input } from '../components/Input';
 import { Card } from '../components/Card';
@@ -41,8 +41,25 @@ const SettingsPage: React.FC = () => {
   const [newSupplierKey, setNewSupplierKey] = useState('');
   const [showAddSupplier, setShowAddSupplier] = useState(false);
 
+  // OAuth state
+  const [oauthStatus, setOauthStatus] = useState<{
+    authorized: boolean;
+    expiresAt?: string;
+    scopes?: string;
+  } | null>(null);
+  const [oauthLoading, setOauthLoading] = useState(false);
+
   useEffect(() => {
     loadSettings();
+    loadOAuthStatus();
+
+    // Check if returning from OAuth callback
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('oauth_refresh') === 'true') {
+      loadOAuthStatus();
+      // Clean up URL
+      window.history.replaceState({}, '', window.location.pathname);
+    }
   }, []);
 
   const loadSettings = async () => {
@@ -52,7 +69,42 @@ const SettingsPage: React.FC = () => {
         const data = response.data.data;
         setSettings(data);
         setAllegroClientId(data.allegroClientId || '');
-        setAllegroClientSecret(data.allegroClientSecret || '');
+        
+        // Debug logging
+        console.log('[SettingsPage] loadSettings response:', {
+          hasClientSecret: !!data.allegroClientSecret,
+          clientSecretLength: data.allegroClientSecret?.length,
+          hasDecryptionError: !!data._allegroClientSecretDecryptionError,
+          decryptionError: data._allegroClientSecretDecryptionError,
+        });
+        
+        // Check if Client Secret exists in database (regardless of decryption success)
+        // If _allegroClientSecretDecryptionError exists, it means the secret exists but decryption failed
+        const secretExistsInDb = data._allegroClientSecretDecryptionError || (data.allegroClientSecret && data.allegroClientSecret.length > 0);
+        
+        if (data._allegroClientSecretDecryptionError && data.allegroClientSecret === null) {
+          // Secret exists in DB but decryption failed - show stars and error
+          const errorInfo = data._allegroClientSecretDecryptionError;
+          const errorMessage = errorInfo && typeof errorInfo === 'object'
+            ? `Client Secret Decryption Error:\n\n` +
+              `• Status: Client Secret exists in database but could not be decrypted\n` +
+              `• Error Type: ${errorInfo.errorType || 'Unknown'}\n` +
+              `• Error Details: ${errorInfo.error || 'Unknown error'}\n\n` +
+              `• Solution: ${errorInfo.suggestion || 'Please re-enter your Client Secret and save it again.'}\n\n` +
+              `This typically occurs when the encryption key has changed or the data was encrypted with a different configuration.`
+            : 'Client Secret exists in database but could not be decrypted. Please re-enter your Client Secret and save it again.';
+          setError(errorMessage);
+          setAllegroClientSecret('********'); // Show stars because secret exists in DB
+          console.log('[SettingsPage] Setting Client Secret to stars (decryption failed)');
+        } else if (secretExistsInDb) {
+          // Client Secret exists in database and was successfully decrypted - show masked value
+          setAllegroClientSecret('********');
+          console.log('[SettingsPage] Setting Client Secret to stars (exists and decrypted)');
+        } else {
+          // No Client Secret in database - show empty
+          setAllegroClientSecret('');
+          console.log('[SettingsPage] Setting Client Secret to empty (does not exist)');
+        }
       }
     } catch (err: unknown) {
       if (err instanceof AxiosError) {
@@ -71,19 +123,71 @@ const SettingsPage: React.FC = () => {
   };
 
   const handleSaveAllegro = async () => {
+    console.log('[SettingsPage] handleSaveAllegro START', {
+      allegroClientId: allegroClientId || 'EMPTY',
+      allegroClientIdLength: allegroClientId?.length || 0,
+      allegroClientSecret: allegroClientSecret ? (allegroClientSecret.substring(0, 10) + '...') : 'EMPTY',
+      allegroClientSecretLength: allegroClientSecret?.length || 0,
+      allegroClientSecretIsMasked: allegroClientSecret === '********',
+      allegroClientSecretIsEmpty: !allegroClientSecret || allegroClientSecret.length === 0,
+      allegroClientSecretType: typeof allegroClientSecret,
+    });
+    
     setSaving(true);
     setError('');
     setSuccess('');
 
     try {
-      const response = await api.put('/settings', {
+      // Only send Client Secret if it was actually changed (not masked value)
+      const payload: any = {
         allegroClientId,
-        allegroClientSecret,
-      });
+      };
+      
+      // Only include Client Secret if it's not the masked placeholder
+      if (allegroClientSecret && allegroClientSecret !== '********') {
+        payload.allegroClientSecret = allegroClientSecret;
+        console.log('[SettingsPage] Including Client Secret in payload', {
+          clientSecretLength: allegroClientSecret.length,
+          clientSecretFirstChars: allegroClientSecret.substring(0, 5) + '...',
+        });
+      } else {
+        console.log('[SettingsPage] NOT including Client Secret in payload', {
+          reason: allegroClientSecret === '********' ? 'masked value' : 'empty',
+          allegroClientSecret,
+        });
+      }
+      
+      console.log('[SettingsPage] Sending PUT /settings request', JSON.stringify({
+        payloadKeys: Object.keys(payload),
+        hasClientId: !!payload.allegroClientId,
+        clientId: payload.allegroClientId || 'EMPTY',
+        clientIdLength: payload.allegroClientId?.length || 0,
+        hasClientSecret: !!payload.allegroClientSecret,
+        clientSecretLength: payload.allegroClientSecret?.length || 0,
+        clientSecretFirstChars: payload.allegroClientSecret ? (payload.allegroClientSecret.substring(0, 10) + '...') : 'EMPTY',
+      }, null, 2));
+      
+      const response = await api.put('/settings', payload);
+      
+      console.log('[SettingsPage] Received PUT /settings response', JSON.stringify({
+        success: response.data?.success,
+        hasData: !!response.data?.data,
+        responseKeys: response.data ? Object.keys(response.data) : [],
+        dataKeys: response.data?.data ? Object.keys(response.data.data) : [],
+        hasClientId: !!response.data?.data?.allegroClientId,
+        clientId: response.data?.data?.allegroClientId || 'EMPTY',
+        hasClientSecret: !!response.data?.data?.allegroClientSecret,
+        clientSecretLength: response.data?.data?.allegroClientSecret?.length || 0,
+        clientSecretFirstChars: response.data?.data?.allegroClientSecret ? (response.data?.data?.allegroClientSecret.substring(0, 10) + '...') : 'EMPTY',
+        hasDecryptionError: !!response.data?.data?._allegroClientSecretDecryptionError,
+        decryptionError: response.data?.data?._allegroClientSecretDecryptionError || 'NONE',
+      }, null, 2));
 
       if (response.data.success) {
         setSuccess('Allegro settings saved successfully');
         loadSettings();
+        // Reload OAuth status in case credentials changed
+        loadOAuthStatus();
       }
     } catch (err: unknown) {
       const errorMessage =
@@ -197,6 +301,90 @@ const SettingsPage: React.FC = () => {
     }
   };
 
+  const loadOAuthStatus = async () => {
+    try {
+      const response = await oauthApi.getStatus();
+      if (response.data.success) {
+        setOauthStatus(response.data.data);
+      }
+    } catch (err: unknown) {
+      // Silently fail - OAuth status is optional
+      console.error('Failed to load OAuth status', err);
+    }
+  };
+
+  const handleAuthorizeOAuth = async () => {
+    // Check if Client ID is configured (Client Secret might not be returned by API for security)
+    const hasClientId = allegroClientId || settings?.allegroClientId;
+    
+    if (!hasClientId) {
+      setError('Please configure and save your Allegro Client ID and Client Secret first');
+      return;
+    }
+
+    setOauthLoading(true);
+    setError('');
+    setSuccess('');
+
+    try {
+      const response = await oauthApi.authorize();
+      if (response.data.success && response.data.data?.authorizationUrl) {
+        // Redirect to Allegro authorization page
+        window.location.href = response.data.data.authorizationUrl;
+      } else {
+        setError('Failed to generate authorization URL');
+      }
+    } catch (err: unknown) {
+      if (err instanceof AxiosError) {
+        const axiosError = err as AxiosError & { isConnectionError?: boolean; serviceErrorMessage?: string };
+        if (axiosError.isConnectionError && axiosError.serviceErrorMessage) {
+          setError(axiosError.serviceErrorMessage);
+        } else {
+          // Backend will return specific error if credentials are missing
+          setError(err.response?.data?.error?.message || 'Failed to start OAuth authorization');
+        }
+      } else {
+        setError('Failed to start OAuth authorization');
+      }
+    } finally {
+      setOauthLoading(false);
+    }
+  };
+
+  const handleRevokeOAuth = async () => {
+    if (!confirm('Are you sure you want to revoke OAuth authorization? You will need to re-authorize to import offers.')) {
+      return;
+    }
+
+    setOauthLoading(true);
+    setError('');
+    setSuccess('');
+
+    try {
+      const response = await oauthApi.revoke();
+      if (response.data.success) {
+        setSuccess('OAuth authorization revoked successfully');
+        loadOAuthStatus();
+      } else {
+        setError('Failed to revoke OAuth authorization');
+      }
+    } catch (err: unknown) {
+      if (err instanceof AxiosError) {
+        const axiosError = err as AxiosError & { isConnectionError?: boolean; serviceErrorMessage?: string };
+        if (axiosError.isConnectionError && axiosError.serviceErrorMessage) {
+          setError(axiosError.serviceErrorMessage);
+        } else {
+          setError(err.response?.data?.error?.message || 'Failed to revoke OAuth authorization');
+        }
+      } else {
+        setError('Failed to revoke OAuth authorization');
+      }
+    } finally {
+      setOauthLoading(false);
+    }
+  };
+
+
   if (loading) {
     return <div>Loading settings...</div>;
   }
@@ -245,6 +433,60 @@ const SettingsPage: React.FC = () => {
               Validate Keys
             </Button>
           </div>
+        </div>
+      </Card>
+
+      {/* OAuth Authorization */}
+      <Card title="OAuth Authorization">
+        <div className="space-y-4">
+          {oauthStatus === null ? (
+            <p className="text-gray-600">Loading OAuth status...</p>
+          ) : oauthStatus.authorized ? (
+            <div className="space-y-3">
+              <div className="flex items-center space-x-2">
+                <div className="w-3 h-3 bg-green-500 rounded-full"></div>
+                <span className="text-green-700 font-semibold">Authorized</span>
+              </div>
+              {oauthStatus.expiresAt && (
+                <div className="text-sm text-gray-600">
+                  <strong>Expires:</strong> {new Date(oauthStatus.expiresAt).toLocaleString()}
+                </div>
+              )}
+              {oauthStatus.scopes && (
+                <div className="text-sm text-gray-600">
+                  <strong>Scopes:</strong> {oauthStatus.scopes}
+                </div>
+              )}
+              <div className="pt-2">
+                <Button variant="danger" onClick={handleRevokeOAuth} disabled={oauthLoading}>
+                  {oauthLoading ? 'Revoking...' : 'Revoke Authorization'}
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              <div className="flex items-center space-x-2">
+                <div className="w-3 h-3 bg-red-500 rounded-full"></div>
+                <span className="text-red-700 font-semibold">Not Authorized</span>
+              </div>
+              <p className="text-sm text-gray-600">
+                OAuth authorization is required to import offers from Allegro. Click the button below to authorize the application.
+              </p>
+              <div className="pt-2">
+                <Button 
+                  onClick={handleAuthorizeOAuth} 
+                  disabled={oauthLoading || !(allegroClientId || settings?.allegroClientId)}
+                >
+                  {oauthLoading ? 'Starting Authorization...' : 'Authorize with Allegro'}
+                </Button>
+              </div>
+              {!(allegroClientId || settings?.allegroClientId) && (
+                <p className="text-sm text-yellow-600">
+                  Please configure and save your Allegro Client ID and Client Secret first.
+                </p>
+              )}
+            </div>
+          )}
         </div>
       </Card>
 

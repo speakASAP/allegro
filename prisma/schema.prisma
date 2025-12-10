@@ -1,6 +1,7 @@
 generator client {
-  provider = "prisma-client-js"
-  output   = "../shared/node_modules/.prisma/client"
+  provider      = "prisma-client-js"
+  output        = "../shared/node_modules/.prisma/client"
+  binaryTargets = ["native", "linux-musl-openssl-3.0.x"]
 }
 
 datasource db {
@@ -321,12 +322,20 @@ model SupplierProduct {
 
 // User settings for API keys and configuration
 model UserSettings {
-  id                String  @id @default(uuid()) @db.Uuid
-  userId            String  @unique @db.VarChar(255) // Links to auth-microservice user ID
+  id     String @id @default(uuid()) @db.Uuid
+  userId String @unique @db.VarChar(255) // Links to auth-microservice user ID
 
   // Allegro API configuration
   allegroClientId     String? @db.VarChar(255)
   allegroClientSecret String? @db.VarChar(500) // Encrypted
+
+  // Allegro OAuth tokens (for accessing user-specific resources)
+  allegroAccessToken       String?   @db.VarChar(5000) // Encrypted
+  allegroRefreshToken      String?   @db.VarChar(5000) // Encrypted
+  allegroTokenExpiresAt    DateTime? @db.Timestamp(6)
+  allegroTokenScopes       String?   @db.VarChar(1000) // Comma-separated scopes
+  allegroOAuthState        String?   @db.VarChar(255) // For OAuth state verification
+  allegroOAuthCodeVerifier String?   @db.VarChar(500) // Encrypted, for PKCE
 
   // Generic supplier configurations
   supplierConfigs Json? // Array of supplier configurations: [{ id, name, apiEndpoint, apiKey, apiConfig }]

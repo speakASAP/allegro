@@ -8,6 +8,7 @@ import { ConfigModule } from '@nestjs/config';
 import { PrismaModule, LoggerModule, AuthModule } from '@allegro/shared';
 import { AllegroApiService } from './allegro-api.service';
 import { AllegroAuthService } from './allegro-auth.service';
+import { AllegroOAuthService } from './allegro-oauth.service';
 import { OffersController } from './offers/offers.controller';
 import { OffersService } from './offers/offers.service';
 import { OrdersController } from './orders/orders.controller';
@@ -17,6 +18,7 @@ import { CategoriesService } from './categories/categories.service';
 import { InventoryService } from './inventory/inventory.service';
 import { EventsController } from './events/events.controller';
 import { EventsService } from './events/events.service';
+import { OAuthController } from './oauth/oauth.controller';
 
 @Module({
   imports: [HttpModule, ConfigModule, PrismaModule, LoggerModule, AuthModule],
@@ -25,10 +27,12 @@ import { EventsService } from './events/events.service';
     OrdersController,
     CategoriesController,
     EventsController,
+    OAuthController,
   ],
   providers: [
     AllegroApiService,
     AllegroAuthService,
+    AllegroOAuthService,
     OffersService,
     OrdersService,
     CategoriesService,

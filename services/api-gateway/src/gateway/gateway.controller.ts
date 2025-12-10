@@ -6,6 +6,7 @@
 import {
   Controller,
   All,
+  Get,
   Req,
   Res,
   UseGuards,
@@ -30,13 +31,67 @@ export class GatewayController {
   }
 
   /**
-   * Route product requests
-   * Handle both /api/products and /api/products/*
+   * Route OAuth callback (public, no auth required)
+   * This endpoint returns a redirect, so we need to handle it specially
    */
-  @All(['products', 'products/*'])
-  async productsRoute(@Req() req: ExpressRequest, @Res() res: ExpressResponse) {
-    const path = req.url.replace('/api/products', '') || '';
-    return this.routeRequest('products', `/products${path}`, req, res);
+  @Get('allegro/oauth/callback')
+  async allegroOAuthCallback(@Req() req: ExpressRequest, @Res() res: ExpressResponse) {
+    const path = req.url.replace('/api/allegro', '');
+    const method = req.method;
+    const requestId = `req-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    const startTime = Date.now();
+
+    this.sharedLogger.info(`[${requestId}] OAuth callback request`, {
+      method,
+      path,
+      originalUrl: req.originalUrl,
+      url: req.url,
+      query: req.query,
+    });
+
+    try {
+      // Don't follow redirects - we want to handle them ourselves
+      const response = await this.gatewayService.forwardRequest(
+        'allegro',
+        `/allegro${path}`,
+        method,
+        undefined,
+        this.getHeaders(req),
+        false, // Don't follow redirects
+      );
+
+      // If it's a redirect response, redirect the client
+      if (response && response._isRedirect && response.location) {
+        const duration = Date.now() - startTime;
+        this.sharedLogger.info(`[${requestId}] OAuth callback redirecting`, {
+          status: response.status,
+          location: response.location,
+          duration: `${duration}ms`,
+        });
+        return res.redirect(response.status || 302, response.location);
+      }
+
+      // Otherwise return JSON response
+      const duration = Date.now() - startTime;
+      this.sharedLogger.info(`[${requestId}] OAuth callback completed`, {
+        duration: `${duration}ms`,
+      });
+      return res.status(200).json(response);
+    } catch (error: any) {
+      const duration = Date.now() - startTime;
+      this.sharedLogger.error(`[${requestId}] OAuth callback error`, {
+        error: error.message,
+        duration: `${duration}ms`,
+      });
+      const errorStatus = error.response?.status || 500;
+      return res.status(errorStatus).json({
+        success: false,
+        error: {
+          code: 'OAUTH_CALLBACK_ERROR',
+          message: error.response?.data?.error?.message || error.message || 'OAuth callback failed',
+        },
+      });
+    }
   }
 
   /**
@@ -47,25 +102,6 @@ export class GatewayController {
   async allegroRoute(@Req() req: ExpressRequest, @Res() res: ExpressResponse) {
     const path = req.url.replace('/api/allegro', '');
     return this.routeRequest('allegro', `/allegro${path}`, req, res);
-  }
-
-  /**
-   * Route sync requests (requires auth)
-   */
-  @All('sync/*')
-  @UseGuards(JwtAuthGuard)
-  async syncRoute(@Req() req: ExpressRequest, @Res() res: ExpressResponse) {
-    const path = req.url.replace('/api/sync', '');
-    return this.routeRequest('sync', `/sync${path}`, req, res);
-  }
-
-  /**
-   * Route webhook requests (no auth - webhook secret validation)
-   */
-  @All('webhooks/*')
-  async webhooksRoute(@Req() req: ExpressRequest, @Res() res: ExpressResponse) {
-    const path = req.url.replace('/api/webhooks', '');
-    return this.routeRequest('webhooks', `/webhooks${path}`, req, res);
   }
 
   /**
@@ -98,11 +134,86 @@ export class GatewayController {
 
   /**
    * Route auth requests (no auth required for register/login)
+   * Must be before catch-all to match correctly
+   * Use explicit routes for common endpoints and catch-all for others
    */
+  @All('auth/login')
+  async authLogin(@Req() req: ExpressRequest, @Res() res: ExpressResponse) {
+    // Temporary debug: log incoming login payload to troubleshoot empty/invalid bodies in dev
+    this.logger.warn(`Auth login payload | url=${req.originalUrl}`, {
+      body: req.body,
+      hasBody: !!req.body,
+      contentType: req.headers['content-type'],
+    });
+    return this.routeRequest('auth', '/auth/login', req, res);
+  }
+
+  @All('auth/register')
+  async authRegister(@Req() req: ExpressRequest, @Res() res: ExpressResponse) {
+    return this.routeRequest('auth', '/auth/register', req, res);
+  }
+
+  @All('auth/refresh')
+  async authRefresh(@Req() req: ExpressRequest, @Res() res: ExpressResponse) {
+    return this.routeRequest('auth', '/auth/refresh', req, res);
+  }
+
   @All('auth/*')
   async authRoute(@Req() req: ExpressRequest, @Res() res: ExpressResponse) {
+    this.sharedLogger.info(`[Auth Route] Matched: ${req.method} ${req.originalUrl}`, {
+      url: req.url,
+      originalUrl: req.originalUrl,
+      path: req.path,
+    });
     const path = req.url.replace('/api/auth', '');
     return this.routeRequest('auth', `/auth${path}`, req, res);
+  }
+
+  @All('auth')
+  async authBaseRoute(@Req() req: ExpressRequest, @Res() res: ExpressResponse) {
+    this.sharedLogger.info(`[Auth Base Route] Matched: ${req.method} ${req.originalUrl}`, {
+      url: req.url,
+      originalUrl: req.originalUrl,
+      path: req.path,
+    });
+    const path = req.url.replace('/api/auth', '') || '';
+    return this.routeRequest('auth', `/auth${path}`, req, res);
+  }
+
+  /**
+   * Catch-all for /api/ root - return helpful error
+   * This must be last to not interfere with specific routes
+   */
+  @All()
+  async apiRoot(@Req() req: ExpressRequest, @Res() res: ExpressResponse) {
+    // Log the request for debugging (production logging)
+    this.sharedLogger.warn(`[API Root] Unmatched request: ${req.method} ${req.url}`, {
+      method: req.method,
+      url: req.url,
+      originalUrl: req.originalUrl,
+      path: req.path,
+      baseUrl: req.baseUrl,
+      query: req.query,
+      params: req.params,
+      headers: {
+        host: req.headers.host,
+        'x-forwarded-for': req.headers['x-forwarded-for'],
+        'x-real-ip': req.headers['x-real-ip'],
+      },
+    });
+    this.logger.warn(`[API Root] Unmatched: ${req.method} ${req.originalUrl} | url: ${req.url} | path: ${req.path}`);
+    
+    res.status(404).json({
+      success: false,
+      error: {
+        code: 'NOT_FOUND',
+        message: `Cannot ${req.method} ${req.url}. Available endpoints: /api/auth/*, /api/allegro/*, /api/import/*, /api/settings/*`,
+      },
+      path: req.url,
+      originalUrl: req.originalUrl,
+      requestPath: req.path,
+      timestamp: new Date().toISOString(),
+    });
   }
 
   /**
@@ -154,6 +265,7 @@ export class GatewayController {
       res.status(200).json(response);
     } catch (error: any) {
       const duration = Date.now() - startTime;
+      const errorStatus = error.response?.status || error.status;
       const errorDetails = {
         serviceName,
         method,
@@ -163,12 +275,32 @@ export class GatewayController {
         errorType: error.constructor?.name,
         errorMessage: error.message,
         errorCode: error.code,
-        errorStatus: error.response?.status || error.status,
+        errorStatus,
         errorData: error.response?.data,
       };
 
-      this.sharedLogger.error(`[${requestId}] Request failed`, errorDetails);
-      this.logger.error(`[${requestId}] ${method} ${req.originalUrl} failed: ${error.message}`, errorDetails);
+      // Handle 401 Unauthorized - don't log as error for auth endpoints (expected response)
+      if (errorStatus === 401 && serviceName === 'auth') {
+        // Pass through the 401 response from auth service
+        const errorData = error.response?.data || { message: 'Invalid credentials', error: 'Unauthorized' };
+        this.sharedLogger.info(`[${requestId}] Authentication failed (expected)`, {
+          serviceName,
+          method,
+          path,
+          duration: `${duration}ms`,
+        });
+        this.logger.debug(`[${requestId}] ${method} ${req.originalUrl} - 401 (authentication failed)`);
+        res.status(401).json({
+          success: false,
+          error: {
+            code: 'UNAUTHORIZED',
+            message: errorData.message || 'Invalid credentials',
+            statusCode: 401,
+          },
+        });
+        return;
+      }
+
       // Handle UnauthorizedException properly
       if (error instanceof UnauthorizedException) {
         res.status(401).json({
@@ -180,6 +312,10 @@ export class GatewayController {
         });
         return;
       }
+
+      // Log other errors
+      this.sharedLogger.error(`[${requestId}] Request failed`, errorDetails);
+      this.logger.error(`[${requestId}] ${method} ${req.originalUrl} failed: ${error.message}`, errorDetails);
 
       // Handle timeout errors (auth service unreachable)
       if (error.code === 'ECONNABORTED' || error.message?.includes('timeout')) {

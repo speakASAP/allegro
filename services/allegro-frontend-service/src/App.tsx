@@ -10,10 +10,9 @@ import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
 import Dashboard from './pages/Dashboard';
 import SettingsPage from './pages/SettingsPage';
-import SyncStatusPage from './pages/SyncStatusPage';
 import ImportJobsPage from './pages/ImportJobsPage';
 import OrdersPage from './pages/OrdersPage';
-import ProductsPage from './pages/ProductsPage';
+import AllegroOAuthCallbackPage from './pages/AllegroOAuthCallbackPage';
 
 function App() {
   return (
@@ -28,6 +27,7 @@ function App() {
           <Route path="/" element={<LandingPage />} />
           <Route path="/login" element={<LoginPage />} />
           <Route path="/register" element={<RegisterPage />} />
+          <Route path="/auth/callback" element={<AllegroOAuthCallbackPage />} />
           <Route
             path="/dashboard"
             element={
@@ -38,10 +38,8 @@ function App() {
           >
             <Route index element={<Navigate to="settings" replace />} />
             <Route path="settings" element={<SettingsPage />} />
-            <Route path="sync" element={<SyncStatusPage />} />
             <Route path="import" element={<ImportJobsPage />} />
             <Route path="orders" element={<OrdersPage />} />
-            <Route path="products" element={<ProductsPage />} />
           </Route>
         </Routes>
       </BrowserRouter>

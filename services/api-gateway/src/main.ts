@@ -35,8 +35,9 @@ async function bootstrap() {
   
   if (corsOrigin) {
     // In development, allow both production and localhost origins
-    // Port configured in allegro/.env: ALLEGRO_FRONTEND_SERVICE_PORT (default: 3410)
-    const frontendPort = process.env.ALLEGRO_FRONTEND_SERVICE_PORT || '3410';
+    // Port configured in allegro/.env: ALLEGRO_FRONTEND_SERVICE_PORT
+    const frontendPort = configService.get<string>('ALLEGRO_FRONTEND_SERVICE_PORT');
+    if (frontendPort) {
     const allowedOrigins = nodeEnv === 'development' 
       ? [corsOrigin, `http://localhost:${frontendPort}`, `http://127.0.0.1:${frontendPort}`]
       : corsOrigin;
@@ -47,6 +48,15 @@ async function bootstrap() {
       methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
       allowedHeaders: ['Content-Type', 'Authorization'],
     });
+    } else {
+      // If frontend port not set, only allow CORS_ORIGIN
+      app.enableCors({
+        origin: corsOrigin,
+        credentials: true,
+        methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+        allowedHeaders: ['Content-Type', 'Authorization'],
+      });
+    }
   } else {
     // If no CORS_ORIGIN is set, enable CORS for all origins in development
     if (nodeEnv === 'development') {
@@ -59,8 +69,11 @@ async function bootstrap() {
     }
   }
 
-  // Port configured in allegro/.env: API_GATEWAY_PORT (default: 3411)
-  const port = configService.get<string>('API_GATEWAY_PORT') || configService.get<string>('PORT') || '3411';
+  // Port configured in allegro/.env: API_GATEWAY_PORT
+  const port = configService.get<string>('API_GATEWAY_PORT') || configService.get<string>('PORT');
+  if (!port) {
+    throw new Error('API_GATEWAY_PORT or PORT must be configured in .env file');
+  }
   await app.listen(parseInt(port));
   console.log(`API Gateway is running on: http://localhost:${port}`);
 }

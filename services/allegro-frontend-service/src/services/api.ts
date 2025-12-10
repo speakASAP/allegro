@@ -7,32 +7,61 @@ import { isConnectionError, getConnectionErrorMessage } from '../utils/serviceEr
 import { authService } from './auth';
 
 // Determine API URL:
-// 1. Use VITE_API_URL if set during build (production)
+// 1. Use VITE_API_URL if set during build (from FRONTEND_API_URL in .env)
 // 2. Auto-detect from current origin (if on production domain)
 // 3. Fallback to localhost for development
 const getApiUrl = (): string => {
-  // If VITE_API_URL is set during build, use it
+  // If VITE_API_URL is set during build, use it (from FRONTEND_API_URL in .env)
   if (import.meta.env.VITE_API_URL) {
     return import.meta.env.VITE_API_URL;
   }
   
-  // Auto-detect production URL from current origin
-  const origin = window.location.origin;
-  if (origin.includes('allegro.statex.cz') || origin.includes('statex.cz')) {
-    return `${origin}/api`;
+  // In development, always use API Gateway port (not origin-based)
+  const isDev = import.meta.env.DEV || import.meta.env.MODE === 'development';
+  if (isDev) {
+    const apiGatewayPort = import.meta.env.VITE_API_GATEWAY_PORT || 
+      import.meta.env.API_GATEWAY_PORT;
+    
+    if (!apiGatewayPort) {
+      console.error('[API Config] API_GATEWAY_PORT not configured. Please set it in .env file.');
+      throw new Error('API_GATEWAY_PORT must be configured in .env file');
+    }
+    
+    return `http://localhost:${apiGatewayPort}/api`;
   }
   
-  // Development fallback
-  return `http://localhost:${process.env.API_GATEWAY_PORT || '3411'}/api`;
+  // Production: Auto-detect from current origin
+  const origin = typeof window !== 'undefined' ? window.location.origin : '';
+  if (origin) {
+    const normalizedOrigin = origin.endsWith('/') ? origin.slice(0, -1) : origin;
+    return `${normalizedOrigin}/api`;
+  }
+  
+  // Fallback (should not happen)
+  throw new Error('Unable to determine API URL');
 };
 
 const API_URL = getApiUrl();
+
+// Log API configuration (production logging)
+console.log('[API Config]', {
+  API_URL,
+  origin: typeof window !== 'undefined' ? window.location.origin : 'N/A',
+  env: {
+    VITE_API_URL: import.meta.env.VITE_API_URL || 'not set',
+    MODE: import.meta.env.MODE,
+    DEV: import.meta.env.DEV,
+    PROD: import.meta.env.PROD,
+  },
+  timestamp: new Date().toISOString(),
+});
 
 const api: AxiosInstance = axios.create({
   baseURL: API_URL,
   headers: {
     'Content-Type': 'application/json',
   },
+  timeout: 30000, // 30 seconds timeout to match GATEWAY_TIMEOUT
 });
 
 // Helper to validate JWT token format
@@ -50,11 +79,34 @@ function isValidJWT(token: string): boolean {
 // Request interceptor to add auth token
 api.interceptors.request.use(
   (config: InternalAxiosRequestConfig) => {
+    // Log request details for debugging (production logging)
+    const fullUrl = config.baseURL && config.url 
+      ? `${config.baseURL}${config.url.startsWith('/') ? '' : '/'}${config.url}`
+      : config.url || 'unknown';
+    
+    console.log('[API Request]', {
+      method: config.method?.toUpperCase() || 'UNKNOWN',
+      baseURL: config.baseURL,
+      url: config.url,
+      fullUrl: fullUrl,
+      hasToken: !!localStorage.getItem('accessToken'),
+      timestamp: new Date().toISOString(),
+    });
+    
+    // Ensure URL is properly constructed
+    if (config.url && !config.url.startsWith('http')) {
+      // If baseURL ends with /api and url starts with /, ensure proper combination
+      if (config.baseURL && config.baseURL.endsWith('/api') && config.url.startsWith('/')) {
+        // Axios will handle this correctly, but ensure no double slashes
+        config.url = config.url.replace(/^\/+/, '/');
+      }
+    }
+    
     const token = localStorage.getItem('accessToken');
     if (token) {
       // Validate token format before using it
       if (!isValidJWT(token)) {
-        console.warn('Invalid token format detected, clearing storage');
+        console.warn('[API] Invalid token format detected, clearing storage');
         localStorage.removeItem('accessToken');
         localStorage.removeItem('refreshToken');
         localStorage.removeItem('user');
@@ -66,6 +118,7 @@ api.interceptors.request.use(
     return config;
   },
   (error) => {
+    console.error('[API Request Error]', error);
     return Promise.reject(error);
   }
 );
@@ -83,9 +136,36 @@ let refreshPromise: Promise<string> | null = null;
 
 // Response interceptor to handle errors
 api.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    // Log successful responses (production logging)
+    console.log('[API Response]', {
+      method: response.config.method?.toUpperCase() || 'UNKNOWN',
+      url: response.config.url,
+      baseURL: response.config.baseURL,
+      status: response.status,
+      statusText: response.statusText,
+      timestamp: new Date().toISOString(),
+    });
+    return response;
+  },
   async (error: AxiosError) => {
     const connectionError = error as ConnectionAxiosError;
+    
+    // Log error details (production logging)
+    console.error('[API Error]', {
+      method: error.config?.method?.toUpperCase() || 'UNKNOWN',
+      url: error.config?.url,
+      baseURL: error.config?.baseURL,
+      fullUrl: error.config?.baseURL && error.config?.url 
+        ? `${error.config.baseURL}${error.config.url.startsWith('/') ? '' : '/'}${error.config.url}`
+        : error.config?.url || 'unknown',
+      status: error.response?.status,
+      statusText: error.response?.statusText,
+      message: error.message,
+      code: connectionError.code,
+      responseData: error.response?.data,
+      timestamp: new Date().toISOString(),
+    });
     
     // Handle connection errors with helpful messages
     if (isConnectionError(error)) {
@@ -204,30 +284,58 @@ api.interceptors.response.use(
 
 // Helper functions
 function getServiceNameFromUrl(url: string): string {
-  const apiGatewayPort = process.env.API_GATEWAY_PORT || '3411';
-  const productServicePort = process.env.PRODUCT_SERVICE_PORT || '3402';
-  const allegroServicePort = process.env.ALLEGRO_SERVICE_PORT || '3403';
-  const syncServicePort = process.env.SYNC_SERVICE_PORT || '3404';
-  const webhookServicePort = process.env.WEBHOOK_SERVICE_PORT || '3405';
-  const importServicePort = process.env.IMPORT_SERVICE_PORT || '3406';
-  const schedulerServicePort = process.env.SCHEDULER_SERVICE_PORT || '3407';
-  const settingsServicePort = process.env.ALLEGRO_SETTINGS_SERVICE_PORT || '3408';
+  // In Vite, use import.meta.env for environment variables (must be prefixed with VITE_)
+  const apiGatewayPort = import.meta.env.VITE_API_GATEWAY_PORT || 
+    import.meta.env.API_GATEWAY_PORT || 
+    '3411';
+  const allegroServicePort = import.meta.env.VITE_ALLEGRO_SERVICE_PORT || 
+    import.meta.env.ALLEGRO_SERVICE_PORT || 
+    '3403';
+  const importServicePort = import.meta.env.VITE_IMPORT_SERVICE_PORT || 
+    import.meta.env.IMPORT_SERVICE_PORT || 
+    '3406';
+  const settingsServicePort = import.meta.env.VITE_ALLEGRO_SETTINGS_SERVICE_PORT || 
+    import.meta.env.ALLEGRO_SETTINGS_SERVICE_PORT || 
+    '3408';
   
   if (url.includes(`:${apiGatewayPort}`)) return 'API Gateway';
-  if (url.includes(`:${productServicePort}`)) return 'Product Service';
   if (url.includes(`:${allegroServicePort}`)) return 'Allegro Service';
-  if (url.includes(`:${syncServicePort}`)) return 'Sync Service';
-  if (url.includes(`:${webhookServicePort}`)) return 'Webhook Service';
   if (url.includes(`:${importServicePort}`)) return 'Import Service';
-  if (url.includes(`:${schedulerServicePort}`)) return 'Scheduler Service';
   if (url.includes(`:${settingsServicePort}`)) return 'Settings Service';
   return 'Unknown Service';
 }
 
 function getPortFromUrl(url: string): number {
   const match = url.match(/:(\d+)/);
-  return match ? parseInt(match[1], 10) : parseInt(process.env.API_GATEWAY_PORT || '3411', 10);
+  const apiGatewayPort = import.meta.env.VITE_API_GATEWAY_PORT || 
+    import.meta.env.API_GATEWAY_PORT || 
+    '3411';
+  return match ? parseInt(match[1], 10) : parseInt(apiGatewayPort, 10);
 }
+
+// OAuth methods
+export const oauthApi = {
+  /**
+   * Get OAuth authorization status
+   */
+  getStatus: async () => {
+    return api.get('/allegro/oauth/status');
+  },
+
+  /**
+   * Get authorization URL
+   */
+  authorize: async () => {
+    return api.get('/allegro/oauth/authorize');
+  },
+
+  /**
+   * Revoke OAuth authorization
+   */
+  revoke: async () => {
+    return api.post('/allegro/oauth/revoke');
+  },
+};
 
 export default api;
 

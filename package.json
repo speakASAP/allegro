@@ -5,7 +5,7 @@
   "private": true,
   "scripts": {
     "migration:run-direct": "ts-node scripts/run-migration-direct.ts",
-    "start:dev": "concurrently -n \"API-GW,PRODUCT,ALLEGRO,SYNC,WEBHOOK,IMPORT,SCHEDULER\" -c \"blue,green,yellow,magenta,cyan,red,white\" \"cd services/api-gateway && npm run start:dev\" \"cd services/product-service && npm run start:dev\" \"cd services/allegro-service && npm run start:dev\" \"cd services/sync-service && npm run start:dev\" \"cd services/webhook-service && npm run start:dev\" \"cd services/import-service && npm run start:dev\" \"cd services/scheduler-service && npm run start:dev\"",
+    "start:dev": "concurrently -n \"API-GW,ALLEGRO,IMPORT,SETTINGS,FRONTEND\" -c \"blue,yellow,cyan,green,white\" \"cd services/api-gateway && npm run start:dev\" \"cd services/allegro-service && npm run start:dev\" \"cd services/import-service && npm run start:dev\" \"cd services/allegro-settings-service && npm run start:dev\" \"cd services/allegro-frontend-service && npm run dev\"",
     "test:event-polling": "ts-node scripts/test-event-polling.ts",
     "test:event-polling:bash": "./scripts/test-allegro-api-events.sh"
   },

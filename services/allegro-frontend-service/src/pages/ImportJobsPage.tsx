@@ -4,7 +4,8 @@
 
 import React, { useState, useEffect } from 'react';
 import { AxiosError } from 'axios';
-import api from '../services/api';
+import { useNavigate } from 'react-router-dom';
+import api, { oauthApi } from '../services/api';
 import { Card } from '../components/Card';
 import { Button } from '../components/Button';
 import { Modal } from '../components/Modal';
@@ -33,10 +34,12 @@ interface PreviewOffer {
 }
 
 const ImportJobsPage: React.FC = () => {
+  const navigate = useNavigate();
   const [jobs, setJobs] = useState<ImportJob[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const [requiresOAuth, setRequiresOAuth] = useState(false);
 
   // Import preview states
   const [showImportPreview, setShowImportPreview] = useState(false);
@@ -46,13 +49,12 @@ const ImportJobsPage: React.FC = () => {
   const [loadingImportAllegro, setLoadingImportAllegro] = useState(false);
   const [loadingImportSalesCenter, setLoadingImportSalesCenter] = useState(false);
   const [processingImport, setProcessingImport] = useState(false);
+  const [loadingImportAll, setLoadingImportAll] = useState(false);
 
   // Export preview states
   const [showExportPreview, setShowExportPreview] = useState(false);
   const [exportPreviewData, setExportPreviewData] = useState<any[]>([]);
   const [selectedExportIds, setSelectedExportIds] = useState<Set<string>>(new Set());
-  const [exportType, setExportType] = useState<'products' | 'offers' | null>(null);
-  const [loadingExportProducts, setLoadingExportProducts] = useState(false);
   const [loadingExportOffers, setLoadingExportOffers] = useState(false);
   const [processingExport, setProcessingExport] = useState(false);
 
@@ -111,6 +113,72 @@ const ImportJobsPage: React.FC = () => {
     }
   };
 
+  const handleImportAllOffers = async () => {
+    setLoadingImportAll(true);
+    setError(null);
+    setSuccess(null);
+    setRequiresOAuth(false);
+
+    try {
+      const response = await api.get('/allegro/offers/import');
+      if (response.data.success) {
+        const totalImported = response.data.data?.totalImported || 0;
+        setSuccess(`Successfully imported ${totalImported} offers from Allegro`);
+        loadJobs(); // Refresh the jobs list
+      }
+    } catch (err) {
+      console.error('Failed to import all offers', err);
+      if (err instanceof AxiosError) {
+        // Don't set error if it's a 401 - the interceptor will handle redirect
+        if (err.response?.status === 401) {
+          return; // Let the interceptor handle the redirect
+        }
+        const errorData = err.response?.data?.error;
+        const errorMessage = errorData?.message || 'Failed to import offers';
+        const needsOAuth = errorData?.requiresOAuth || errorMessage.toLowerCase().includes('oauth');
+        
+        if (needsOAuth) {
+          setRequiresOAuth(true);
+          setError(errorMessage);
+        } else {
+          const axiosError = err as AxiosError & { isConnectionError?: boolean; serviceErrorMessage?: string };
+          if (axiosError.isConnectionError && axiosError.serviceErrorMessage) {
+            setError(axiosError.serviceErrorMessage);
+          } else {
+            setError(errorMessage);
+          }
+        }
+      } else {
+        setError('Failed to import offers');
+      }
+    } finally {
+      setLoadingImportAll(false);
+    }
+  };
+
+  const handleAuthorizeOAuth = async () => {
+    try {
+      const response = await oauthApi.authorize();
+      if (response.data.success && response.data.data?.authorizationUrl) {
+        // Redirect to Allegro authorization page
+        window.location.href = response.data.data.authorizationUrl;
+      } else {
+        setError('Failed to generate authorization URL');
+      }
+    } catch (err: unknown) {
+      if (err instanceof AxiosError) {
+        const axiosError = err as AxiosError & { isConnectionError?: boolean; serviceErrorMessage?: string };
+        if (axiosError.isConnectionError && axiosError.serviceErrorMessage) {
+          setError(axiosError.serviceErrorMessage);
+        } else {
+          setError(err.response?.data?.error?.message || 'Failed to start OAuth authorization');
+        }
+      } else {
+        setError('Failed to start OAuth authorization');
+      }
+    }
+  };
+
   const handlePreviewImport = async (source: 'allegro' | 'sales-center') => {
     if (source === 'allegro') {
       setLoadingImportAllegro(true);
@@ -118,6 +186,7 @@ const ImportJobsPage: React.FC = () => {
       setLoadingImportSalesCenter(true);
     }
     setError(null);
+    setRequiresOAuth(false);
     setImportSource(source);
 
     try {
@@ -138,11 +207,20 @@ const ImportJobsPage: React.FC = () => {
         if (err.response?.status === 401) {
           return; // Let the interceptor handle the redirect
         }
-        const axiosError = err as AxiosError & { isConnectionError?: boolean; serviceErrorMessage?: string };
-        if (axiosError.isConnectionError && axiosError.serviceErrorMessage) {
-          setError(axiosError.serviceErrorMessage);
+        const errorData = err.response?.data?.error;
+        const errorMessage = errorData?.message || 'Failed to preview import';
+        const needsOAuth = errorData?.requiresOAuth || errorMessage.toLowerCase().includes('oauth');
+        
+        if (needsOAuth) {
+          setRequiresOAuth(true);
+          setError(errorMessage);
         } else {
-          setError(err.response?.data?.error?.message || 'Failed to preview import');
+          const axiosError = err as AxiosError & { isConnectionError?: boolean; serviceErrorMessage?: string };
+          if (axiosError.isConnectionError && axiosError.serviceErrorMessage) {
+            setError(axiosError.serviceErrorMessage);
+          } else {
+            setError(errorMessage);
+          }
         }
       } else {
         setError('Failed to preview import');
@@ -193,18 +271,12 @@ const ImportJobsPage: React.FC = () => {
     }
   };
 
-  const handlePreviewExport = async (type: 'products' | 'offers') => {
-    if (type === 'products') {
-      setLoadingExportProducts(true);
-    } else {
-      setLoadingExportOffers(true);
-    }
+  const handlePreviewExport = async () => {
+    setLoadingExportOffers(true);
     setError(null);
-    setExportType(type);
 
     try {
-      const endpoint = type === 'products' ? '/products' : '/allegro/offers';
-      const response = await api.get(`${endpoint}?limit=1000`);
+      const response = await api.get('/allegro/offers?limit=1000');
       
       if (response.data.success) {
         const items = response.data.data.items || [];
@@ -224,11 +296,7 @@ const ImportJobsPage: React.FC = () => {
         setError('Failed to preview export');
       }
     } finally {
-      if (type === 'products') {
-        setLoadingExportProducts(false);
-      } else {
-        setLoadingExportOffers(false);
-      }
+      setLoadingExportOffers(false);
     }
   };
 
@@ -242,27 +310,21 @@ const ImportJobsPage: React.FC = () => {
     setError(null);
 
     try {
-      const endpoint = exportType === 'products'
-        ? '/products/export/csv'
-        : '/allegro/offers/export/csv';
-      
-      const response = await api.get(endpoint, {
+      const response = await api.get('/allegro/offers/export/csv', {
         responseType: 'blob',
       });
       
       const url = window.URL.createObjectURL(new Blob([response.data]));
       const link = document.createElement('a');
       link.href = url;
-      const filename = exportType === 'products'
-        ? `products_${new Date().toISOString().split('T')[0]}.csv`
-        : `offers_${new Date().toISOString().split('T')[0]}.csv`;
+      const filename = `offers_${new Date().toISOString().split('T')[0]}.csv`;
       link.setAttribute('download', filename);
       document.body.appendChild(link);
       link.click();
       link.remove();
       window.URL.revokeObjectURL(url);
       
-      setSuccess(`${exportType === 'products' ? 'Products' : 'Offers'} exported successfully`);
+      setSuccess('Offers exported successfully');
       setShowExportPreview(false);
       setExportPreviewData([]);
       setSelectedExportIds(new Set());
@@ -333,52 +395,88 @@ const ImportJobsPage: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <h2 className="text-2xl font-bold">Import & Export</h2>
-        <div className="flex space-x-2">
-          <div className="flex space-x-2 border-r pr-2 mr-2">
-            <Button
-              onClick={() => handlePreviewImport('allegro')}
-              disabled={loadingImportAllegro || loadingImportSalesCenter || processingImport}
-              variant="secondary"
-              size="small"
-            >
-              {loadingImportAllegro ? 'Loading...' : '📥 Import from Allegro API'}
-            </Button>
-            <Button
-              onClick={() => handlePreviewImport('sales-center')}
-              disabled={loadingImportAllegro || loadingImportSalesCenter || processingImport}
-              variant="secondary"
-              size="small"
-            >
-              {loadingImportSalesCenter ? 'Loading...' : '📥 Import from Sales Center'}
-            </Button>
+      <div className="space-y-4">
+        <div className="flex justify-between items-center">
+          <h2 className="text-2xl font-bold">Import & Export</h2>
+        </div>
+        
+        {/* Primary Import Actions */}
+        <Card title="Import Offers from Allegro">
+          <div className="space-y-4">
+            <div className="flex flex-col sm:flex-row gap-3">
+              <Button
+                onClick={handleImportAllOffers}
+                disabled={loadingImportAll || loadingImportAllegro || loadingImportSalesCenter || processingImport}
+                variant="primary"
+                size="medium"
+                className="flex-1"
+              >
+                {loadingImportAll ? '⏳ Importing...' : '📥 Import All Offers from Allegro'}
+              </Button>
+              <Button
+                onClick={() => handlePreviewImport('allegro')}
+                disabled={loadingImportAll || loadingImportAllegro || loadingImportSalesCenter || processingImport}
+                variant="secondary"
+                size="medium"
+                className="flex-1"
+              >
+                {loadingImportAllegro ? '⏳ Loading...' : '📋 Preview & Select from Allegro API'}
+              </Button>
+            </div>
+            <p className="text-sm text-gray-600">
+              <strong>Import All Offers:</strong> Imports all existing offers from your Allegro account directly into the database.
+              <br />
+              <strong>Preview & Select:</strong> Preview offers from Allegro API and select which ones to import.
+            </p>
           </div>
-          <div className="flex space-x-2">
-            <Button
-              onClick={() => handlePreviewExport('products')}
-              disabled={loadingExportProducts || loadingExportOffers || processingExport}
-              variant="secondary"
-              size="small"
-            >
-              {loadingExportProducts ? 'Loading...' : '📤 Export Products'}
-            </Button>
-            <Button
-              onClick={() => handlePreviewExport('offers')}
-              disabled={loadingExportProducts || loadingExportOffers || processingExport}
-              variant="secondary"
-              size="small"
-            >
-              {loadingExportOffers ? 'Loading...' : '📤 Export Offers'}
-            </Button>
-          </div>
+        </Card>
+
+        {/* Secondary Actions */}
+        <div className="flex justify-end space-x-2">
+          <Button
+            onClick={() => handlePreviewImport('sales-center')}
+            disabled={loadingImportAll || loadingImportAllegro || loadingImportSalesCenter || processingImport}
+            variant="secondary"
+            size="small"
+          >
+            {loadingImportSalesCenter ? 'Loading...' : '📋 Preview from Sales Center'}
+          </Button>
+          <Button
+            onClick={handlePreviewExport}
+            disabled={loadingExportOffers || processingExport}
+            variant="secondary"
+            size="small"
+          >
+            {loadingExportOffers ? 'Loading...' : '📤 Export Offers'}
+          </Button>
         </div>
       </div>
 
       {error && (
         <div className="p-4 bg-red-100 border border-red-400 text-red-700 rounded whitespace-pre-line">
           <div className="font-semibold mb-2">Error:</div>
-          <div className="text-sm">{error}</div>
+          <div className="text-sm mb-3">{error}</div>
+          {requiresOAuth && (
+            <div className="mt-3 pt-3 border-t border-red-300">
+              <p className="text-sm mb-3">To import offers from Allegro, you need to authorize the application via OAuth.</p>
+              <div className="flex space-x-2">
+                <Button
+                  onClick={handleAuthorizeOAuth}
+                  variant="primary"
+                  size="small"
+                >
+                  Authorize with Allegro
+                </Button>
+                <Button
+                  onClick={() => navigate('/dashboard/settings')}
+                  variant="secondary"
+                  size="small"
+                >
+                  Go to Settings
+                </Button>
+              </div>
+            </div>
+          )}
         </div>
       )}
 
@@ -523,7 +621,7 @@ const ImportJobsPage: React.FC = () => {
           setExportPreviewData([]);
           setSelectedExportIds(new Set());
         }}
-        title={`Review Export - ${exportType === 'products' ? 'Products' : 'Offers'}`}
+        title="Review Export - Offers"
         size="xlarge"
       >
         <div className="space-y-4">
@@ -553,21 +651,10 @@ const ImportJobsPage: React.FC = () => {
                       className="rounded"
                     />
                   </th>
-                  {exportType === 'products' ? (
-                    <>
-                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Code</th>
-                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Name</th>
-                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Stock</th>
-                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Price</th>
-                    </>
-                  ) : (
-                    <>
-                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Title</th>
-                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Price</th>
-                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Stock</th>
-                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
-                    </>
-                  )}
+                  <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Title</th>
+                  <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Price</th>
+                  <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Stock</th>
+                  <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
@@ -583,21 +670,10 @@ const ImportJobsPage: React.FC = () => {
                           className="rounded"
                         />
                       </td>
-                      {exportType === 'products' ? (
-                        <>
-                          <td className="px-4 py-2 text-sm text-gray-900">{item.code}</td>
-                          <td className="px-4 py-2 text-sm text-gray-900">{item.name}</td>
-                          <td className="px-4 py-2 text-sm text-gray-900">{item.stockQuantity || 0}</td>
-                          <td className="px-4 py-2 text-sm text-gray-900">{item.sellingPrice || '-'}</td>
-                        </>
-                      ) : (
-                        <>
-                          <td className="px-4 py-2 text-sm text-gray-900">{item.title}</td>
-                          <td className="px-4 py-2 text-sm text-gray-900">{item.price} {item.currency || 'PLN'}</td>
-                          <td className="px-4 py-2 text-sm text-gray-900">{item.stockQuantity || 0}</td>
-                          <td className="px-4 py-2 text-sm text-gray-900">{item.status}</td>
-                        </>
-                      )}
+                      <td className="px-4 py-2 text-sm text-gray-900">{item.title}</td>
+                      <td className="px-4 py-2 text-sm text-gray-900">{item.price} {item.currency || 'PLN'}</td>
+                      <td className="px-4 py-2 text-sm text-gray-900">{item.stockQuantity || 0}</td>
+                      <td className="px-4 py-2 text-sm text-gray-900">{item.status}</td>
                     </tr>
                   );
                 })}

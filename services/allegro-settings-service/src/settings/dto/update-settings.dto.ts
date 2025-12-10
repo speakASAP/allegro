@@ -82,3 +82,17 @@ export class ValidateAllegroKeysDto {
   clientSecret: string;
 }
 
+export class AllegroOAuthCallbackDto {
+  @IsString()
+  code: string;
+
+  @IsString()
+  state: string;
+}
+
+export class AllegroOAuthStatusDto {
+  authorized: boolean;
+  expiresAt?: Date;
+  scopes?: string;
+}
+

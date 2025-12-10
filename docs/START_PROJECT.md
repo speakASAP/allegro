@@ -41,7 +41,6 @@
 5. **Access services**:
    - API Gateway: <http://localhost:${API_GATEWAY_PORT:-3411}> (configured in `allegro/.env`)
    - Health Check: <http://localhost:${API_GATEWAY_PORT:-3411}/health>
-   - Product Service: <http://localhost:${PRODUCT_SERVICE_PORT:-3402}/health> (configured in `allegro/.env`)
    - Allegro Service: <http://localhost:${ALLEGRO_SERVICE_PORT:-3403}/health> (configured in `allegro/.env`)
 
 6. **Stop services**:
@@ -77,46 +76,32 @@
    npm run start:dev
    ```
 
-   **Terminal 2 - Product Service**:
-
-   ```bash
-   cd services/product-service
-   npm run start:dev
-   ```
-
-   **Terminal 3 - Allegro Service**:
+   **Terminal 2 - Allegro Service**:
 
    ```bash
    cd services/allegro-service
    npm run start:dev
    ```
 
-   **Terminal 4 - Sync Service**:
-
-   ```bash
-   cd services/sync-service
-   npm run start:dev
-   ```
-
-   **Terminal 5 - Webhook Service**:
-
-   ```bash
-   cd services/webhook-service
-   npm run start:dev
-   ```
-
-   **Terminal 6 - Import Service**:
+   **Terminal 3 - Import Service**:
 
    ```bash
    cd services/import-service
    npm run start:dev
    ```
 
-   **Terminal 7 - Scheduler Service**:
+   **Terminal 4 - Settings Service**:
 
    ```bash
-   cd services/scheduler-service
+   cd services/allegro-settings-service
    npm run start:dev
+   ```
+
+   **Terminal 5 - Frontend Service**:
+
+   ```bash
+   cd services/allegro-frontend-service
+   npm run dev
    ```
 
 3. **Or use a process manager** (like PM2 or concurrently):
@@ -143,17 +128,16 @@ You can also create a start script. Check if there's a start script in root pack
 ## Service Ports
 
 - API Gateway: ${API_GATEWAY_PORT:-3411} (configured in `allegro/.env`)
-- Product Service: ${PRODUCT_SERVICE_PORT:-3402} (configured in `allegro/.env`)
 - Allegro Service: ${ALLEGRO_SERVICE_PORT:-3403} (configured in `allegro/.env`)
-- Sync Service: ${SYNC_SERVICE_PORT:-3404} (configured in `allegro/.env`)
-- Webhook Service: ${WEBHOOK_SERVICE_PORT:-3405} (configured in `allegro/.env`)
 - Import Service: ${IMPORT_SERVICE_PORT:-3406} (configured in `allegro/.env`)
-- Scheduler Service: ${SCHEDULER_SERVICE_PORT:-3407} (configured in `allegro/.env`)
+- Settings Service: ${ALLEGRO_SETTINGS_SERVICE_PORT:-3408} (configured in `allegro/.env`)
+- Frontend Service: ${ALLEGRO_FRONTEND_SERVICE_PORT:-3410} (configured in `allegro/.env`)
 
 ## Health Checks
 
 All services expose `/health` endpoint:
 
 - <http://localhost:${API_GATEWAY_PORT:-3411}/health> (API Gateway, configured in `allegro/.env`)
-- <http://localhost:${PRODUCT_SERVICE_PORT:-3402}/health> (Product Service, configured in `allegro/.env`)
-- etc.
+- <http://localhost:${ALLEGRO_SERVICE_PORT:-3403}/health> (Allegro Service, configured in `allegro/.env`)
+- <http://localhost:${IMPORT_SERVICE_PORT:-3406}/health> (Import Service, configured in `allegro/.env`)
+- <http://localhost:${ALLEGRO_SETTINGS_SERVICE_PORT:-3408}/health> (Settings Service, configured in `allegro/.env`)
