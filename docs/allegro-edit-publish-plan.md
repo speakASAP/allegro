@@ -138,16 +138,16 @@ Enable editing of Allegro offers in the UI, updating the database first (single 
 ## Implementation Checklist
 
 1. ✅ Review existing updateOffer implementation
-2. ⏳ Enhance UpdateOfferDto with all editable fields
-3. ⏳ Enhance updateOffer service method to handle full payload
-4. ⏳ Add helper methods for transformation and rawData merging
-5. ⏳ Add error handling and logging to controller
-6. ⏳ Add edit mode state and UI toggle to OffersPage
-7. ⏳ Create edit form with all editable fields
-8. ⏳ Implement handleSaveOffer method
-9. ⏳ Add sync status display after updates
+2. ✅ Enhance UpdateOfferDto with all editable fields
+3. ✅ Enhance updateOffer service method to handle full payload
+4. ✅ Add helper methods for transformation and rawData merging
+5. ✅ Add error handling and logging to controller
+6. ✅ Add edit mode state and UI toggle to OffersPage
+7. ✅ Create edit form with all editable fields
+8. ✅ Implement handleSaveOffer method
+9. ✅ Add sync status display after updates
 10. ⏳ Test edit flow end-to-end
-11. ⏳ Update documentation
+11. ✅ Update documentation
 
 ## Notes
 

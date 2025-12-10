@@ -92,6 +92,8 @@ interface Offer {
   publicationStatus?: string;
   lastSyncedAt?: string;
   syncSource?: string;
+  syncStatus?: string;
+  syncError?: string;
   validationStatus?: 'READY' | 'WARNINGS' | 'ERRORS';
   validationErrors?: Array<{ type: string; message: string; severity: 'error' | 'warning' }>;
   lastValidatedAt?: string;

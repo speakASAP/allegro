@@ -26,6 +26,7 @@
 - ✅ Frontend Display: Validation status in list and detail view with error/warning display
 - ✅ Metrics: MetricsService tracks list/detail/validation requests and errors; GET /allegro/offers/metrics endpoint
 - ✅ Error Tracking: All catch blocks in offers controller track errors in metrics
+- ✅ Edit + Publish: Full edit functionality with UI form, backend transformation, Allegro API sync, rawData updates, and re-validation
 
 ## Goal
 
