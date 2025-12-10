@@ -231,7 +231,7 @@ const OffersPage: React.FC = () => {
     if (!selectedOffer) return;
     setEditedOffer({
       title: selectedOffer.title,
-      description: selectedOffer.description,
+      description: selectedOffer.description || selectedOffer.rawData?.description || '',
       price: selectedOffer.price,
       currency: selectedOffer.currency,
       stockQuantity: selectedOffer.stockQuantity,
@@ -821,7 +821,7 @@ const OffersPage: React.FC = () => {
                   <textarea
                     className="w-full px-3 py-2 border border-gray-300 rounded-md"
                     rows={6}
-                    value={editedOffer.description || ''}
+                    value={editedOffer.description || selectedOffer?.rawData?.description || ''}
                     onChange={(e) => setEditedOffer({ ...editedOffer, description: e.target.value })}
                   />
                 </div>

@@ -1512,10 +1512,21 @@ export class OffersService {
 
   /**
    * Extract images from Allegro offer payload
+   * Checks both direct images field and rawData.images
    */
   private extractImages(allegroOffer: any): any {
+    // Check direct images field first
     if (allegroOffer.images && Array.isArray(allegroOffer.images)) {
       return allegroOffer.images.map((img: any) => {
+        if (typeof img === 'string') {
+          return img;
+        }
+        return img.url || img.path || img;
+      });
+    }
+    // Check rawData.images as fallback
+    if (allegroOffer.rawData?.images && Array.isArray(allegroOffer.rawData.images)) {
+      return allegroOffer.rawData.images.map((img: any) => {
         if (typeof img === 'string') {
           return img;
         }
@@ -1540,8 +1551,9 @@ export class OffersService {
       errors.push({ type: 'MISSING_TITLE', message: 'Title is required', severity: 'error' });
     }
 
-    // Required: Description
-    if (!offer.description || offer.description.trim().length === 0) {
+    // Required: Description - check both direct field and rawData
+    const description = offer.description || offer.rawData?.description || '';
+    if (!description || (typeof description === 'string' && description.trim().length === 0)) {
       errors.push({ type: 'MISSING_DESCRIPTION', message: 'Description is required', severity: 'error' });
     }
 
