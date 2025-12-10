@@ -46,6 +46,7 @@ const ImportJobsPage: React.FC = () => {
   const [showImportPreview, setShowImportPreview] = useState(false);
   const [importPreviewData, setImportPreviewData] = useState<PreviewOffer[]>([]);
   const [selectedImportIds, setSelectedImportIds] = useState<Set<string>>(new Set());
+  const [, setSelectedExportIds] = useState<Set<string>>(new Set());
   const [importSource, setImportSource] = useState<'allegro' | 'sales-center' | null>(null);
   const [loadingImportAllegro, setLoadingImportAllegro] = useState(false);
   const [loadingImportSalesCenter, setLoadingImportSalesCenter] = useState(false);
