@@ -395,45 +395,60 @@ const ImportJobsPage: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <h2 className="text-2xl font-bold">Import & Export</h2>
-        <div className="flex space-x-2">
-          <div className="flex space-x-2 border-r pr-2 mr-2">
-            <Button
-              onClick={handleImportAllOffers}
-              disabled={loadingImportAll || loadingImportAllegro || loadingImportSalesCenter || processingImport}
-              variant="primary"
-              size="small"
-            >
-              {loadingImportAll ? 'Importing...' : '📥 Import All Offers'}
-            </Button>
-            <Button
-              onClick={() => handlePreviewImport('allegro')}
-              disabled={loadingImportAll || loadingImportAllegro || loadingImportSalesCenter || processingImport}
-              variant="secondary"
-              size="small"
-            >
-              {loadingImportAllegro ? 'Loading...' : '📋 Preview from Allegro API'}
-            </Button>
-            <Button
-              onClick={() => handlePreviewImport('sales-center')}
-              disabled={loadingImportAll || loadingImportAllegro || loadingImportSalesCenter || processingImport}
-              variant="secondary"
-              size="small"
-            >
-              {loadingImportSalesCenter ? 'Loading...' : '📋 Preview from Sales Center'}
-            </Button>
+      <div className="space-y-4">
+        <div className="flex justify-between items-center">
+          <h2 className="text-2xl font-bold">Import & Export</h2>
+        </div>
+        
+        {/* Primary Import Actions */}
+        <Card title="Import Offers from Allegro">
+          <div className="space-y-4">
+            <div className="flex flex-col sm:flex-row gap-3">
+              <Button
+                onClick={handleImportAllOffers}
+                disabled={loadingImportAll || loadingImportAllegro || loadingImportSalesCenter || processingImport}
+                variant="primary"
+                size="medium"
+                className="flex-1"
+              >
+                {loadingImportAll ? '⏳ Importing...' : '📥 Import All Offers from Allegro'}
+              </Button>
+              <Button
+                onClick={() => handlePreviewImport('allegro')}
+                disabled={loadingImportAll || loadingImportAllegro || loadingImportSalesCenter || processingImport}
+                variant="secondary"
+                size="medium"
+                className="flex-1"
+              >
+                {loadingImportAllegro ? '⏳ Loading...' : '📋 Preview & Select from Allegro API'}
+              </Button>
+            </div>
+            <p className="text-sm text-gray-600">
+              <strong>Import All Offers:</strong> Imports all existing offers from your Allegro account directly into the database.
+              <br />
+              <strong>Preview & Select:</strong> Preview offers from Allegro API and select which ones to import.
+            </p>
           </div>
-          <div className="flex space-x-2">
-            <Button
-              onClick={handlePreviewExport}
-              disabled={loadingExportOffers || processingExport}
-              variant="secondary"
-              size="small"
-            >
-              {loadingExportOffers ? 'Loading...' : '📤 Export Offers'}
-            </Button>
-          </div>
+        </Card>
+
+        {/* Secondary Actions */}
+        <div className="flex justify-end space-x-2">
+          <Button
+            onClick={() => handlePreviewImport('sales-center')}
+            disabled={loadingImportAll || loadingImportAllegro || loadingImportSalesCenter || processingImport}
+            variant="secondary"
+            size="small"
+          >
+            {loadingImportSalesCenter ? 'Loading...' : '📋 Preview from Sales Center'}
+          </Button>
+          <Button
+            onClick={handlePreviewExport}
+            disabled={loadingExportOffers || processingExport}
+            variant="secondary"
+            size="small"
+          >
+            {loadingExportOffers ? 'Loading...' : '📤 Export Offers'}
+          </Button>
         </div>
       </div>
 
