@@ -238,7 +238,11 @@ export class OffersService {
 
     // Parameters/attributes - always include all existing parameters (required)
     // Merge updated parameters from DTO with existing ones
-    const existingParams = existingOffer.rawData?.parameters || existingOffer.rawData?.product?.parameters || [];
+    // Check both rawData.parameters and direct parameters (for API responses)
+    const existingParams = existingOffer.rawData?.parameters || 
+                          existingOffer.parameters || 
+                          existingOffer.rawData?.product?.parameters || 
+                          [];
     if (dto.attributes !== undefined && Array.isArray(dto.attributes)) {
       // Update specific parameters from DTO
       const updatedParams = dto.attributes.map((attr: any) => ({
