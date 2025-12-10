@@ -102,8 +102,9 @@ export class OffersController {
 
   @Get('import')
   @UseGuards(JwtAuthGuard)
-  async importOffers(): Promise<{ success: boolean; data: any }> {
-    const result = await this.offersService.importAllOffers();
+  async importOffers(@Request() req: any): Promise<{ success: boolean; data: any }> {
+    const userId = String(req.user.id);
+    const result = await this.offersService.importAllOffers(userId);
     return { success: true, data: result };
   }
 

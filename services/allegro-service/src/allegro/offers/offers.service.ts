@@ -415,64 +415,123 @@ export class OffersService {
   /**
    * Import all offers from Allegro
    */
-  async importAllOffers() {
-    this.logger.log('Importing all offers from Allegro');
+  async importAllOffers(userId?: string) {
+    this.logger.log('Importing all offers from Allegro', { userId });
 
     let offset = 0;
     const limit = 100;
     let hasMore = true;
     let totalImported = 0;
 
-    while (hasMore) {
-      const response = await this.allegroApi.getOffers({
-        limit,
-        offset,
-      });
-
-      const offers = response.offers || [];
-      
-      for (const allegroOffer of offers) {
-        try {
-          await this.prisma.allegroOffer.upsert({
-            where: { allegroOfferId: allegroOffer.id },
-            update: {
-              title: allegroOffer.name,
-              description: allegroOffer.description,
-              categoryId: allegroOffer.category?.id || '',
-              price: parseFloat(allegroOffer.sellingMode?.price?.amount || '0'),
-              quantity: allegroOffer.stock?.available || 0,
-              stockQuantity: allegroOffer.stock?.available || 0,
-              status: allegroOffer.publication?.status || 'INACTIVE',
-              syncStatus: 'SYNCED',
-              lastSyncedAt: new Date(),
-            },
-            create: {
-              allegroOfferId: allegroOffer.id,
-              title: allegroOffer.name,
-              description: allegroOffer.description,
-              categoryId: allegroOffer.category?.id || '',
-              price: parseFloat(allegroOffer.sellingMode?.price?.amount || '0'),
-              quantity: allegroOffer.stock?.available || 0,
-              stockQuantity: allegroOffer.stock?.available || 0,
-              status: allegroOffer.publication?.status || 'INACTIVE',
-              syncStatus: 'SYNCED',
-              lastSyncedAt: new Date(),
-            },
-          });
-          totalImported++;
-        } catch (error: any) {
-          this.logger.error('Failed to import offer', {
-            offerId: allegroOffer.id,
-            error: error.message,
-          });
+    // Determine if we should use OAuth token (for accessing user-specific resources)
+    let useOAuth = false;
+    
+    if (userId) {
+      try {
+        // Try to get OAuth token to check if it's available
+        await this.allegroAuth.getUserAccessToken(userId);
+        this.logger.log('Using OAuth token for Allegro API import', { userId });
+        useOAuth = true;
+      } catch (oauthError: any) {
+        // Check if error is specifically about OAuth being required
+        if (oauthError.message && oauthError.message.includes('OAuth authorization required')) {
+          this.logger.warn('OAuth authorization required for importing offers', { userId });
+          throw new Error('OAuth authorization required. Please authorize the application in Settings to access your Allegro offers.');
         }
+        
+        // OAuth not available or failed, fall back to client credentials
+        this.logger.debug('OAuth token not available, falling back to client credentials', {
+          userId,
+          error: oauthError.message,
+        });
+        useOAuth = false;
       }
-
-      hasMore = offers.length === limit;
-      offset += limit;
     }
 
-    this.logger.log('Finished importing offers', { totalImported });
+    while (hasMore) {
+      try {
+        let response;
+        if (useOAuth && userId) {
+          // Use OAuth token for this batch
+          const oauthToken = await this.allegroAuth.getUserAccessToken(userId);
+          response = await this.allegroApi.getOffersWithOAuthToken(oauthToken, {
+            limit,
+            offset,
+          });
+        } else {
+          // Fall back to client credentials (may not work for /sale/offers)
+          response = await this.allegroApi.getOffers({
+            limit,
+            offset,
+          });
+        }
+
+        const offers = response.offers || [];
+        
+        for (const allegroOffer of offers) {
+          try {
+            await this.prisma.allegroOffer.upsert({
+              where: { allegroOfferId: allegroOffer.id },
+              update: {
+                title: allegroOffer.name,
+                description: allegroOffer.description,
+                categoryId: allegroOffer.category?.id || '',
+                price: parseFloat(allegroOffer.sellingMode?.price?.amount || '0'),
+                quantity: allegroOffer.stock?.available || 0,
+                stockQuantity: allegroOffer.stock?.available || 0,
+                status: allegroOffer.publication?.status || 'INACTIVE',
+                syncStatus: 'SYNCED',
+                lastSyncedAt: new Date(),
+              },
+              create: {
+                allegroOfferId: allegroOffer.id,
+                title: allegroOffer.name,
+                description: allegroOffer.description,
+                categoryId: allegroOffer.category?.id || '',
+                price: parseFloat(allegroOffer.sellingMode?.price?.amount || '0'),
+                quantity: allegroOffer.stock?.available || 0,
+                stockQuantity: allegroOffer.stock?.available || 0,
+                status: allegroOffer.publication?.status || 'INACTIVE',
+                syncStatus: 'SYNCED',
+                lastSyncedAt: new Date(),
+              },
+            });
+            totalImported++;
+          } catch (error: any) {
+            this.logger.error('Failed to import offer', {
+              offerId: allegroOffer.id,
+              error: error.message,
+            });
+          }
+        }
+
+        hasMore = offers.length === limit;
+        offset += limit;
+      } catch (error: any) {
+        const errorStatus = error.response?.status;
+        const errorData = error.response?.data || {};
+        
+        if (errorStatus === 403 || errorStatus === 401) {
+          this.logger.error('Access denied when importing offers - OAuth may be required', {
+            userId,
+            errorStatus,
+            errorData,
+          });
+          throw new Error('OAuth authorization required. The /sale/offers endpoint requires OAuth authorization code flow. Please authorize the application in Settings to access your Allegro offers.');
+        }
+        
+        // Re-throw other errors
+        this.logger.error('Failed to import offers', {
+          userId,
+          error: error.message,
+          errorStatus,
+          errorData,
+        });
+        throw error;
+      }
+    }
+
+    this.logger.log('Finished importing offers', { totalImported, userId });
     return { totalImported };
   }
 
