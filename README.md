@@ -402,6 +402,22 @@ To import offers from Allegro:
 
 ## Documentation
 
+### Project Documentation
+
 - **Implementation Plan**: See [IMPLEMENTATION_PLAN.md](./IMPLEMENTATION_PLAN.md) for detailed architecture and implementation details
-- **Allegro API**: See [Allegro Developer Portal](https://developer.allegro.pl/documentation) for API documentation
 - **Prisma Schema**: See `prisma/schema.prisma` for database schema definition
+- **Local Development Setup**: See [docs/LOCAL_DEV_SETUP.md](./docs/LOCAL_DEV_SETUP.md) for local development guide
+
+### OAuth Authorization Documentation
+
+The system uses OAuth 2.0 Authorization Code Flow with PKCE for accessing user-specific Allegro API resources. Comprehensive documentation is available:
+
+- **[OAuth Troubleshooting Complete Guide](./docs/OAUTH_TROUBLESHOOTING_COMPLETE.md)** - Complete documentation of the multi-day OAuth implementation and troubleshooting process, including all issues encountered, fixes applied, and lessons learned
+- **[OAuth Quick Reference](./docs/OAUTH_QUICK_REFERENCE.md)** - Quick troubleshooting checklist, common errors, and useful commands
+- **[OAuth 400 Error Troubleshooting](./docs/OAUTH_400_ERROR_TROUBLESHOOTING.md)** - Specific guide for debugging OAuth 400 errors
+- **[OAuth Implementation Plan](./docs/OAUTH_IMPLEMENTATION_PLAN.md)** - Initial OAuth implementation plan
+
+### External Resources
+
+- **Allegro API**: See [Allegro Developer Portal](https://developer.allegro.pl/documentation) for API documentation
+- **OAuth 2.0 with PKCE**: See [OAuth.net PKCE](https://oauth.net/2/pkce/) for PKCE specification
