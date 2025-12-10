@@ -173,18 +173,34 @@ export class OffersService {
 
   /**
    * Transform DTO to Allegro API format
+   * For PATCH requests, we must include all required fields from existing offer
    */
   private transformDtoToAllegroFormat(dto: any, existingOffer: any): any {
     const payload: any = {};
 
     // Basic fields
-    if (dto.title !== undefined) payload.name = dto.title;
-    if (dto.description !== undefined) payload.description = dto.description;
-    if (dto.categoryId !== undefined) {
-      payload.category = { id: dto.categoryId };
+    if (dto.title !== undefined) {
+      payload.name = dto.title;
+    } else if (existingOffer.rawData?.name) {
+      payload.name = existingOffer.rawData.name;
     }
 
-    // Selling mode (price)
+    if (dto.description !== undefined) {
+      payload.description = dto.description;
+    } else if (existingOffer.rawData?.description) {
+      payload.description = existingOffer.rawData.description;
+    }
+
+    // Category - always include (required)
+    if (dto.categoryId !== undefined) {
+      payload.category = { id: dto.categoryId };
+    } else if (existingOffer.rawData?.category?.id) {
+      payload.category = { id: existingOffer.rawData.category.id };
+    } else if (existingOffer.categoryId) {
+      payload.category = { id: existingOffer.categoryId };
+    }
+
+    // Selling mode (price) - always include if exists
     if (dto.price !== undefined || dto.currency !== undefined) {
       payload.sellingMode = {
         ...(existingOffer.rawData?.sellingMode || {}),
@@ -193,15 +209,19 @@ export class OffersService {
           currency: dto.currency || existingOffer.currency || this.getDefaultCurrency(),
         },
       };
+    } else if (existingOffer.rawData?.sellingMode) {
+      payload.sellingMode = existingOffer.rawData.sellingMode;
     }
 
-    // Stock
+    // Stock - always include if exists
     if (dto.stockQuantity !== undefined || dto.quantity !== undefined) {
       const stockQty = dto.stockQuantity !== undefined ? dto.stockQuantity : dto.quantity;
       payload.stock = {
         ...(existingOffer.rawData?.stock || {}),
         available: stockQty,
       };
+    } else if (existingOffer.rawData?.stock) {
+      payload.stock = existingOffer.rawData.stock;
     }
 
     // Images - always include (required by Allegro API)
@@ -216,12 +236,23 @@ export class OffersService {
       payload.images = existingOffer.images.map((url: string) => ({ url }));
     }
 
-    // Parameters/attributes
+    // Parameters/attributes - always include all existing parameters (required)
+    // Merge updated parameters from DTO with existing ones
+    const existingParams = existingOffer.rawData?.parameters || existingOffer.rawData?.product?.parameters || [];
     if (dto.attributes !== undefined && Array.isArray(dto.attributes)) {
-      payload.parameters = dto.attributes.map((attr: any) => ({
+      // Update specific parameters from DTO
+      const updatedParams = dto.attributes.map((attr: any) => ({
         id: attr.id,
         values: attr.values,
       }));
+      // Keep non-updated parameters from existing offer
+      const otherParams = existingParams.filter((p: any) => 
+        !dto.attributes.some((a: any) => a.id === p.id)
+      );
+      payload.parameters = [...otherParams, ...updatedParams];
+    } else if (existingParams.length > 0) {
+      // Include all existing parameters if not updating
+      payload.parameters = existingParams;
     }
 
     // Publication status
@@ -230,14 +261,22 @@ export class OffersService {
         ...(existingOffer.rawData?.publication || {}),
         status: dto.publicationStatus,
       };
+    } else if (existingOffer.rawData?.publication) {
+      payload.publication = existingOffer.rawData.publication;
     }
 
-    // Delivery and payment options
+    // Delivery options - include if exists
     if (dto.deliveryOptions !== undefined) {
       payload.delivery = dto.deliveryOptions;
+    } else if (existingOffer.rawData?.delivery) {
+      payload.delivery = existingOffer.rawData.delivery;
     }
+
+    // Payment options - include if exists
     if (dto.paymentOptions !== undefined) {
       payload.payments = dto.paymentOptions;
+    } else if (existingOffer.rawData?.payments) {
+      payload.payments = existingOffer.rawData.payments;
     }
 
     return payload;
