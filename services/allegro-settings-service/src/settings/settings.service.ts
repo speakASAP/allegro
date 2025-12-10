@@ -83,13 +83,22 @@ export class SettingsService {
    * Get user settings
    */
   async getSettings(userId: string): Promise<any> {
-    this.logger.log('Getting user settings', { userId });
+    this.logger.log('SettingsService.getSettings START', { userId });
 
     let settings = await this.prisma.userSettings.findUnique({
       where: { userId },
     });
 
+    this.logger.log('SettingsService.getSettings: Database query completed', {
+      userId,
+      found: !!settings,
+      hasClientId: !!settings?.allegroClientId,
+      hasClientSecret: !!settings?.allegroClientSecret,
+      clientSecretLength: settings?.allegroClientSecret?.length,
+    });
+
     if (!settings) {
+      this.logger.log('SettingsService.getSettings: No settings found, creating default', { userId });
       // Create default settings if they don't exist
       settings = await this.prisma.userSettings.create({
         data: {
@@ -98,17 +107,48 @@ export class SettingsService {
           preferences: {},
         },
       });
+      this.logger.log('SettingsService.getSettings: Default settings created', {
+        userId,
+        settingsId: settings.id,
+      });
     }
 
     // Decrypt sensitive data before returning
+    this.logger.log('SettingsService.getSettings: Preparing to decrypt Client Secret', {
+      userId,
+      hasClientSecret: !!settings.allegroClientSecret,
+      clientSecretLength: settings.allegroClientSecret?.length,
+    });
+    
     const result: any = { ...settings };
+    
     if (result.allegroClientSecret) {
+      this.logger.log('SettingsService.getSettings: Attempting to decrypt Client Secret', {
+        userId,
+        encryptedLength: result.allegroClientSecret.length,
+        encryptedFirstChars: result.allegroClientSecret.substring(0, 20) + '...',
+      });
+      
       try {
-        result.allegroClientSecret = this.decrypt(result.allegroClientSecret);
+        const decryptedSecret = this.decrypt(result.allegroClientSecret);
+        result.allegroClientSecret = decryptedSecret;
+        
+        this.logger.log('SettingsService.getSettings: Client Secret decrypted successfully', {
+          userId,
+          decryptedLength: decryptedSecret.length,
+          decryptedFirstChars: decryptedSecret.substring(0, 5) + '...',
+        });
       } catch (error: any) {
-        this.logger.error('Failed to decrypt allegroClientSecret', { userId, error: error.message, errorStack: error.stack });
+        this.logger.error('SettingsService.getSettings: Failed to decrypt allegroClientSecret', {
+          userId,
+          error: error.message,
+          errorStack: error.stack,
+          encryptedLength: result.allegroClientSecret?.length,
+        });
+        
         // Set to null to indicate it exists but decryption failed
         result.allegroClientSecret = null;
+        
         // Add detailed error information
         result._allegroClientSecretDecryptionError = {
           exists: true,
@@ -116,8 +156,26 @@ export class SettingsService {
           errorType: error.constructor?.name || 'Error',
           suggestion: 'This usually happens when the encryption key has changed or the data was encrypted with a different key. Please re-enter your Client Secret.',
         };
+        
+        this.logger.log('SettingsService.getSettings: Added decryption error to response', {
+          userId,
+          errorInfo: result._allegroClientSecretDecryptionError,
+        });
       }
+    } else {
+      this.logger.log('SettingsService.getSettings: No Client Secret in database', { userId });
     }
+
+    this.logger.log('SettingsService.getSettings: Returning result', {
+      userId,
+      resultKeys: Object.keys(result),
+      hasClientId: !!result.allegroClientId,
+      hasClientSecret: !!result.allegroClientSecret,
+      clientSecretLength: result.allegroClientSecret?.length,
+      hasDecryptionError: !!result._allegroClientSecretDecryptionError,
+    });
+
+    return result;
 
     // Decrypt API keys in supplier configs
     if (result.supplierConfigs && Array.isArray(result.supplierConfigs)) {
