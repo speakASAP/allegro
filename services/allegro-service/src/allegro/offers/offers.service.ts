@@ -1062,7 +1062,25 @@ export class OffersService {
           offset,
           limit,
           responseKeys: Object.keys(response),
+          responseCount: response.count,
+          hasOffers: !!response.offers,
+          offersIsArray: Array.isArray(response.offers),
+          fullResponse: JSON.stringify(response).substring(0, 500),
         });
+        
+        // If no offers returned, log and exit
+        if (offers.length === 0) {
+          this.logger.warn('[importAllOffers] No offers returned from Allegro API', {
+            offset,
+            limit,
+            responseCount: response.count,
+            responseKeys: Object.keys(response),
+            hasOffers: !!response.offers,
+            fullResponse: JSON.stringify(response).substring(0, 1000),
+          });
+          hasMore = false;
+          break;
+        }
         
         for (const allegroOffer of offers) {
           try {
