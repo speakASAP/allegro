@@ -199,7 +199,7 @@ export class SettingsService {
    * Update user settings
    */
   async updateSettings(userId: string, dto: UpdateSettingsDto): Promise<any> {
-    this.logger.log('SettingsService.updateSettings START', {
+    const startLogData = {
       userId,
       hasClientId: !!dto.allegroClientId,
       clientId: dto.allegroClientId?.substring(0, 8) + '...',
@@ -208,47 +208,56 @@ export class SettingsService {
       clientSecretLength: dto.allegroClientSecret?.length,
       clientSecretFirstChars: dto.allegroClientSecret?.substring(0, 5) + '...',
       dtoKeys: Object.keys(dto),
-    });
+    };
+    this.logger.log('SettingsService.updateSettings START', startLogData);
+    console.log('[SettingsService] updateSettings START', JSON.stringify(startLogData, null, 2));
 
     const updateData: any = {};
 
     if (dto.allegroClientId !== undefined) {
       updateData.allegroClientId = dto.allegroClientId;
-      this.logger.log('SettingsService.updateSettings: Added Client ID to updateData', {
-        userId,
-        clientIdLength: updateData.allegroClientId?.length,
-      });
+      const logData = { userId, clientIdLength: updateData.allegroClientId?.length };
+      this.logger.log('SettingsService.updateSettings: Added Client ID to updateData', logData);
+      console.log('[SettingsService] Added Client ID to updateData', JSON.stringify(logData, null, 2));
     } else {
       this.logger.log('SettingsService.updateSettings: Client ID not provided', { userId });
+      console.log('[SettingsService] Client ID not provided', { userId });
     }
 
     if (dto.allegroClientSecret !== undefined) {
-      this.logger.log('SettingsService.updateSettings: Encrypting Client Secret', {
+      const encryptLogData = {
         userId,
         clientSecretLength: dto.allegroClientSecret.length,
         clientSecretFirstChars: dto.allegroClientSecret.substring(0, 5) + '...',
-      });
+      };
+      this.logger.log('SettingsService.updateSettings: Encrypting Client Secret', encryptLogData);
+      console.log('[SettingsService] Encrypting Client Secret', JSON.stringify(encryptLogData, null, 2));
       
       try {
         // Encrypt the secret before storing
         const encryptedSecret = this.encrypt(dto.allegroClientSecret);
         updateData.allegroClientSecret = encryptedSecret;
         
-        this.logger.log('SettingsService.updateSettings: Client Secret encrypted successfully', {
+        const successLogData = {
           userId,
           encryptedLength: encryptedSecret.length,
           encryptedFirstChars: encryptedSecret.substring(0, 20) + '...',
-        });
+        };
+        this.logger.log('SettingsService.updateSettings: Client Secret encrypted successfully', successLogData);
+        console.log('[SettingsService] Client Secret encrypted successfully', JSON.stringify(successLogData, null, 2));
       } catch (error: any) {
-        this.logger.error('SettingsService.updateSettings: Failed to encrypt Client Secret', {
+        const errorLogData = {
           userId,
           error: error.message,
           errorStack: error.stack,
-        });
+        };
+        this.logger.error('SettingsService.updateSettings: Failed to encrypt Client Secret', errorLogData);
+        console.error('[SettingsService] Failed to encrypt Client Secret', JSON.stringify(errorLogData, null, 2));
         throw error;
       }
     } else {
       this.logger.log('SettingsService.updateSettings: Client Secret not provided', { userId });
+      console.log('[SettingsService] Client Secret not provided', { userId });
     }
 
     if (dto.supplierConfigs !== undefined) {
@@ -270,13 +279,15 @@ export class SettingsService {
       updateData.preferences = dto.preferences;
     }
 
-    this.logger.log('SettingsService.updateSettings: Preparing database upsert', {
+    const upsertLogData = {
       userId,
       updateDataKeys: Object.keys(updateData),
       hasClientId: !!updateData.allegroClientId,
       hasClientSecret: !!updateData.allegroClientSecret,
       clientSecretEncryptedLength: updateData.allegroClientSecret?.length,
-    });
+    };
+    this.logger.log('SettingsService.updateSettings: Preparing database upsert', upsertLogData);
+    console.log('[SettingsService] Preparing database upsert', JSON.stringify(upsertLogData, null, 2));
     
     const settings = await this.prisma.userSettings.upsert({
       where: { userId },
@@ -289,13 +300,15 @@ export class SettingsService {
       },
     });
     
-    this.logger.log('SettingsService.updateSettings: Database upsert completed', {
+    const completedLogData = {
       userId,
       settingsId: settings.id,
       hasStoredClientId: !!settings.allegroClientId,
       hasStoredClientSecret: !!settings.allegroClientSecret,
       storedClientSecretLength: settings.allegroClientSecret?.length,
-    });
+    };
+    this.logger.log('SettingsService.updateSettings: Database upsert completed', completedLogData);
+    console.log('[SettingsService] Database upsert completed', JSON.stringify(completedLogData, null, 2));
 
     // Decrypt for response
     this.logger.log('SettingsService.updateSettings: Preparing response', {

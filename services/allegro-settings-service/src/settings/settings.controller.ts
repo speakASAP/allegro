@@ -42,7 +42,7 @@ export class SettingsController {
   ): Promise<{ success: boolean; data: any }> {
     const userId = String(req.user.id); // Convert to string as Prisma expects String
     
-    this.logger.log('SettingsController.updateSettings called', {
+    const logData = {
       userId,
       hasClientId: !!dto.allegroClientId,
       clientIdLength: dto.allegroClientId?.length,
@@ -50,11 +50,13 @@ export class SettingsController {
       clientSecretLength: dto.allegroClientSecret?.length,
       clientSecretFirstChars: dto.allegroClientSecret?.substring(0, 5) + '...',
       dtoKeys: Object.keys(dto),
-    });
+    };
+    this.logger.log('SettingsController.updateSettings called', logData);
+    console.log('[SettingsController] updateSettings called', JSON.stringify(logData, null, 2));
     
     const settings = await this.settingsService.updateSettings(userId, dto);
     
-    this.logger.log('SettingsController.updateSettings completed', {
+    const completedLogData = {
       userId,
       resultSuccess: settings?.success !== false,
       hasResultData: !!settings,
@@ -63,7 +65,9 @@ export class SettingsController {
       hasClientSecret: !!settings?.allegroClientSecret,
       clientSecretLength: settings?.allegroClientSecret?.length,
       hasDecryptionError: !!settings?._allegroClientSecretDecryptionError,
-    });
+    };
+    this.logger.log('SettingsController.updateSettings completed', completedLogData);
+    console.log('[SettingsController] updateSettings completed', JSON.stringify(completedLogData, null, 2));
     
     return { success: true, data: settings };
   }
