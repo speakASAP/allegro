@@ -201,9 +201,17 @@ export class ProductsService {
     const prisma = this.prisma as any;
     const summary = this.extractSummaryFromRaw(payload.rawData, payload);
 
+    // Ensure allegroProductId is set (required field)
+    const allegroProductId = 
+      payload.allegroProductId || 
+      summary.allegroProductId || 
+      payload.rawData?.product?.id || 
+      payload.rawData?.id || 
+      `local-${Date.now()}-${Math.random().toString(36).substring(7)}`;
+
     const created = await prisma.allegroProduct.create({
       data: {
-        allegroProductId: summary.allegroProductId || undefined,
+        allegroProductId: String(allegroProductId),
         name: summary.name,
         brand: summary.brand,
         manufacturerCode: summary.manufacturerCode,

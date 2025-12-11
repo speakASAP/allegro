@@ -873,8 +873,8 @@ const OffersPage: React.FC = () => {
     try {
       const response = await api.get('/allegro/products', { params: { limit: 100, page: 1 } });
       if (response.data.success) {
-        const items = response.data.data.items || [];
-        setProducts(items.map((p: any) => ({ id: p.id, allegroProductId: p.allegroProductId, name: p.name, brand: p.brand })));
+        const items = (response.data.data.items || []) as AllegroProduct[];
+        setProducts(items.map((p: AllegroProduct) => ({ id: p.id, allegroProductId: p.allegroProductId, name: p.name, brand: p.brand })));
       }
     } catch (err) {
       console.error('Failed to load products', err);
@@ -909,7 +909,16 @@ const OffersPage: React.FC = () => {
     setCreatingOffer(true);
     setError(null);
     try {
-      const payload: any = {
+      const payload: {
+        title: string;
+        description?: string;
+        categoryId?: string;
+        price?: number;
+        quantity?: number;
+        currency: string;
+        allegroProductId?: string;
+        syncToAllegro: boolean;
+      } = {
         title: newOffer.title,
         description: newOffer.description || undefined,
         categoryId: newOffer.categoryId || undefined,
@@ -1385,6 +1394,14 @@ const OffersPage: React.FC = () => {
                       className="text-blue-600 hover:text-blue-800 text-xs"
                     >
                       (View on Allegro ↗)
+                    </a>
+                    <a
+                      href={`https://allegro.cz/nabidka/${selectedOffer.allegroOfferId}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-blue-600 hover:text-blue-800 text-xs"
+                    >
+                      (View on Allegro (nabidka) ↗)
                     </a>
                   </div>
                 </div>
