@@ -617,77 +617,178 @@ export class OffersService {
       });
 
       // Update via Allegro API asynchronously (don't block response)
-      this.logger.log('Updating offer via Allegro API (async, non-blocking)', {
+      this.logger.log('[updateOffer] Updating offer via Allegro API (async, non-blocking)', {
         userId,
         offerId: id,
         allegroOfferId: offer.allegroOfferId,
         endpoint: `/sale/product-offers/${offer.allegroOfferId}`,
         method: 'PATCH',
         hasOAuthToken: !!oauthToken,
+        oauthTokenLength: oauthToken?.length || 0,
+        oauthTokenPreview: oauthToken ? `${oauthToken.substring(0, 20)}...` : 'null',
         payloadKeys: Object.keys(allegroPayload),
+        payloadSize: JSON.stringify(allegroPayload).length,
+        timestamp: new Date().toISOString(),
       });
 
       // Execute async sync with proper error handling
       // Use setImmediate to ensure it runs after the current execution context
+      this.logger.log('[Async Sync] STEP 1: Scheduling async sync job with setImmediate', {
+        offerId: id,
+        allegroOfferId: offer.allegroOfferId,
+        hasOAuthToken: !!oauthToken,
+        timestamp: new Date().toISOString(),
+        stackTrace: new Error().stack?.split('\n').slice(0, 5).join(' | '),
+      });
+      
+      const asyncSyncStartTime = Date.now();
       setImmediate(async () => {
+        const asyncSyncExecutionTime = Date.now() - asyncSyncStartTime;
+        this.logger.log('[Async Sync] STEP 2: setImmediate callback executed', {
+          offerId: id,
+          allegroOfferId: offer.allegroOfferId,
+          timeSinceScheduling: `${asyncSyncExecutionTime}ms`,
+          timestamp: new Date().toISOString(),
+        });
+        
         try {
-          this.logger.log('[Async Sync] Starting Allegro API update', {
+          this.logger.log('[Async Sync] STEP 3: Starting Allegro API update', {
             offerId: id,
             allegroOfferId: offer.allegroOfferId,
             hasOAuthToken: !!oauthToken,
             oauthTokenLength: oauthToken?.length || 0,
+            oauthTokenPreview: oauthToken ? `${oauthToken.substring(0, 20)}...` : 'null',
+            timestamp: new Date().toISOString(),
           });
           
           if (!oauthToken) {
+            this.logger.error('[Async Sync] STEP 3.1: OAuth token validation failed', {
+              offerId: id,
+              allegroOfferId: offer.allegroOfferId,
+              oauthToken: oauthToken,
+              timestamp: new Date().toISOString(),
+            });
             throw new Error('OAuth token is missing');
           }
+          
+          this.logger.log('[Async Sync] STEP 3.2: OAuth token validated, starting retry loop', {
+            offerId: id,
+            allegroOfferId: offer.allegroOfferId,
+            maxRetries: 2,
+            timestamp: new Date().toISOString(),
+          });
           
           // Retry logic for timeout errors (Allegro API can be slow)
           let lastError: any;
           const maxRetries = 2;
           for (let attempt = 0; attempt <= maxRetries; attempt++) {
+            const attemptStartTime = Date.now();
+            this.logger.log('[Async Sync] STEP 4: Attempting Allegro API call', {
+              offerId: id,
+              allegroOfferId: offer.allegroOfferId,
+              attempt: attempt + 1,
+              maxAttempts: maxRetries + 1,
+              timestamp: new Date().toISOString(),
+            });
+            
             try {
               if (attempt > 0) {
-                this.logger.log('[Async Sync] Retrying Allegro API update after timeout', {
+                this.logger.log('[Async Sync] STEP 4.1: Retrying Allegro API update after timeout', {
                   offerId: id,
                   allegroOfferId: offer.allegroOfferId,
                   attempt: attempt + 1,
                   maxRetries: maxRetries + 1,
+                  waitTime: `${5000 * attempt}ms`,
+                  timestamp: new Date().toISOString(),
                 });
                 // Wait before retry (exponential backoff: 5s, 10s)
                 await new Promise(resolve => setTimeout(resolve, 5000 * attempt));
+                this.logger.log('[Async Sync] STEP 4.2: Wait completed, proceeding with retry', {
+                  offerId: id,
+                  allegroOfferId: offer.allegroOfferId,
+                  attempt: attempt + 1,
+                  timestamp: new Date().toISOString(),
+                });
               }
               
+              this.logger.log('[Async Sync] STEP 5: Calling updateOfferWithOAuthToken', {
+                offerId: id,
+                allegroOfferId: offer.allegroOfferId,
+                attempt: attempt + 1,
+                url: `${this.allegroApi['apiUrl']}/sale/product-offers/${offer.allegroOfferId}`,
+                payloadSize: JSON.stringify(allegroPayload).length,
+                timestamp: new Date().toISOString(),
+              });
+              
+              const apiCallStartTime = Date.now();
               await this.allegroApi.updateOfferWithOAuthToken(oauthToken, offer.allegroOfferId, allegroPayload);
+              const apiCallDuration = Date.now() - apiCallStartTime;
+              
+              this.logger.log('[Async Sync] STEP 6: Allegro API call successful', {
+                offerId: id,
+                allegroOfferId: offer.allegroOfferId,
+                attempt: attempt + 1,
+                duration: `${apiCallDuration}ms`,
+                timestamp: new Date().toISOString(),
+              });
               
               // Success - break out of retry loop
               break;
             } catch (error: any) {
+              const attemptDuration = Date.now() - attemptStartTime;
               lastError = error;
               const isTimeout = error.code === 'ECONNABORTED' || error.message?.includes('timeout');
               
+              this.logger.error('[Async Sync] STEP 7: Allegro API call failed', {
+                offerId: id,
+                allegroOfferId: offer.allegroOfferId,
+                attempt: attempt + 1,
+                duration: `${attemptDuration}ms`,
+                error: error.message,
+                errorCode: error.code,
+                errorStatus: error.response?.status,
+                errorStatusText: error.response?.statusText,
+                errorData: error.response?.data,
+                isTimeout: isTimeout,
+                willRetry: isTimeout && attempt < maxRetries,
+                timestamp: new Date().toISOString(),
+              });
+              
               if (isTimeout && attempt < maxRetries) {
                 // Will retry
-                this.logger.warn('[Async Sync] Timeout error, will retry', {
+                this.logger.warn('[Async Sync] STEP 7.1: Timeout error, will retry', {
                   offerId: id,
                   allegroOfferId: offer.allegroOfferId,
                   attempt: attempt + 1,
+                  nextAttempt: attempt + 2,
                   error: error.message,
+                  timestamp: new Date().toISOString(),
                 });
                 continue;
               } else {
                 // Not a timeout or max retries reached - throw
+                this.logger.error('[Async Sync] STEP 7.2: Max retries reached or non-timeout error, throwing', {
+                  offerId: id,
+                  allegroOfferId: offer.allegroOfferId,
+                  attempt: attempt + 1,
+                  maxRetries: maxRetries + 1,
+                  isTimeout: isTimeout,
+                  error: error.message,
+                  timestamp: new Date().toISOString(),
+                });
                 throw error;
               }
             }
           }
           
-          this.logger.log('[Async Sync] Allegro API update successful, updating database sync status', {
+          this.logger.log('[Async Sync] STEP 8: Allegro API update successful, updating database sync status', {
             offerId: id,
             allegroOfferId: offer.allegroOfferId,
+            timestamp: new Date().toISOString(),
           });
           
           // Update sync status on success
+          const dbUpdateStartTime = Date.now();
           await this.prisma.allegroOffer.update({
             where: { id },
             data: {
@@ -696,26 +797,49 @@ export class OffersService {
               lastSyncedAt: new Date(),
             } as any,
           });
+          const dbUpdateDuration = Date.now() - dbUpdateStartTime;
           
-          this.logger.log('[Async Sync] Offer synced to Allegro API successfully', {
+          this.logger.log('[Async Sync] STEP 9: Database sync status updated successfully', {
             offerId: id,
             allegroOfferId: offer.allegroOfferId,
             syncStatus: 'SYNCED',
+            dbUpdateDuration: `${dbUpdateDuration}ms`,
+            timestamp: new Date().toISOString(),
+          });
+          
+          this.logger.log('[Async Sync] STEP 10: Offer synced to Allegro API successfully - COMPLETE', {
+            offerId: id,
+            allegroOfferId: offer.allegroOfferId,
+            syncStatus: 'SYNCED',
+            totalDuration: `${Date.now() - asyncSyncStartTime}ms`,
+            timestamp: new Date().toISOString(),
           });
         } catch (error: any) {
           // Update sync status on error
-          this.logger.error('[Async Sync] Failed to sync offer to Allegro API', {
+          this.logger.error('[Async Sync] STEP ERROR: Failed to sync offer to Allegro API', {
             offerId: id,
             allegroOfferId: offer.allegroOfferId,
             error: error.message,
+            errorName: error.name,
+            errorCode: error.code,
             errorStack: error.stack,
             status: error.response?.status,
             statusText: error.response?.statusText,
             errorData: error.response?.data,
-            errorCode: error.code,
+            errorHeaders: error.response?.headers,
+            totalDuration: `${Date.now() - asyncSyncStartTime}ms`,
+            timestamp: new Date().toISOString(),
           });
           
           try {
+            this.logger.log('[Async Sync] STEP ERROR.1: Updating database with ERROR status', {
+              offerId: id,
+              allegroOfferId: offer.allegroOfferId,
+              syncError: error.message || 'Unknown error',
+              timestamp: new Date().toISOString(),
+            });
+            
+            const dbErrorUpdateStartTime = Date.now();
             await this.prisma.allegroOffer.update({
               where: { id },
               data: {
@@ -723,13 +847,32 @@ export class OffersService {
                 syncError: error.message || 'Unknown error',
               } as any,
             });
-          } catch (dbError: any) {
-            this.logger.error('[Async Sync] Failed to update sync error status in database', {
+            const dbErrorUpdateDuration = Date.now() - dbErrorUpdateStartTime;
+            
+            this.logger.log('[Async Sync] STEP ERROR.2: Database updated with ERROR status', {
               offerId: id,
-              error: dbError.message,
+              allegroOfferId: offer.allegroOfferId,
+              syncStatus: 'ERROR',
+              dbUpdateDuration: `${dbErrorUpdateDuration}ms`,
+              timestamp: new Date().toISOString(),
+            });
+          } catch (dbError: any) {
+            this.logger.error('[Async Sync] STEP ERROR.3: Failed to update sync error status in database', {
+              offerId: id,
+              allegroOfferId: offer.allegroOfferId,
+              dbError: dbError.message,
+              dbErrorStack: dbError.stack,
+              originalError: error.message,
+              timestamp: new Date().toISOString(),
             });
           }
         }
+      });
+      
+      this.logger.log('[Async Sync] STEP 0: setImmediate scheduled, returning control to caller', {
+        offerId: id,
+        allegroOfferId: offer.allegroOfferId,
+        timestamp: new Date().toISOString(),
       });
       
       // Log after updating database
