@@ -4042,15 +4042,17 @@ export class OffersService {
       results,
     };
 
-    this.logger.log(`[${requestId}] [publishOffersToAllegro] Bulk publish completed`, {
+    this.logger.log(`[${finalRequestId}] [publishOffersToAllegro] ========== BULK PUBLISH COMPLETED ==========`, {
       userId,
-      requestId,
+      requestId: finalRequestId,
       totalDuration: `${totalDuration}ms`,
       totalDurationSeconds: Math.round(totalDuration / 1000),
       averageTimePerOffer: `${Math.round(totalDuration / offerIds.length)}ms`,
       throughput: `${Math.round((offerIds.length / totalDuration) * 1000)} offers/sec`,
       timestamp: new Date().toISOString(),
       summary,
+      successRate: `${Math.round((successful / offerIds.length) * 100)}%`,
+      failureRate: `${Math.round((failed / offerIds.length) * 100)}%`,
     });
 
     return summary;
