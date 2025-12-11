@@ -3837,5 +3837,117 @@ export class OffersService {
 
     return summary;
   }
+
+  /**
+   * Import all offers, remove trailing dots from titles, and update back to Allegro
+   */
+  async importAndFixTitles(userId: string): Promise<any> {
+    this.logger.log('[importAndFixTitles] Starting import and fix titles', { userId });
+
+    // Step 1: Import all offers from Allegro
+    this.logger.log('[importAndFixTitles] Step 1: Importing all offers from Allegro', { userId });
+    const importResult = await this.importAllOffers(userId);
+    this.logger.log('[importAndFixTitles] Import completed', {
+      userId,
+      totalImported: importResult?.totalImported || 0,
+    });
+
+    // Step 2: Get all offers from database
+    this.logger.log('[importAndFixTitles] Step 2: Loading offers from database', { userId });
+    const { items: offers } = await this.getOffers({
+      limit: 10000, // Get all offers
+      page: 1,
+    });
+
+    this.logger.log('[importAndFixTitles] Found offers in database', {
+      userId,
+      totalOffers: offers.length,
+    });
+
+    // Step 3: Process offers - remove trailing dots from titles
+    const offersToUpdate: Array<{ id: string; originalTitle: string; newTitle: string }> = [];
+    for (const offer of offers) {
+      if (offer.title && offer.title.endsWith('.')) {
+        const newTitle = offer.title.slice(0, -1).trim(); // Remove last dot and trim
+        if (newTitle !== offer.title) {
+          offersToUpdate.push({
+            id: offer.id,
+            originalTitle: offer.title,
+            newTitle,
+          });
+        }
+      }
+    }
+
+    this.logger.log('[importAndFixTitles] Found offers with trailing dots', {
+      userId,
+      count: offersToUpdate.length,
+      sample: offersToUpdate.slice(0, 5),
+    });
+
+    if (offersToUpdate.length === 0) {
+      return {
+        importResult,
+        fixed: 0,
+        updated: 0,
+        failed: 0,
+        message: 'No offers with trailing dots found',
+      };
+    }
+
+    // Step 4: Update titles in database
+    this.logger.log('[importAndFixTitles] Step 3: Updating titles in database', {
+      userId,
+      count: offersToUpdate.length,
+    });
+
+    let updated = 0;
+    let failed = 0;
+
+    for (const { id, newTitle } of offersToUpdate) {
+      try {
+        await this.prisma.allegroOffer.update({
+          where: { id },
+          data: { title: newTitle } as any,
+        });
+        updated++;
+      } catch (error: any) {
+        this.logger.error('[importAndFixTitles] Failed to update offer in database', {
+          offerId: id,
+          error: error.message,
+        });
+        failed++;
+      }
+    }
+
+    this.logger.log('[importAndFixTitles] Database updates completed', {
+      userId,
+      updated,
+      failed,
+    });
+
+    // Step 5: Publish updated offers back to Allegro
+    this.logger.log('[importAndFixTitles] Step 4: Publishing updated offers to Allegro', {
+      userId,
+      count: offersToUpdate.length,
+    });
+
+    const offerIds = offersToUpdate.map((o) => o.id);
+    const publishResult = await this.publishOffersToAllegro(userId, offerIds);
+
+    this.logger.log('[importAndFixTitles] Publish completed', {
+      userId,
+      publishResult,
+    });
+
+    return {
+      importResult,
+      fixed: offersToUpdate.length,
+      updated,
+      failed,
+      publishResult,
+    };
+  }
+
 }
 

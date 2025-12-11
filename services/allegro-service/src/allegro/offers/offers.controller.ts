@@ -510,8 +510,68 @@ export class OffersController {
   @UseGuards(JwtAuthGuard)
   async syncFromAllegro(@Param('id') id: string, @Request() req: any): Promise<{ success: boolean; data: any }> {
     const userId = String(req.user?.id || 'unknown');
-    const result = await this.offersService.syncOfferFromAllegro(id, userId);
-    return { success: true, data: result };
+    try {
+      this.logger.log('Syncing offer from Allegro', {
+        userId,
+        offerId: id,
+      });
+      const result = await this.offersService.syncOfferFromAllegro(id, userId);
+      this.logger.log('Offer synced from Allegro successfully', {
+        userId,
+        offerId: id,
+        allegroOfferId: result?.allegroOfferId,
+      });
+      return { success: true, data: result };
+    } catch (error: any) {
+      this.metricsService.incrementErrors();
+      const errorStatus = error.response?.status || error.status || HttpStatus.INTERNAL_SERVER_ERROR;
+      const errorData = error.response?.data || {};
+      const errorMessage = errorData.error_description || errorData.error?.message || errorData.message || error.message || 'Failed to sync offer from Allegro';
+
+      this.logger.error('Failed to sync offer from Allegro', {
+        userId,
+        offerId: id,
+        error: error.message,
+        errorStatus,
+        errorCode: error.code,
+        errorStack: error.stack,
+        allegroError: errorData,
+        responseData: error.response?.data,
+      });
+
+      // Handle OAuth-related errors
+      if (errorStatus === 403 || error.code === 'OAUTH_REQUIRED' || errorMessage.includes('OAuth')) {
+        throw new HttpException(
+          {
+            success: false,
+            error: {
+              code: 'OAUTH_REQUIRED',
+              message: 'OAuth authorization required. Please authorize the application in Settings to access your Allegro offers.',
+              status: HttpStatus.FORBIDDEN,
+            },
+          },
+          HttpStatus.FORBIDDEN,
+        );
+      }
+
+      // Handle Allegro API errors
+      if (errorStatus === 404 || errorMessage.includes('not found')) {
+        throw new HttpException(
+          {
+            success: false,
+            error: {
+              code: 'OFFER_NOT_FOUND',
+              message: 'Offer not found in Allegro. It may have been deleted or is no longer accessible.',
+              status: HttpStatus.NOT_FOUND,
+            },
+          },
+          HttpStatus.NOT_FOUND,
+        );
+      }
+
+      // Handle other errors
+      throw error;
+    }
   }
 
   @Post(':id/validate')

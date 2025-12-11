@@ -170,6 +170,9 @@ const OffersPage: React.FC = () => {
   } | null>(null);
   const [showPublishResultsModal, setShowPublishResultsModal] = useState(false);
   
+  // Remove trailing dots states
+  const [removingDots, setRemovingDots] = useState(false);
+  
   // Create offer states
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [creatingOffer, setCreatingOffer] = useState(false);
@@ -957,6 +960,75 @@ const OffersPage: React.FC = () => {
     }
   };
 
+  // Remove trailing dots from all offer titles
+  const handleRemoveTrailingDots = async () => {
+    setRemovingDots(true);
+    setError(null);
+    try {
+      // Get all offers with titles ending in "."
+      const offersWithDots = allOffers.filter((offer) => offer.title && offer.title.endsWith('.'));
+
+      if (offersWithDots.length === 0) {
+        setError('No offers found with trailing dots in titles');
+        setRemovingDots(false);
+        return;
+      }
+
+      let updated = 0;
+      let failed = 0;
+      const errors: string[] = [];
+
+      // Update each offer
+      for (const offer of offersWithDots) {
+        try {
+          const newTitle = offer.title.slice(0, -1).trim(); // Remove last dot and trim
+          const response = await api.put(`/allegro/offers/${offer.id}`, {
+            title: newTitle,
+          });
+
+          if (response.data.success) {
+            updated++;
+          } else {
+            failed++;
+            errors.push(`${offer.title}: ${response.data.error?.message || 'Update failed'}`);
+          }
+        } catch (err) {
+          failed++;
+          const axiosErr = err as AxiosError & { response?: { data?: { error?: { message?: string } } } };
+          const errorMessage =
+            axiosErr.response?.data?.error?.message ||
+            axiosErr.message ||
+            'Update failed';
+          errors.push(`${offer.title}: ${errorMessage}`);
+          console.error(`Failed to update offer ${offer.id}`, err);
+        }
+      }
+
+      // Refresh offers list
+      await loadAllOffers();
+
+      if (failed > 0) {
+        setError(`Updated ${updated} offers. Failed ${failed}:\n${errors.join('\n')}`);
+      } else {
+        setError(null);
+        // Show success message briefly
+        const successMsg = `Successfully removed trailing dots from ${updated} offer${updated !== 1 ? 's' : ''}`;
+        setError(successMsg);
+        setTimeout(() => setError(null), 3000);
+      }
+    } catch (err) {
+      console.error('Failed to remove trailing dots', err);
+      const axiosErr = err as AxiosError & { response?: { data?: { error?: { message?: string } } } };
+      const errorMessage =
+        axiosErr.response?.data?.error?.message ||
+        axiosErr.message ||
+        'Failed to remove trailing dots';
+      setError(errorMessage);
+    } finally {
+      setRemovingDots(false);
+    }
+  };
+
   // Publish all offers
   const handlePublishAll = async () => {
     if (total === 0) {
@@ -1029,6 +1101,13 @@ const OffersPage: React.FC = () => {
           <div className="text-sm text-gray-600">
             Total: {total} offers
           </div>
+          <Button
+            onClick={handleRemoveTrailingDots}
+            disabled={removingDots || total === 0}
+            variant="secondary"
+          >
+            {removingDots ? 'Removing dots...' : '🔧 Remove Trailing Dots'}
+          </Button>
           <Button
             onClick={handlePublishAll}
             disabled={publishing || total === 0}
