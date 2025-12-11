@@ -628,12 +628,19 @@ export class OffersService {
       });
 
       // Execute async sync with proper error handling
-      (async () => {
+      // Use setImmediate to ensure it runs after the current execution context
+      setImmediate(async () => {
         try {
           this.logger.log('[Async Sync] Starting Allegro API update', {
             offerId: id,
             allegroOfferId: offer.allegroOfferId,
+            hasOAuthToken: !!oauthToken,
+            oauthTokenLength: oauthToken?.length || 0,
           });
+          
+          if (!oauthToken) {
+            throw new Error('OAuth token is missing');
+          }
           
           await this.allegroApi.updateOfferWithOAuthToken(oauthToken, offer.allegroOfferId, allegroPayload);
           
@@ -667,6 +674,7 @@ export class OffersService {
             status: error.response?.status,
             statusText: error.response?.statusText,
             errorData: error.response?.data,
+            errorCode: error.code,
           });
           
           try {
@@ -684,13 +692,6 @@ export class OffersService {
             });
           }
         }
-      })().catch((unhandledError: any) => {
-        // Catch any unhandled promise rejections
-        this.logger.error('[Async Sync] Unhandled error in async sync', {
-          offerId: id,
-          error: unhandledError.message,
-          errorStack: unhandledError.stack,
-        });
       });
       
       // Log after updating database
