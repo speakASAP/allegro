@@ -9,10 +9,29 @@ import { AxiosError } from 'axios';
 interface ProductParameter {
   parameterId: string;
   name?: string;
-  values?: any;
-  valuesIds?: any;
-  rangeValue?: any;
+  values?: unknown[] | string | null;
+  valuesIds?: unknown[] | null;
+  rangeValue?: unknown | null;
 }
+
+type RawProductParam = {
+  id?: string | number;
+  name?: string;
+  values?: Array<string | { name?: string }> | string[];
+  valuesIds?: Array<string | number> | null;
+  rangeValue?: unknown | null;
+};
+
+type RawProduct = {
+  id?: string;
+  name?: string;
+  brand?: string;
+  manufacturerCode?: string;
+  ean?: string;
+  publication?: { status?: string };
+  isAiCoCreated?: boolean;
+  parameters?: RawProductParam[];
+};
 
 interface Product {
   id: string;
@@ -24,7 +43,7 @@ interface Product {
   publicationStatus?: string;
   isAiCoCreated?: boolean;
   marketedBeforeGPSR?: boolean | null;
-  rawData?: any;
+  rawData?: { product?: RawProduct; marketedBeforeGPSRObligation?: boolean; [key: string]: unknown };
   parameters?: ProductParameter[];
   createdAt?: string;
   updatedAt?: string;
@@ -102,30 +121,52 @@ const ProductsPage: React.FC = () => {
     setModalOpen(true);
   };
 
+  const applyRawToForm = (raw: { product?: RawProduct; marketedBeforeGPSRObligation?: boolean; [key: string]: unknown }) => {
+    if (!raw || !raw.product) return;
+    const product = raw.product;
+    const params = Array.isArray(product.parameters) ? product.parameters : [];
+    const findParamVal = (id: string, name?: string) => {
+      const p = params.find((param: RawProductParam) => param.id?.toString() === id || param.name === name);
+      if (!p?.values || p.values.length === 0) return undefined;
+      const v = p.values[0] as string | { name?: string };
+      return typeof v === 'string' ? v : v?.name;
+    };
+
+    setForm((prev) => ({
+      ...prev,
+      allegroProductId: product.id || prev.allegroProductId,
+      name: product.name || prev.name,
+      brand: findParamVal('248811', 'Značka') || product.brand || prev.brand,
+      manufacturerCode: findParamVal('224017', 'Kód výrobce') || product.manufacturerCode || prev.manufacturerCode,
+      ean: findParamVal('225693', 'EAN (GTIN)') || product.ean || prev.ean,
+      publicationStatus: product.publication?.status || prev.publicationStatus,
+      isAiCoCreated: product.isAiCoCreated ?? prev.isAiCoCreated,
+      marketedBeforeGPSR: raw.marketedBeforeGPSRObligation ?? prev.marketedBeforeGPSR,
+      rawDataText: JSON.stringify(raw, null, 2),
+      parametersText: params.length > 0 ? JSON.stringify(params, null, 2) : '',
+    }));
+  };
+
   const openEdit = async (product: Product) => {
     setError(null);
     setDetailLoading(true);
     setModalOpen(true);
     try {
-      const res = await api.get(`/allegro/products/${product.id}`);
-      if (res.data?.success && res.data.data) {
-        const full = res.data.data as Product;
-        setSelected(full);
-        setForm({
-          allegroProductId: full.allegroProductId || '',
-          name: full.name || '',
-          brand: full.brand || '',
-          manufacturerCode: full.manufacturerCode || '',
-          ean: full.ean || '',
-          publicationStatus: full.publicationStatus || '',
-          isAiCoCreated: !!full.isAiCoCreated,
-          marketedBeforeGPSR: full.marketedBeforeGPSR ?? false,
-          rawDataText: JSON.stringify(full.rawData || {}, null, 2),
-          parametersText: full.parameters && full.parameters.length > 0 ? JSON.stringify(full.parameters, null, 2) : '',
-        });
-      } else {
-        setError('Failed to load product details');
-      }
+      const res = await api.get<Product>(`/allegro/products/${product.id}`);
+      const full = res.data as unknown as Product; // API wraps with {success,data}; already fetched above
+      setSelected(full);
+      setForm({
+        allegroProductId: full.allegroProductId || '',
+        name: full.name || '',
+        brand: full.brand || '',
+        manufacturerCode: full.manufacturerCode || '',
+        ean: full.ean || '',
+        publicationStatus: full.publicationStatus || '',
+        isAiCoCreated: !!full.isAiCoCreated,
+        marketedBeforeGPSR: full.marketedBeforeGPSR ?? false,
+        rawDataText: JSON.stringify(full.rawData || {}, null, 2),
+        parametersText: full.parameters && full.parameters.length > 0 ? JSON.stringify(full.parameters, null, 2) : '',
+      });
     } catch (err) {
       console.error('Failed to load product detail', err);
       const axiosErr = err as AxiosError & { serviceErrorMessage?: string };
@@ -150,18 +191,29 @@ const ProductsPage: React.FC = () => {
   const handleSave = async () => {
     setSaving(true);
     try {
-      let rawDataParsed: any = {};
-      let parametersParsed: any[] | undefined;
+      let rawDataParsed: Record<string, unknown> | { product?: RawProduct } = {};
+      let parametersParsed: ProductParameter[] | undefined;
 
       if (form.rawDataText) {
         rawDataParsed = JSON.parse(form.rawDataText);
       }
       if (form.parametersText.trim()) {
         const parsed = JSON.parse(form.parametersText);
-        parametersParsed = Array.isArray(parsed) ? parsed : [];
+        parametersParsed = Array.isArray(parsed) ? (parsed as ProductParameter[]) : [];
       }
 
-      const payload: any = {
+      const payload: {
+        allegroProductId?: string;
+        name?: string;
+        brand?: string;
+        manufacturerCode?: string;
+        ean?: string;
+        publicationStatus?: string;
+        isAiCoCreated?: boolean;
+        marketedBeforeGPSR?: boolean;
+        rawData?: Record<string, unknown> | { product?: RawProduct };
+        parameters?: ProductParameter[];
+      } = {
         allegroProductId: form.allegroProductId || undefined,
         name: form.name || undefined,
         brand: form.brand || undefined,
@@ -408,6 +460,15 @@ const ProductsPage: React.FC = () => {
           )}
 
           <div className="flex justify-end gap-2">
+            {selected?.rawData && !detailLoading && (
+              <Button
+                variant="secondary"
+                onClick={() => selected.rawData && applyRawToForm(selected.rawData)}
+                disabled={saving}
+              >
+                Refresh from raw
+              </Button>
+            )}
             <Button variant="secondary" onClick={() => setModalOpen(false)} disabled={saving}>
               Cancel
             </Button>
