@@ -3550,7 +3550,7 @@ export class OffersService {
             // Get product ID from existing offer or from allegroProduct relation
             const productId = (sourceOffer as any)?.productSet?.[0]?.product?.id ||
                               (sourceOffer as any)?.product?.id ||
-                              offer.allegroProduct?.allegroProductId ||
+                              (offer as any)?.allegroProduct?.allegroProductId ||
                               null;
             
             if (productId) {
@@ -3719,9 +3719,9 @@ export class OffersService {
             const searchStartTime = Date.now();
             this.logger.log(`[${finalRequestId}] [publishOffersToAllegro] OFFER ${processedCount}: Searching for product on Allegro`, {
               offerId,
-              hasEAN: !!(offer.product?.ean || offer.allegroProduct?.ean),
-              hasManufacturerCode: !!(offer.product?.manufacturerCode || offer.allegroProduct?.manufacturerCode),
-              hasProductName: !!(offer.product?.name || offer.allegroProduct?.name || offer.title),
+              hasEAN: !!((offer as any)?.product?.ean || (offer as any)?.allegroProduct?.ean),
+              hasManufacturerCode: !!((offer as any)?.product?.manufacturerCode || (offer as any)?.allegroProduct?.manufacturerCode),
+              hasProductName: !!((offer as any)?.product?.name || (offer as any)?.allegroProduct?.name || offer.title),
               timestamp: new Date().toISOString(),
             });
             
