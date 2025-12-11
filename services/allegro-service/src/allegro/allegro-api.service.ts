@@ -226,6 +226,39 @@ export class AllegroApiService {
   }
 
   /**
+   * Get product details by productId with OAuth token
+   */
+  async getProductWithOAuthToken(accessToken: string, productId: string) {
+    const endpoint = `/sale/products/${productId}`;
+    const url = `${this.apiUrl}${endpoint}`;
+
+    try {
+      const config = {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          Accept: 'application/vnd.allegro.public.v1+json',
+        },
+        timeout: 10000,
+      };
+      const response = await firstValueFrom(this.httpService.get(url, config));
+      return response.data;
+    } catch (error: any) {
+      const errorData = error.response?.data || {};
+      this.logger.error('Allegro API request failed when fetching product with OAuth token', {
+        endpoint,
+        productId,
+        error: error.message,
+        status: error.response?.status,
+        statusText: error.response?.statusText,
+        errorData,
+        responseHeaders: error.response?.headers,
+        isTimeout: error.code === 'ECONNABORTED' || error.message?.includes('timeout'),
+      });
+      throw error;
+    }
+  }
+
+  /**
    * Create offer
    */
   async createOffer(data: any) {

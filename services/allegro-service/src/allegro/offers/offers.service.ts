@@ -1253,7 +1253,7 @@ export class OffersService {
               });
             }
 
-            const allegroProductId = await this.upsertAllegroProductFromOffer(fullOfferData);
+            const allegroProductId = await this.upsertAllegroProductFromOffer(fullOfferData, oauthToken);
             const offerData = this.sanitizeOfferDataForPrisma(this.extractOfferData(fullOfferData));
             
             // Log before saving to database
@@ -1570,7 +1570,7 @@ export class OffersService {
               }) : [],
             });
 
-            const allegroProductId = await this.upsertAllegroProductFromOffer(fullOfferData);
+            const allegroProductId = await this.upsertAllegroProductFromOffer(fullOfferData, oauthToken);
             const offerData = this.sanitizeOfferDataForPrisma(this.extractOfferData(fullOfferData));
             
             // Log before saving
@@ -1905,7 +1905,7 @@ export class OffersService {
               }) : [],
             });
             
-            const allegroProductId = await this.upsertAllegroProductFromOffer(fullOfferData);
+            const allegroProductId = await this.upsertAllegroProductFromOffer(fullOfferData, oauthToken);
             const offerData = this.sanitizeOfferDataForPrisma(this.extractOfferData(fullOfferData));
             
             // Log after parsing - what was extracted
@@ -2143,7 +2143,7 @@ export class OffersService {
       
       for (const allegroOffer of offers) {
         try {
-          const allegroProductId = await this.upsertAllegroProductFromOffer(allegroOffer);
+          const allegroProductId = await this.upsertAllegroProductFromOffer(allegroOffer, oauthToken);
           const offerData = this.sanitizeOfferDataForPrisma(this.extractOfferData(allegroOffer));
           const offer = await this.prisma.allegroOffer.upsert({
             where: { allegroOfferId: allegroOffer.id },
@@ -2236,7 +2236,7 @@ export class OffersService {
   /**
    * Upsert Allegro product (raw productSet) and normalized parameters
    */
-  private async upsertAllegroProductFromOffer(allegroOffer: any): Promise<string | null> {
+  private async upsertAllegroProductFromOffer(allegroOffer: any, oauthToken?: string): Promise<string | null> {
     try {
       const productSet = Array.isArray(allegroOffer?.productSet) && allegroOffer.productSet.length > 0
         ? allegroOffer.productSet[0]
@@ -2246,7 +2246,28 @@ export class OffersService {
         return null;
       }
 
-      const parameters = Array.isArray(product.parameters) ? product.parameters : [];
+      let productDetails = product;
+
+      // If name/parameters are missing, try to fetch product details from Allegro API
+      if ((!product?.name || !product?.parameters || product.parameters.length === 0) && oauthToken) {
+        try {
+          const detailed = await this.allegroApi.getProductWithOAuthToken(oauthToken, String(product.id));
+          if (detailed) {
+            productDetails = {
+              ...product,
+              ...detailed,
+              parameters: detailed.parameters || product.parameters,
+            };
+          }
+        } catch (fetchError: any) {
+          this.logger.warn('[upsertAllegroProductFromOffer] Failed to fetch product details', {
+            productId: product.id,
+            error: fetchError.message,
+          });
+        }
+      }
+
+      const parameters = Array.isArray(productDetails?.parameters) ? productDetails.parameters : [];
       const findParamValue = (match: (param: any) => boolean): string | null => {
         const param = parameters.find(match);
         if (!param) return null;
@@ -2258,16 +2279,16 @@ export class OffersService {
         return null;
       };
 
-      const brand = findParamValue((p) => String(p.id) === '248811' || p.name === 'Značka') || product.brand || null;
-      const manufacturerCode = findParamValue((p) => String(p.id) === '224017' || p.name === 'Kód výrobce') || product.manufacturerCode || null;
-      const ean = findParamValue((p) => String(p.id) === '225693' || p.name === 'EAN (GTIN)') || product.ean || null;
-      const publicationStatus = product.publication?.status || null;
+      const brand = findParamValue((p) => String(p.id) === '248811' || p.name === 'Značka') || productDetails.brand || null;
+      const manufacturerCode = findParamValue((p) => String(p.id) === '224017' || p.name === 'Kód výrobce') || productDetails.manufacturerCode || null;
+      const ean = findParamValue((p) => String(p.id) === '225693' || p.name === 'EAN (GTIN)') || productDetails.ean || null;
+      const publicationStatus = productDetails.publication?.status || null;
       const marketedBeforeGPSR = productSet?.marketedBeforeGPSRObligation ?? null;
-      const isAiCoCreated = !!product.isAiCoCreated;
+      const isAiCoCreated = !!productDetails.isAiCoCreated;
 
       const baseData = {
-        allegroProductId: String(product.id),
-        name: product.name || null,
+        allegroProductId: String(productDetails.id),
+        name: productDetails.name || null,
         brand,
         manufacturerCode,
         ean,
