@@ -1141,7 +1141,7 @@ export class OffersService {
     const offers = response.offers || [];
     
     for (const allegroOffer of offers) {
-      const offerData = this.extractOfferData(allegroOffer);
+      const offerData = this.sanitizeOfferDataForPrisma(this.extractOfferData(allegroOffer));
       previewOffers.push({
         ...offerData,
         // Keep raw data for reference (already included in offerData)
@@ -1254,7 +1254,7 @@ export class OffersService {
             }
 
             const allegroProductId = await this.upsertAllegroProductFromOffer(fullOfferData);
-            const offerData = this.extractOfferData(fullOfferData);
+            const offerData = this.sanitizeOfferDataForPrisma(this.extractOfferData(fullOfferData));
             
             // Log before saving to database
             this.logger.log('[importApprovedOffers] Saving offer to database', {
@@ -1571,7 +1571,7 @@ export class OffersService {
             });
 
             const allegroProductId = await this.upsertAllegroProductFromOffer(fullOfferData);
-            const offerData = this.extractOfferData(fullOfferData);
+            const offerData = this.sanitizeOfferDataForPrisma(this.extractOfferData(fullOfferData));
             
             // Log before saving
             this.logger.log('[importAllOffers] Saving offer to database', {
@@ -1906,7 +1906,7 @@ export class OffersService {
             });
             
             const allegroProductId = await this.upsertAllegroProductFromOffer(fullOfferData);
-            const offerData = this.extractOfferData(fullOfferData);
+            const offerData = this.sanitizeOfferDataForPrisma(this.extractOfferData(fullOfferData));
             
             // Log after parsing - what was extracted
             this.logger.log('[importApprovedOffersFromSalesCenter] Raw data parsed successfully', {
@@ -2144,7 +2144,7 @@ export class OffersService {
       for (const allegroOffer of offers) {
         try {
           const allegroProductId = await this.upsertAllegroProductFromOffer(allegroOffer);
-          const offerData = this.extractOfferData(allegroOffer);
+          const offerData = this.sanitizeOfferDataForPrisma(this.extractOfferData(allegroOffer));
           const offer = await this.prisma.allegroOffer.upsert({
             where: { allegroOfferId: allegroOffer.id },
             update: {
@@ -2223,6 +2223,14 @@ export class OffersService {
 
   private getDefaultCurrency(): string {
     return this.configService.get('PRICE_CURRENCY_TARGET') || 'CZK';
+  }
+
+  /**
+   * Strip fields not present in Prisma schema to avoid unknown argument errors
+   */
+  private sanitizeOfferDataForPrisma(data: any): any {
+    const { publicUrl, ...rest } = data || {};
+    return rest;
   }
 
   /**
@@ -2374,13 +2382,6 @@ export class OffersService {
     // Extract payment options - check multiple possible locations
     let paymentOptions = allegroOffer.payments || allegroOffer.paymentOptions || allegroOffer.sellingMode?.payments || null;
 
-    // Extract public URL if available (Allegro API may provide url, publicUrl, or webUrl)
-    const publicUrl = allegroOffer.url || 
-                     allegroOffer.publicUrl || 
-                     allegroOffer.webUrl || 
-                     allegroOffer.external?.url ||
-                     null;
-
     const extractedData = {
       allegroOfferId: allegroOffer.id,
       allegroListingId: allegroOffer.listing?.id || allegroOffer.external?.id || null,
@@ -2396,7 +2397,6 @@ export class OffersService {
       images: images,
       deliveryOptions: deliveryOptions,
       paymentOptions: paymentOptions,
-      publicUrl: publicUrl, // Include public URL if available from API
       rawData: allegroOffer as any,
     };
 
@@ -2592,7 +2592,7 @@ export class OffersService {
       throw new HttpException('Failed to fetch offer from Allegro', HttpStatus.BAD_GATEWAY);
     }
 
-    const offerData = this.extractOfferData(fullOffer);
+    const offerData = this.sanitizeOfferDataForPrisma(this.extractOfferData(fullOffer));
     const updated = await this.prisma.allegroOffer.update({
       where: { id: offerId },
       data: {
@@ -2763,7 +2763,7 @@ export class OffersService {
         
         if (fullOffer) {
           // Update offer with fresh data
-          const offerData = this.extractOfferData(fullOffer);
+          const offerData = this.sanitizeOfferDataForPrisma(this.extractOfferData(fullOffer));
           offer = await this.prisma.allegroOffer.update({
             where: { id: offerId },
             data: {
