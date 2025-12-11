@@ -104,6 +104,7 @@ export class GatewayService {
     
     // Special timeout for bulk operations that may take longer
     const isBulkOperation = path.includes('/publish-all') || path.includes('/import') || path.includes('/bulk');
+    const isPublishAll = path.includes('/publish-all');
     const defaultTimeout = (() => {
       const gatewayTimeout = this.configService.get<string>('GATEWAY_TIMEOUT');
       const httpTimeout = this.configService.get<string>('HTTP_TIMEOUT');
@@ -114,8 +115,10 @@ export class GatewayService {
       return parseInt(timeout);
     })();
     
-    // Use longer timeout for bulk operations (60 seconds = 60000ms)
-    const timeout = isBulkOperation ? 60000 : defaultTimeout;
+    // Use longer timeout for bulk operations
+    // publish-all can take 5+ minutes for many offers (30 seconds per offer * 29 offers = ~14 minutes worst case)
+    // Set to 10 minutes (600000ms) to be safe
+    const timeout = isPublishAll ? 600000 : (isBulkOperation ? 120000 : defaultTimeout);
     
     const config: AxiosRequestConfig = {
       headers: {

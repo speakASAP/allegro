@@ -4009,8 +4009,43 @@ export class OffersService {
         }
         } catch (error: any) {
           const offerDuration = Date.now() - offerStartTime;
-          const errorMessage = this.extractErrorMessage(error);
           const errorData = error.response?.data || {};
+          let errorMessage = this.extractErrorMessage(error);
+          
+          // If errorMessage is still generic, try to get more details
+          if (!errorMessage || errorMessage === 'Unknown error occurred. Please check logs for details.' || errorMessage.length < 10) {
+            // Try to construct a more detailed message
+            if (error.response?.status) {
+              errorMessage = `HTTP ${error.response.status}: ${error.message || 'Request failed'}`;
+            } else if (error.code) {
+              errorMessage = `${error.code}: ${error.message || 'Request failed'}`;
+            } else if (error.message) {
+              errorMessage = error.message;
+            } else {
+              errorMessage = 'An error occurred while processing the offer';
+            }
+            
+            // Add error data details if available
+            if (errorData && typeof errorData === 'object') {
+              const errorDetails: string[] = [];
+              if (errorData.userMessage) errorDetails.push(errorData.userMessage);
+              if (errorData.message) errorDetails.push(errorData.message);
+              if (errorData.errors && Array.isArray(errorData.errors) && errorData.errors.length > 0) {
+                const firstErr = errorData.errors[0];
+                if (typeof firstErr === 'string') {
+                  errorDetails.push(firstErr);
+                } else if (firstErr?.userMessage) {
+                  errorDetails.push(firstErr.userMessage);
+                } else if (firstErr?.message) {
+                  errorDetails.push(firstErr.message);
+                }
+              }
+              if (errorDetails.length > 0) {
+                errorMessage = errorDetails.join('; ');
+              }
+            }
+          }
+          
           this.logger.error(`[${finalRequestId}] [publishOffersToAllegro] OFFER ${processedCount}: ❌ CRITICAL ERROR - Failed to process offer`, {
             offerId,
             error: error.message,
@@ -4020,8 +4055,9 @@ export class OffersService {
             offerDuration: `${offerDuration}ms`,
             progress: `${processedCount}/${offerIds.length}`,
             errorStatus: error.response?.status,
-            errorData: errorData,
+            errorData: JSON.stringify(errorData, null, 2),
             errorResponseKeys: errorData ? Object.keys(errorData) : [],
+            fullError: JSON.stringify(error, Object.getOwnPropertyNames(error), 2).substring(0, 2000),
             timestamp: new Date().toISOString(),
           });
 

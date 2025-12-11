@@ -995,7 +995,7 @@ const OffersPage: React.FC = () => {
       const response = await api.post('/allegro/offers/publish-all', {
         offerIds,
       }, {
-        timeout: 90000, // 90 seconds for bulk operations
+        timeout: 600000, // 10 minutes for publish-all (can take long for many offers)
       });
 
       if (response.data.success) {
