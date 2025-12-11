@@ -186,12 +186,55 @@ export class OffersController {
   async importOffers(@Request() req: any): Promise<{ success: boolean; data: any }> {
     this.logger.log('[importOffers] Import request received', {
       userId: req.user?.id,
+      userSub: req.user?.sub,
       hasUser: !!req.user,
       userKeys: req.user ? Object.keys(req.user) : [],
+      userObject: req.user ? JSON.stringify(req.user) : 'null',
     });
     
     try {
-      const userId = String(req.user.id);
+      // Extract user ID - try multiple sources
+      const userId = String(req.user?.id || req.user?.sub || req.user?.userId || 'unknown');
+      
+      if (!req.user) {
+        this.logger.error('[importOffers] No user object in request', {
+          hasUser: false,
+        });
+        throw new HttpException(
+          {
+            success: false,
+            error: {
+              code: 'AUTH_ERROR',
+              message: 'User authentication failed. Please log in again.',
+              status: HttpStatus.UNAUTHORIZED,
+            },
+          },
+          HttpStatus.UNAUTHORIZED,
+        );
+      }
+      
+      if (userId === 'unknown' || userId === 'undefined' || userId === 'null') {
+        this.logger.error('[importOffers] Missing user ID in request', {
+          hasUser: !!req.user,
+          userKeys: req.user ? Object.keys(req.user) : [],
+          userId: req.user?.id,
+          userSub: req.user?.sub,
+          userUserId: req.user?.userId,
+          userObject: JSON.stringify(req.user),
+        });
+        throw new HttpException(
+          {
+            success: false,
+            error: {
+              code: 'AUTH_ERROR',
+              message: 'User ID not found in authentication token. Please log in again.',
+              status: HttpStatus.UNAUTHORIZED,
+            },
+          },
+          HttpStatus.UNAUTHORIZED,
+        );
+      }
+      
       this.logger.log('[importOffers] Starting importAllOffers', { userId });
       const result = await this.offersService.importAllOffers(userId);
       this.logger.log('[importOffers] Import completed successfully', {
