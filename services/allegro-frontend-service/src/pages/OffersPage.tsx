@@ -132,13 +132,41 @@ const OffersPage: React.FC = () => {
   const [editedOffer, setEditedOffer] = useState<Partial<Offer> | null>(null);
   const [saving, setSaving] = useState(false);
   
-  // Filters
-  const [statusFilter, setStatusFilter] = useState<string>('');
-  const [searchQuery, setSearchQuery] = useState<string>('');
-  const [categoryFilter, setCategoryFilter] = useState<string>('');
+  // Load saved filters from localStorage
+  const loadSavedFilters = (): { statusFilter: string; searchQuery: string; categoryFilter: string; page: number } => {
+    try {
+      const saved = localStorage.getItem('allegro-offers-filters');
+      if (saved) {
+        return JSON.parse(saved);
+      }
+    } catch (error) {
+      console.error('Failed to load saved filters', error);
+    }
+    return { statusFilter: '', searchQuery: '', categoryFilter: '', page: 1 };
+  };
+
+  // Save filters to localStorage
+  const saveFilters = (statusFilter: string, searchQuery: string, categoryFilter: string, page: number) => {
+    try {
+      localStorage.setItem('allegro-offers-filters', JSON.stringify({
+        statusFilter,
+        searchQuery,
+        categoryFilter,
+        page,
+      }));
+    } catch (error) {
+      console.error('Failed to save filters', error);
+    }
+  };
+
+  // Filters - load from localStorage on mount
+  const savedFilters = loadSavedFilters();
+  const [statusFilter, setStatusFilter] = useState<string>(savedFilters.statusFilter);
+  const [searchQuery, setSearchQuery] = useState<string>(savedFilters.searchQuery);
+  const [categoryFilter, setCategoryFilter] = useState<string>(savedFilters.categoryFilter);
   
   // Pagination
-  const [page, setPage] = useState(1);
+  const [page, setPage] = useState<number>(savedFilters.page);
   const [totalPages, setTotalPages] = useState(1);
   const [total, setTotal] = useState(0);
   const limit = 20;
@@ -182,6 +210,11 @@ const OffersPage: React.FC = () => {
   useEffect(() => {
     loadAllOffers();
   }, [loadAllOffers]);
+
+  // Save filters to localStorage whenever they change
+  useEffect(() => {
+    saveFilters(statusFilter, searchQuery, categoryFilter, page);
+  }, [statusFilter, searchQuery, categoryFilter, page]);
 
   // Client-side filtering - instant!
   useEffect(() => {
