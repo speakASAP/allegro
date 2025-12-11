@@ -2,11 +2,29 @@
  * Check the last updated offer and its sync status
  */
 
-const { PrismaClient } = require('@prisma/client');
+// Try to load Prisma from shared module (production) or root (local)
+let PrismaClient;
+try {
+  // Production path: inside Docker container
+  PrismaClient = require('../../shared/node_modules/.prisma/client').PrismaClient;
+} catch (e) {
+  try {
+    // Local development path
+    PrismaClient = require('@prisma/client').PrismaClient;
+  } catch (e2) {
+    // Fallback: try relative path
+    PrismaClient = require('../shared/node_modules/.prisma/client').PrismaClient;
+  }
+}
+
 const path = require('path');
 
 // Load .env if available
-require('dotenv').config({ path: path.join(__dirname, '../.env') });
+try {
+  require('dotenv').config({ path: path.join(__dirname, '../.env') });
+} catch (e) {
+  // dotenv not available, use environment variables
+}
 
 const prisma = new PrismaClient();
 
