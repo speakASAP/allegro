@@ -152,21 +152,30 @@ const ProductsPage: React.FC = () => {
     setDetailLoading(true);
     setModalOpen(true);
     try {
-      const res = await api.get<Product>(`/allegro/products/${product.id}`);
-      const full = res.data as unknown as Product; // API wraps with {success,data}; already fetched above
+      const res = await api.get(`/allegro/products/${product.id}`);
+      const body = res.data as any;
+      const full: Product = (body && body.data) || body || product;
       setSelected(full);
       setForm({
-        allegroProductId: full.allegroProductId || '',
-        name: full.name || '',
-        brand: full.brand || '',
-        manufacturerCode: full.manufacturerCode || '',
-        ean: full.ean || '',
-        publicationStatus: full.publicationStatus || '',
-        isAiCoCreated: !!full.isAiCoCreated,
-        marketedBeforeGPSR: full.marketedBeforeGPSR ?? false,
-        rawDataText: JSON.stringify(full.rawData || {}, null, 2),
-        parametersText: full.parameters && full.parameters.length > 0 ? JSON.stringify(full.parameters, null, 2) : '',
+        allegroProductId: full.allegroProductId || product.allegroProductId || '',
+        name: full.name || product.name || '',
+        brand: full.brand || product.brand || '',
+        manufacturerCode: full.manufacturerCode || product.manufacturerCode || '',
+        ean: full.ean || product.ean || '',
+        publicationStatus: full.publicationStatus || product.publicationStatus || '',
+        isAiCoCreated: !!(full.isAiCoCreated ?? product.isAiCoCreated),
+        marketedBeforeGPSR: full.marketedBeforeGPSR ?? product.marketedBeforeGPSR ?? false,
+        rawDataText: JSON.stringify(full.rawData || product.rawData || {}, null, 2),
+        parametersText:
+          (full.parameters && full.parameters.length > 0
+            ? JSON.stringify(full.parameters, null, 2)
+            : product.parameters && product.parameters.length > 0
+              ? JSON.stringify(product.parameters, null, 2)
+              : ''),
       });
+      if (full.rawData) {
+        applyRawToForm(full.rawData as any);
+      }
     } catch (err) {
       console.error('Failed to load product detail', err);
       const axiosErr = err as AxiosError & { serviceErrorMessage?: string };
