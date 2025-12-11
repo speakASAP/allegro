@@ -5,15 +5,20 @@
 // Try to load Prisma from shared module (production) or root (local)
 let PrismaClient;
 try {
-  // Production path: inside Docker container
-  PrismaClient = require('../../shared/node_modules/.prisma/client').PrismaClient;
+  // Production path: inside Docker container (from /app/shared)
+  PrismaClient = require('/app/shared/node_modules/.prisma/client').PrismaClient;
 } catch (e) {
   try {
-    // Local development path
-    PrismaClient = require('@prisma/client').PrismaClient;
+    // Alternative production path: relative from /app/shared
+    PrismaClient = require('./node_modules/.prisma/client').PrismaClient;
   } catch (e2) {
-    // Fallback: try relative path
-    PrismaClient = require('../shared/node_modules/.prisma/client').PrismaClient;
+    try {
+      // Local development path
+      PrismaClient = require('@prisma/client').PrismaClient;
+    } catch (e3) {
+      // Fallback: try relative path from script location
+      PrismaClient = require('../shared/node_modules/.prisma/client').PrismaClient;
+    }
   }
 }
 
