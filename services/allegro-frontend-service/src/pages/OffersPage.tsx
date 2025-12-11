@@ -1153,8 +1153,40 @@ const OffersPage: React.FC = () => {
                           return url;
                         }
                         
-                        // Fallback: construct URL using Czech domain (allegro.cz)
-                        // Try produkt format first (newer format), then oferta (older format)
+                        // Construct URL using produkt format: /produkt/{slug}-{productId}?offerId={offerId}
+                        // Extract product ID from rawData.productSet[0].product.id
+                        let productId: string | undefined;
+                        let productName: string | undefined;
+                        
+                        if (rawDataRecord?.productSet && Array.isArray(rawDataRecord.productSet) && rawDataRecord.productSet.length > 0) {
+                          const productSet = rawDataRecord.productSet[0] as Record<string, unknown>;
+                          if (productSet.product && typeof productSet.product === 'object' && productSet.product !== null) {
+                            const product = productSet.product as Record<string, unknown>;
+                            productId = typeof product.id === 'string' ? product.id : undefined;
+                            productName = typeof product.name === 'string' ? product.name : undefined;
+                          }
+                        }
+                        
+                        // Helper function to generate URL-friendly slug from text
+                        const generateSlug = (text: string): string => {
+                          return text
+                            .toLowerCase()
+                            .normalize('NFD')
+                            .replace(/[\u0300-\u036f]/g, '') // Remove diacritics
+                            .replace(/[^a-z0-9]+/g, '-') // Replace non-alphanumeric with hyphens
+                            .replace(/^-+|-+$/g, '') // Remove leading/trailing hyphens
+                            .substring(0, 100); // Limit length
+                        };
+                        
+                        // If we have product ID, construct the proper produkt URL
+                        if (productId) {
+                          // Use product name if available, otherwise use offer title
+                          const nameForSlug = productName || selectedOffer.title || 'produkt';
+                          const slug = generateSlug(nameForSlug);
+                          return `https://allegro.cz/produkt/${slug}-${productId}?offerId=${selectedOffer.allegroOfferId}`;
+                        }
+                        
+                        // Fallback: use oferta format (older format, still works but less SEO-friendly)
                         return `https://allegro.cz/oferta/${selectedOffer.allegroOfferId}`;
                       })()}
                       target="_blank"
