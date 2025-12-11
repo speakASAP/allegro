@@ -2344,6 +2344,116 @@ export class OffersService {
   }
 
   /**
+   * Extract human-readable error message from Allegro API error response
+   * Handles various error formats from Allegro API
+   */
+  private extractErrorMessage(error: any): string {
+    try {
+      const errorData = error.response?.data || error.data || {};
+      const statusCode = error.response?.status || error.status;
+
+      // Try multiple error message locations
+      // 1. errors array with message property
+      if (errorData.errors && Array.isArray(errorData.errors) && errorData.errors.length > 0) {
+        const firstError = errorData.errors[0];
+        if (typeof firstError === 'string') {
+          return firstError;
+        }
+        if (typeof firstError === 'object') {
+          // Try various message properties
+          if (firstError.message) return String(firstError.message);
+          if (firstError.userMessage) return String(firstError.userMessage);
+          if (firstError.detail) return String(firstError.detail);
+          if (firstError.code) return `${firstError.code}: ${firstError.userMessage || firstError.message || 'Unknown error'}`;
+          // If error object has keys, try to stringify meaningful parts
+          const keys = Object.keys(firstError);
+          if (keys.length > 0) {
+            const meaningfulValue = firstError[keys[0]];
+            if (typeof meaningfulValue === 'string' && meaningfulValue.length < 200) {
+              return meaningfulValue;
+            }
+          }
+        }
+      }
+
+      // 2. Direct message property
+      if (errorData.message) {
+        return String(errorData.message);
+      }
+
+      // 3. error_description (OAuth errors)
+      if (errorData.error_description) {
+        return String(errorData.error_description);
+      }
+
+      // 4. error property
+      if (errorData.error) {
+        const errorValue = errorData.error;
+        if (typeof errorValue === 'string') {
+          return errorValue;
+        }
+        if (typeof errorValue === 'object' && errorValue.message) {
+          return String(errorValue.message);
+        }
+      }
+
+      // 5. violations array (validation errors)
+      if (errorData.violations && Array.isArray(errorData.violations) && errorData.violations.length > 0) {
+        const violation = errorData.violations[0];
+        if (violation.message) return String(violation.message);
+        if (violation.path && violation.message) {
+          return `${violation.path}: ${violation.message}`;
+        }
+      }
+
+      // 6. Standard error message
+      if (error.message) {
+        // Check if it's a generic error that we can improve
+        if (error.message === 'Request failed with status code' && statusCode) {
+          return `Request failed with status code ${statusCode}`;
+        }
+        return String(error.message);
+      }
+
+      // 7. Status code based messages
+      if (statusCode) {
+        if (statusCode === 401 || statusCode === 403) {
+          return 'OAuth authorization required or token expired. Please re-authorize in Settings.';
+        }
+        if (statusCode === 404) {
+          return 'Resource not found. The offer or product may have been deleted.';
+        }
+        if (statusCode === 422) {
+          return 'Validation error. Please check offer data (images, category, required fields).';
+        }
+        if (statusCode === 429) {
+          return 'Rate limit exceeded. Please try again later.';
+        }
+        return `Request failed with status code ${statusCode}`;
+      }
+
+      // 8. Last resort - try to stringify errorData if it's small
+      try {
+        const errorStr = JSON.stringify(errorData);
+        if (errorStr && errorStr.length < 200 && errorStr !== '{}') {
+          return errorStr;
+        }
+      } catch (e) {
+        // Ignore JSON stringify errors
+      }
+
+      return 'Unknown error occurred. Please check logs for details.';
+    } catch (extractError: any) {
+      // If error extraction itself fails, return a safe message
+      this.logger.error('[extractErrorMessage] Failed to extract error message', {
+        originalError: error.message,
+        extractError: extractError.message,
+      });
+      return error.message || 'Failed to parse error message';
+    }
+  }
+
+  /**
    * Strip fields not present in Prisma schema to avoid unknown argument errors
    */
   private sanitizeOfferDataForPrisma(data: any): any {
@@ -3367,13 +3477,14 @@ export class OffersService {
             });
           } catch (error: any) {
             const errorData = error.response?.data || {};
-            const errorMessage = errorData.errors?.[0]?.message || errorData.message || error.message || 'Unknown error';
+            const errorMessage = this.extractErrorMessage(error);
             const errorDetails = JSON.stringify(errorData, null, 2);
 
             this.logger.error('[publishOffersToAllegro] Failed to update offer', {
               offerId,
               allegroOfferId: offer.allegroOfferId,
               error: error.message,
+              extractedErrorMessage: errorMessage,
               status: error.response?.status,
               errorData,
               errorDetails,
@@ -3451,13 +3562,16 @@ export class OffersService {
             offerPayload.images = images;
 
             // Add parameters if available
+            const allegroProduct = offer.allegroProduct as any;
             const parameters =
               (offer.rawData as any)?.parameters ||
-              offer.allegroProduct?.parameters?.map((p: any) => ({
-                id: p.parameterId,
-                values: Array.isArray(p.values) ? p.values : p.valuesIds || [],
-                valuesIds: Array.isArray(p.valuesIds) ? p.valuesIds : [],
-              })) ||
+              (allegroProduct?.parameters && Array.isArray(allegroProduct.parameters)
+                ? allegroProduct.parameters.map((p: any) => ({
+                    id: p.parameterId,
+                    values: Array.isArray(p.values) ? p.values : p.valuesIds || [],
+                    valuesIds: Array.isArray(p.valuesIds) ? p.valuesIds : [],
+                  }))
+                : null) ||
               [];
 
             if (parameters.length > 0) {
@@ -3559,12 +3673,13 @@ export class OffersService {
             });
           } catch (error: any) {
             const errorData = error.response?.data || {};
-            const errorMessage = errorData.errors?.[0]?.message || errorData.message || error.message || 'Unknown error';
+            const errorMessage = this.extractErrorMessage(error);
             const errorDetails = JSON.stringify(errorData, null, 2);
 
             this.logger.error('[publishOffersToAllegro] Failed to create offer', {
               offerId,
               error: error.message,
+              extractedErrorMessage: errorMessage,
               status: error.response?.status,
               errorData,
               errorDetails,
@@ -3587,15 +3702,17 @@ export class OffersService {
           }
         }
       } catch (error: any) {
+        const errorMessage = this.extractErrorMessage(error);
         this.logger.error('[publishOffersToAllegro] Failed to process offer', {
           offerId,
           error: error.message,
+          extractedErrorMessage: errorMessage,
         });
 
         results.push({
           offerId,
           status: 'failed',
-          error: error.message,
+          error: errorMessage,
         });
         failed++;
       }
