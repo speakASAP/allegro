@@ -101,20 +101,28 @@ export class GatewayService {
     }
 
     const url = `${baseUrl}${path}`;
+    
+    // Special timeout for bulk operations that may take longer
+    const isBulkOperation = path.includes('/publish-all') || path.includes('/import') || path.includes('/bulk');
+    const defaultTimeout = (() => {
+      const gatewayTimeout = this.configService.get<string>('GATEWAY_TIMEOUT');
+      const httpTimeout = this.configService.get<string>('HTTP_TIMEOUT');
+      const timeout = gatewayTimeout || httpTimeout;
+      if (!timeout) {
+        throw new Error('GATEWAY_TIMEOUT or HTTP_TIMEOUT must be configured in .env file');
+      }
+      return parseInt(timeout);
+    })();
+    
+    // Use longer timeout for bulk operations (5 minutes = 300000ms)
+    const timeout = isBulkOperation ? 300000 : defaultTimeout;
+    
     const config: AxiosRequestConfig = {
       headers: {
         'Content-Type': 'application/json',
         ...headers,
       },
-      timeout: (() => {
-        const gatewayTimeout = this.configService.get<string>('GATEWAY_TIMEOUT');
-        const httpTimeout = this.configService.get<string>('HTTP_TIMEOUT');
-        const timeout = gatewayTimeout || httpTimeout;
-        if (!timeout) {
-          throw new Error('GATEWAY_TIMEOUT or HTTP_TIMEOUT must be configured in .env file');
-        }
-        return parseInt(timeout);
-      })(),
+      timeout,
       maxRedirects: followRedirects ? 5 : 0,
       validateStatus: (status) => status >= 200 && status < 400, // Accept redirects
     };
