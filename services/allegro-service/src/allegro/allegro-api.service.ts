@@ -360,8 +360,39 @@ export class AllegroApiService {
   async createOfferWithOAuthToken(accessToken: string, data: any) {
     const endpoint = `/sale/product-offers`;
     const url = `${this.apiUrl}${endpoint}`;
+    const requestId = `api-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    const requestStartTime = Date.now();
 
     try {
+      const payloadSize = JSON.stringify(data).length;
+      this.logger.log(`[${requestId}] [createOfferWithOAuthToken] ========== ALLEGRO API REQUEST ==========`, {
+        endpoint,
+        method: 'POST',
+        url,
+        payloadSize: `${payloadSize} bytes`,
+        payloadKeys: Object.keys(data),
+        hasName: !!data.name,
+        hasCategory: !!data.category,
+        categoryId: data.category?.id,
+        hasSellingMode: !!data.sellingMode,
+        price: data.sellingMode?.price?.amount,
+        currency: data.sellingMode?.price?.currency,
+        hasStock: !!data.stock,
+        stockAvailable: data.stock?.available,
+        hasImages: !!data.images,
+        imagesCount: data.images?.length || 0,
+        hasProductSet: !!data.productSet,
+        productId: data.productSet?.[0]?.product?.id,
+        hasParameters: !!data.parameters,
+        parametersCount: data.parameters?.length || 0,
+        hasDescription: !!data.description,
+        descriptionLength: data.description?.length || 0,
+        tokenLength: accessToken?.length || 0,
+        tokenPreview: accessToken ? `${accessToken.substring(0, 20)}...${accessToken.substring(accessToken.length - 10)}` : 'null',
+        payloadPreview: JSON.stringify(data, null, 2).substring(0, 2000),
+        timestamp: new Date().toISOString(),
+      });
+
       const config = {
         headers: {
           'Authorization': `Bearer ${accessToken}`,
@@ -371,20 +402,59 @@ export class AllegroApiService {
         timeout: 60000, // 60 seconds timeout for creating offer (Allegro API can be slow)
       };
 
+      this.logger.log(`[${requestId}] [createOfferWithOAuthToken] Sending HTTP POST request`, {
+        url,
+        headers: Object.keys(config.headers),
+        timeout: config.timeout,
+        timestamp: new Date().toISOString(),
+      });
+
       const response = await firstValueFrom(this.httpService.post(url, data, config));
+      const requestDuration = Date.now() - requestStartTime;
+      
+      this.logger.log(`[${requestId}] [createOfferWithOAuthToken] ========== ALLEGRO API RESPONSE SUCCESS ==========`, {
+        endpoint,
+        method: 'POST',
+        status: response.status,
+        statusText: response.statusText,
+        requestDuration: `${requestDuration}ms`,
+        responseKeys: response.data ? Object.keys(response.data) : [],
+        responseId: response.data?.id,
+        responseSize: JSON.stringify(response.data).length,
+        responsePreview: JSON.stringify(response.data, null, 2).substring(0, 2000),
+        timestamp: new Date().toISOString(),
+      });
+      
       return response.data;
     } catch (error: any) {
+      const requestDuration = Date.now() - requestStartTime;
       const errorData = error.response?.data || {};
-      this.logger.error('Allegro API request failed when creating offer with OAuth token', {
+      const errorDetails = JSON.stringify(errorData, null, 2);
+      
+      this.logger.error(`[${requestId}] [createOfferWithOAuthToken] ========== ALLEGRO API RESPONSE ERROR ==========`, {
         endpoint,
+        method: 'POST',
+        url,
         error: error.message,
+        errorCode: error.code,
         status: error.response?.status,
         statusText: error.response?.statusText,
-        errorData: errorData,
-        errorDetails: JSON.stringify(errorData, null, 2),
-        requestPayload: JSON.stringify(data, null, 2).substring(0, 1000),
-        responseHeaders: error.response?.headers,
+        requestDuration: `${requestDuration}ms`,
         isTimeout: error.code === 'ECONNABORTED' || error.message?.includes('timeout'),
+        errorData: errorData,
+        errorDetails: errorDetails,
+        errorResponseKeys: errorData ? Object.keys(errorData) : [],
+        hasErrorsArray: !!(errorData.errors && Array.isArray(errorData.errors)),
+        errorsCount: errorData.errors?.length || 0,
+        firstError: errorData.errors?.[0] ? JSON.stringify(errorData.errors[0], null, 2) : undefined,
+        userMessage: errorData.userMessage,
+        message: errorData.message,
+        code: errorData.code,
+        path: errorData.path,
+        errorDescription: errorData.error_description,
+        responseHeaders: error.response?.headers ? JSON.stringify(error.response.headers) : undefined,
+        requestPayload: JSON.stringify(data, null, 2).substring(0, 2000),
+        timestamp: new Date().toISOString(),
       });
       throw error;
     }
@@ -405,8 +475,36 @@ export class AllegroApiService {
     // Use new product-offers endpoint (replaces deprecated /sale/offers)
     const endpoint = `/sale/product-offers/${offerId}`;
     const url = `${this.apiUrl}${endpoint}`;
+    const requestId = `api-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    const requestStartTime = Date.now();
 
     try {
+      const payloadSize = JSON.stringify(data).length;
+      this.logger.log(`[${requestId}] [updateOfferWithOAuthToken] ========== ALLEGRO API REQUEST ==========`, {
+        endpoint,
+        method: 'PATCH',
+        url,
+        offerId,
+        payloadSize: `${payloadSize} bytes`,
+        payloadKeys: Object.keys(data),
+        hasName: !!data.name,
+        hasCategory: !!data.category,
+        categoryId: data.category?.id,
+        hasSellingMode: !!data.sellingMode,
+        price: data.sellingMode?.price?.amount,
+        currency: data.sellingMode?.price?.currency,
+        hasStock: !!data.stock,
+        stockAvailable: data.stock?.available,
+        hasImages: !!data.images,
+        imagesCount: data.images?.length || 0,
+        hasParameters: !!data.parameters,
+        parametersCount: data.parameters?.length || 0,
+        tokenLength: accessToken?.length || 0,
+        tokenPreview: accessToken ? `${accessToken.substring(0, 20)}...${accessToken.substring(accessToken.length - 10)}` : 'null',
+        payloadPreview: JSON.stringify(data, null, 2).substring(0, 2000),
+        timestamp: new Date().toISOString(),
+      });
+
       const config = {
         headers: {
           'Authorization': `Bearer ${accessToken}`,
@@ -416,22 +514,63 @@ export class AllegroApiService {
         timeout: 60000, // 60 seconds timeout for updating offer (Allegro API can be slow)
       };
 
+      this.logger.log(`[${requestId}] [updateOfferWithOAuthToken] Sending HTTP PATCH request`, {
+        url,
+        headers: Object.keys(config.headers),
+        timeout: config.timeout,
+        timestamp: new Date().toISOString(),
+      });
+
       // Use PATCH for partial updates (recommended by Allegro)
       // For full updates, use PUT with complete offer data
       const response = await firstValueFrom(this.httpService.patch(url, data, config));
+      const requestDuration = Date.now() - requestStartTime;
+      
+      this.logger.log(`[${requestId}] [updateOfferWithOAuthToken] ========== ALLEGRO API RESPONSE SUCCESS ==========`, {
+        endpoint,
+        method: 'PATCH',
+        offerId,
+        status: response.status,
+        statusText: response.statusText,
+        requestDuration: `${requestDuration}ms`,
+        responseKeys: response.data ? Object.keys(response.data) : [],
+        responseId: response.data?.id,
+        responseSize: JSON.stringify(response.data).length,
+        responsePreview: JSON.stringify(response.data, null, 2).substring(0, 2000),
+        timestamp: new Date().toISOString(),
+      });
+      
       return response.data;
     } catch (error: any) {
+      const requestDuration = Date.now() - requestStartTime;
       const errorData = error.response?.data || {};
-      this.logger.error('Allegro API request failed with OAuth token', {
+      const errorDetails = JSON.stringify(errorData, null, 2);
+      
+      this.logger.error(`[${requestId}] [updateOfferWithOAuthToken] ========== ALLEGRO API RESPONSE ERROR ==========`, {
         endpoint,
+        method: 'PATCH',
+        url,
+        offerId,
         error: error.message,
+        errorCode: error.code,
         status: error.response?.status,
         statusText: error.response?.statusText,
-        errorData: errorData,
-        errorDetails: JSON.stringify(errorData, null, 2),
-        responseHeaders: error.response?.headers,
-        requestPayload: JSON.stringify(data, null, 2).substring(0, 1000), // Log first 1000 chars of payload
+        requestDuration: `${requestDuration}ms`,
         isTimeout: error.code === 'ECONNABORTED' || error.message?.includes('timeout'),
+        errorData: errorData,
+        errorDetails: errorDetails,
+        errorResponseKeys: errorData ? Object.keys(errorData) : [],
+        hasErrorsArray: !!(errorData.errors && Array.isArray(errorData.errors)),
+        errorsCount: errorData.errors?.length || 0,
+        firstError: errorData.errors?.[0] ? JSON.stringify(errorData.errors[0], null, 2) : undefined,
+        userMessage: errorData.userMessage,
+        message: errorData.message,
+        code: errorData.code,
+        path: errorData.path,
+        errorDescription: errorData.error_description,
+        responseHeaders: error.response?.headers ? JSON.stringify(error.response.headers) : undefined,
+        requestPayload: JSON.stringify(data, null, 2).substring(0, 2000),
+        timestamp: new Date().toISOString(),
       });
       throw error;
     }

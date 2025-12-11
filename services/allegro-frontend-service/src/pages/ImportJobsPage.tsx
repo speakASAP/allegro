@@ -52,6 +52,7 @@ const ImportJobsPage: React.FC = () => {
   const [loadingImportSalesCenter, setLoadingImportSalesCenter] = useState(false);
   const [processingImport, setProcessingImport] = useState(false);
   const [loadingImportAll, setLoadingImportAll] = useState(false);
+  const [loadingImportAndFix, setLoadingImportAndFix] = useState(false);
 
   // Export preview states
   const [showExportPreview, setShowExportPreview] = useState(false);
@@ -154,6 +155,68 @@ const ImportJobsPage: React.FC = () => {
       }
     } finally {
       setLoadingImportAll(false);
+    }
+  };
+
+  const handleImportAndFixTitles = async () => {
+    setLoadingImportAndFix(true);
+    setError(null);
+    setSuccess(null);
+    setRequiresOAuth(false);
+
+    try {
+      const response = await api.post('/allegro/offers/import-and-fix-titles');
+      if (response.data.success) {
+        const data = response.data.data;
+        const importCount = data.importResult?.totalImported || 0;
+        const fixedCount = data.fixed || 0;
+        const updatedCount = data.updated || 0;
+        const publishResult = data.publishResult || {};
+        const successful = publishResult.successful || 0;
+        const failed = publishResult.failed || 0;
+        
+        let message = `Import completed: ${importCount} offers imported. `;
+        if (fixedCount > 0) {
+          message += `Fixed ${fixedCount} titles (removed trailing dots). `;
+          message += `Updated ${updatedCount} in database. `;
+          message += `Published to Allegro: ${successful} successful`;
+          if (failed > 0) {
+            message += `, ${failed} failed`;
+          }
+        } else {
+          message += 'No offers with trailing dots found.';
+        }
+        
+        setSuccess(message);
+        loadJobs(); // Refresh the jobs list
+      }
+    } catch (err) {
+      console.error('Failed to import and fix titles', err);
+      if (err instanceof AxiosError) {
+        // Don't set error if it's a 401 - the interceptor will handle redirect
+        if (err.response?.status === 401) {
+          return; // Let the interceptor handle the redirect
+        }
+        const errorData = err.response?.data?.error;
+        const errorMessage = errorData?.message || 'Failed to import and fix titles';
+        const needsOAuth = errorData?.requiresOAuth || errorMessage.toLowerCase().includes('oauth');
+        
+        if (needsOAuth) {
+          setRequiresOAuth(true);
+          setError(errorMessage);
+        } else {
+          const axiosError = err as AxiosError & { isConnectionError?: boolean; serviceErrorMessage?: string };
+          if (axiosError.isConnectionError && axiosError.serviceErrorMessage) {
+            setError(axiosError.serviceErrorMessage);
+          } else {
+            setError(errorMessage);
+          }
+        }
+      } else {
+        setError('Failed to import and fix titles');
+      }
+    } finally {
+      setLoadingImportAndFix(false);
     }
   };
 
@@ -484,10 +547,10 @@ const ImportJobsPage: React.FC = () => {
         {/* Primary Import Actions */}
         <Card title="Import Offers from Allegro">
           <div className="space-y-4">
-            <div className="flex flex-col sm:flex-row gap-3">
+            <div className="flex flex-col sm:flex-row gap-3 flex-wrap">
               <Button
                 onClick={handleImportAllOffers}
-                disabled={loadingImportAll || loadingImportAllegro || loadingImportSalesCenter || processingImport}
+                disabled={loadingImportAll || loadingImportAndFix || loadingImportAllegro || loadingImportSalesCenter || processingImport}
                 variant="primary"
                 size="medium"
                 className="flex-1"
@@ -495,8 +558,17 @@ const ImportJobsPage: React.FC = () => {
                 {loadingImportAll ? '⏳ Importing...' : '📥 Import All Offers from Allegro'}
               </Button>
               <Button
+                onClick={handleImportAndFixTitles}
+                disabled={loadingImportAll || loadingImportAndFix || loadingImportAllegro || loadingImportSalesCenter || processingImport}
+                variant="secondary"
+                size="medium"
+                className="flex-1"
+              >
+                {loadingImportAndFix ? '⏳ Importing & Fixing...' : '🔧 Import & Fix Titles'}
+              </Button>
+              <Button
                 onClick={() => handlePreviewImport('allegro')}
-                disabled={loadingImportAll || loadingImportAllegro || loadingImportSalesCenter || processingImport}
+                disabled={loadingImportAll || loadingImportAndFix || loadingImportAllegro || loadingImportSalesCenter || processingImport}
                 variant="secondary"
                 size="medium"
                 className="flex-1"
@@ -507,6 +579,9 @@ const ImportJobsPage: React.FC = () => {
             <p className="text-sm text-gray-600">
               <strong>Import All Offers:</strong> Imports all existing offers from your Allegro account directly into the database.
               <br />
+              <br />
+              <strong>Import & Fix Titles:</strong> Imports all offers, removes trailing dots from titles, and updates them back to Allegro.
+              <br />
               <strong>Preview & Select:</strong> Preview offers from Allegro API and select which ones to import.
             </p>
           </div>
@@ -516,7 +591,7 @@ const ImportJobsPage: React.FC = () => {
         <div className="flex justify-end space-x-2">
           <Button
             onClick={() => handlePreviewImport('sales-center')}
-            disabled={loadingImportAll || loadingImportAllegro || loadingImportSalesCenter || processingImport}
+            disabled={loadingImportAll || loadingImportAndFix || loadingImportAllegro || loadingImportSalesCenter || processingImport}
             variant="secondary"
             size="small"
           >

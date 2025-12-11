@@ -3618,15 +3618,29 @@ export class OffersService {
             const errorData = error.response?.data || {};
             const errorMessage = this.extractErrorMessage(error);
             const errorDetails = JSON.stringify(errorData, null, 2);
+            const offerDuration = Date.now() - offerStartTime;
 
-            this.logger.error('[publishOffersToAllegro] Failed to update offer', {
+            this.logger.error(`[${finalRequestId}] [publishOffersToAllegro] OFFER ${processedCount}: ❌ FAILED - Failed to update offer`, {
               offerId,
               allegroOfferId: offer.allegroOfferId,
               error: error.message,
+              errorCode: error.code,
+              errorStatus: error.response?.status,
+              errorStatusText: error.response?.statusText,
               extractedErrorMessage: errorMessage,
-              status: error.response?.status,
-              errorData,
-              errorDetails,
+              offerDuration: `${offerDuration}ms`,
+              errorData: errorData,
+              errorDetails: errorDetails,
+              errorHeaders: error.response?.headers ? JSON.stringify(error.response.headers) : undefined,
+              errorResponseKeys: errorData ? Object.keys(errorData) : [],
+              hasErrorsArray: !!(errorData.errors && Array.isArray(errorData.errors)),
+              errorsCount: errorData.errors?.length || 0,
+              firstError: errorData.errors?.[0] ? JSON.stringify(errorData.errors[0], null, 2) : undefined,
+              userMessage: errorData.userMessage,
+              message: errorData.message,
+              code: errorData.code,
+              path: errorData.path,
+              timestamp: new Date().toISOString(),
             });
 
             await this.prisma.allegroOffer.update({
@@ -3646,7 +3660,7 @@ export class OffersService {
             });
             failed++;
 
-            this.logger.warn(`[${requestId}] [publishOffersToAllegro] Offer update failed`, {
+            this.logger.warn(`[${finalRequestId}] [publishOffersToAllegro] OFFER ${processedCount}: Update failed summary`, {
               offerId,
               allegroOfferId: offer.allegroOfferId,
               error: errorMessage,
@@ -3655,20 +3669,56 @@ export class OffersService {
               successful,
               failed,
               remaining: offerIds.length - processedCount,
+              timestamp: new Date().toISOString(),
             });
           }
         } else {
           // Offer doesn't exist on Allegro - create it
           try {
-            this.logger.log('[publishOffersToAllegro] Creating new offer', { offerId });
+            const createStartTime = Date.now();
+            this.logger.log(`[${finalRequestId}] [publishOffersToAllegro] OFFER ${processedCount}: Creating new offer on Allegro`, { 
+              offerId,
+              timestamp: new Date().toISOString(),
+            });
 
             // Search for product on Allegro
+            const searchStartTime = Date.now();
+            this.logger.log(`[${finalRequestId}] [publishOffersToAllegro] OFFER ${processedCount}: Searching for product on Allegro`, {
+              offerId,
+              hasEAN: !!(offer.product?.ean || offer.allegroProduct?.ean),
+              hasManufacturerCode: !!(offer.product?.manufacturerCode || offer.allegroProduct?.manufacturerCode),
+              hasProductName: !!(offer.product?.name || offer.allegroProduct?.name || offer.title),
+              timestamp: new Date().toISOString(),
+            });
+            
             let allegroProductId: string | null = await this.searchProductOnAllegro(oauthToken, offer);
+            const searchDuration = Date.now() - searchStartTime;
+            
+            this.logger.log(`[${finalRequestId}] [publishOffersToAllegro] OFFER ${processedCount}: Product search completed`, {
+              offerId,
+              searchDuration: `${searchDuration}ms`,
+              productFound: !!allegroProductId,
+              allegroProductId: allegroProductId || 'null',
+              timestamp: new Date().toISOString(),
+            });
 
             // If product not found, create it
             if (!allegroProductId) {
-              this.logger.log('[publishOffersToAllegro] Product not found, creating new product', { offerId });
+              const createProductStartTime = Date.now();
+              this.logger.log(`[${finalRequestId}] [publishOffersToAllegro] OFFER ${processedCount}: Product not found, creating new product`, {
+                offerId,
+                timestamp: new Date().toISOString(),
+              });
+              
               allegroProductId = await this.createProductOnAllegro(oauthToken, offer);
+              const createProductDuration = Date.now() - createProductStartTime;
+              
+              this.logger.log(`[${finalRequestId}] [publishOffersToAllegro] OFFER ${processedCount}: Product created successfully`, {
+                offerId,
+                allegroProductId,
+                createProductDuration: `${createProductDuration}ms`,
+                timestamp: new Date().toISOString(),
+              });
             }
 
             // Build offer payload
@@ -3745,6 +3795,27 @@ export class OffersService {
             } else {
               throw new Error('Product is required to create an offer. Product not found and could not be created.');
             }
+            
+            const finalPayloadSize = JSON.stringify(offerPayload).length;
+            this.logger.log(`[${finalRequestId}] [publishOffersToAllegro] OFFER ${processedCount}: Final offer payload prepared`, {
+              offerId,
+              payloadSize: `${finalPayloadSize} bytes`,
+              payloadKeys: Object.keys(offerPayload),
+              hasName: !!offerPayload.name,
+              hasCategory: !!offerPayload.category,
+              hasSellingMode: !!offerPayload.sellingMode,
+              hasStock: !!offerPayload.stock,
+              hasImages: !!offerPayload.images,
+              imagesCount: offerPayload.images?.length || 0,
+              hasProductSet: !!offerPayload.productSet,
+              productId: offerPayload.productSet?.[0]?.product?.id,
+              hasParameters: !!offerPayload.parameters,
+              parametersCount: offerPayload.parameters?.length || 0,
+              hasDescription: !!offerPayload.description,
+              descriptionLength: offerPayload.description?.length || 0,
+              payloadPreview: JSON.stringify(offerPayload, null, 2).substring(0, 1000),
+              timestamp: new Date().toISOString(),
+            });
 
             // Add delivery options - use from database or rawData, or provide defaults
             if (offer.deliveryOptions) {
@@ -3791,7 +3862,26 @@ export class OffersService {
             });
 
             // Create offer on Allegro
+            const apiCallStartTime = Date.now();
+            this.logger.log(`[${finalRequestId}] [publishOffersToAllegro] OFFER ${processedCount}: Calling Allegro API POST to create offer`, {
+              offerId,
+              endpoint: '/sale/product-offers',
+              method: 'POST',
+              payloadSize: `${finalPayloadSize} bytes`,
+              timestamp: new Date().toISOString(),
+            });
+            
             const createdOffer = await this.allegroApi.createOfferWithOAuthToken(oauthToken, offerPayload);
+            const apiCallDuration = Date.now() - apiCallStartTime;
+            
+            this.logger.log(`[${finalRequestId}] [publishOffersToAllegro] OFFER ${processedCount}: Allegro API POST response received`, {
+              offerId,
+              apiCallDuration: `${apiCallDuration}ms`,
+              responseKeys: createdOffer ? Object.keys(createdOffer) : [],
+              createdOfferId: createdOffer?.id,
+              hasId: !!createdOffer?.id,
+              timestamp: new Date().toISOString(),
+            });
 
             if (!createdOffer?.id) {
               throw new Error('Offer creation succeeded but no offer ID returned');
@@ -3819,7 +3909,7 @@ export class OffersService {
             });
             successful++;
 
-            this.logger.log(`[${requestId}] [publishOffersToAllegro] Offer created successfully`, {
+            this.logger.log(`[${finalRequestId}] [publishOffersToAllegro] OFFER ${processedCount}: ✅ SUCCESS - Offer created successfully`, {
               offerId,
               allegroOfferId: createdOffer.id,
               offerDuration: `${offerDuration}ms`,
@@ -3827,16 +3917,34 @@ export class OffersService {
               successful,
               failed,
               remaining: offerIds.length - processedCount,
+              timestamp: new Date().toISOString(),
             });
           } catch (error: any) {
             const errorData = error.response?.data || {};
             const errorMessage = this.extractErrorMessage(error);
             const errorDetails = JSON.stringify(errorData, null, 2);
 
-            this.logger.error('[publishOffersToAllegro] Failed to create offer', {
+            const offerDuration = Date.now() - offerStartTime;
+            this.logger.error(`[${finalRequestId}] [publishOffersToAllegro] OFFER ${processedCount}: ❌ FAILED - Failed to create offer`, {
               offerId,
               error: error.message,
+              errorCode: error.code,
+              errorStatus: error.response?.status,
+              errorStatusText: error.response?.statusText,
               extractedErrorMessage: errorMessage,
+              offerDuration: `${offerDuration}ms`,
+              errorData: errorData,
+              errorDetails: errorDetails,
+              errorHeaders: error.response?.headers ? JSON.stringify(error.response.headers) : undefined,
+              errorResponseKeys: errorData ? Object.keys(errorData) : [],
+              hasErrorsArray: !!(errorData.errors && Array.isArray(errorData.errors)),
+              errorsCount: errorData.errors?.length || 0,
+              firstError: errorData.errors?.[0] ? JSON.stringify(errorData.errors[0], null, 2) : undefined,
+              userMessage: errorData.userMessage,
+              message: errorData.message,
+              code: errorData.code,
+              path: errorData.path,
+              timestamp: new Date().toISOString(),
               status: error.response?.status,
               errorData,
               errorDetails,
@@ -3869,19 +3977,23 @@ export class OffersService {
             });
           }
         }
-      } catch (error: any) {
-        const offerDuration = Date.now() - offerStartTime;
-        const errorMessage = this.extractErrorMessage(error);
-        this.logger.error(`[${requestId}] [publishOffersToAllegro] Failed to process offer`, {
-          offerId,
-          error: error.message,
-          errorCode: error.code,
-          errorStack: error.stack,
-          extractedErrorMessage: errorMessage,
-          offerDuration: `${offerDuration}ms`,
-          progress: `${processedCount}/${offerIds.length}`,
-          timestamp: new Date().toISOString(),
-        });
+        } catch (error: any) {
+          const offerDuration = Date.now() - offerStartTime;
+          const errorMessage = this.extractErrorMessage(error);
+          const errorData = error.response?.data || {};
+          this.logger.error(`[${finalRequestId}] [publishOffersToAllegro] OFFER ${processedCount}: ❌ CRITICAL ERROR - Failed to process offer`, {
+            offerId,
+            error: error.message,
+            errorCode: error.code,
+            errorStack: error.stack,
+            extractedErrorMessage: errorMessage,
+            offerDuration: `${offerDuration}ms`,
+            progress: `${processedCount}/${offerIds.length}`,
+            errorStatus: error.response?.status,
+            errorData: errorData,
+            errorResponseKeys: errorData ? Object.keys(errorData) : [],
+            timestamp: new Date().toISOString(),
+          });
 
         results.push({
           offerId,
