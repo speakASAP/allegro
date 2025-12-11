@@ -3546,6 +3546,36 @@ export class OffersService {
               };
             }
 
+            // Add productSet if available - REQUIRED for product-offers endpoint
+            // Get product ID from existing offer or from allegroProduct relation
+            const productId = (sourceOffer as any)?.productSet?.[0]?.product?.id ||
+                              (sourceOffer as any)?.product?.id ||
+                              offer.allegroProduct?.allegroProductId ||
+                              null;
+            
+            if (productId) {
+              updatePayload.productSet = [
+                {
+                  product: {
+                    id: String(productId),
+                  },
+                },
+              ];
+              this.logger.log(`[${finalRequestId}] [publishOffersToAllegro] OFFER ${processedCount}: Added productSet to update payload`, {
+                offerId,
+                productId: String(productId),
+                timestamp: new Date().toISOString(),
+              });
+            } else {
+              this.logger.warn(`[${finalRequestId}] [publishOffersToAllegro] OFFER ${processedCount}: No productSet found - this may cause 422 error`, {
+                offerId,
+                allegroOfferId: offer.allegroOfferId,
+                hasSourceOffer: !!sourceOffer,
+                hasAllegroProduct: !!offer.allegroProduct,
+                timestamp: new Date().toISOString(),
+              });
+            }
+
             // Log payload before sending
             const payloadSize = JSON.stringify(updatePayload).length;
             this.logger.log(`[${finalRequestId}] [publishOffersToAllegro] OFFER ${processedCount}: Preparing update payload`, {
