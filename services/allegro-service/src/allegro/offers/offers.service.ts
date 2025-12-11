@@ -1254,8 +1254,6 @@ export class OffersService {
             }
 
             const allegroProductId = await this.upsertAllegroProductFromOffer(fullOfferData);
-            const allegroProductId = await this.upsertAllegroProductFromOffer(fullOfferData);
-            const allegroProductId = await this.upsertAllegroProductFromOffer(fullOfferData);
             const offerData = this.extractOfferData(fullOfferData);
             
             // Log before saving to database
@@ -1572,6 +1570,7 @@ export class OffersService {
               }) : [],
             });
 
+            const allegroProductId = await this.upsertAllegroProductFromOffer(fullOfferData);
             const offerData = this.extractOfferData(fullOfferData);
             
             // Log before saving
@@ -1906,6 +1905,7 @@ export class OffersService {
               }) : [],
             });
             
+            const allegroProductId = await this.upsertAllegroProductFromOffer(fullOfferData);
             const offerData = this.extractOfferData(fullOfferData);
             
             // Log after parsing - what was extracted
