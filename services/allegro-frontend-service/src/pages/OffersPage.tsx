@@ -1731,7 +1731,9 @@ const OffersPage: React.FC = () => {
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Title *</label>
-              <Input
+              <input
+                type="text"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md"
                 value={newOffer.title}
                 onChange={(e) => setNewOffer({ ...newOffer, title: e.target.value })}
                 placeholder="Offer title"
@@ -1739,7 +1741,9 @@ const OffersPage: React.FC = () => {
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Category ID</label>
-              <Input
+              <input
+                type="text"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md"
                 value={newOffer.categoryId}
                 onChange={(e) => setNewOffer({ ...newOffer, categoryId: e.target.value })}
                 placeholder="Category ID"
@@ -1747,8 +1751,9 @@ const OffersPage: React.FC = () => {
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Price</label>
-              <Input
+              <input
                 type="number"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md"
                 value={newOffer.price}
                 onChange={(e) => setNewOffer({ ...newOffer, price: e.target.value })}
                 placeholder="0.00"
@@ -1756,8 +1761,9 @@ const OffersPage: React.FC = () => {
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Quantity</label>
-              <Input
+              <input
                 type="number"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md"
                 value={newOffer.quantity}
                 onChange={(e) => setNewOffer({ ...newOffer, quantity: e.target.value })}
                 placeholder="1"
