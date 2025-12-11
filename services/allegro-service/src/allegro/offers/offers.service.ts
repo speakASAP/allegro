@@ -2254,6 +2254,13 @@ export class OffersService {
     // Extract payment options - check multiple possible locations
     let paymentOptions = allegroOffer.payments || allegroOffer.paymentOptions || allegroOffer.sellingMode?.payments || null;
 
+    // Extract public URL if available (Allegro API may provide url, publicUrl, or webUrl)
+    const publicUrl = allegroOffer.url || 
+                     allegroOffer.publicUrl || 
+                     allegroOffer.webUrl || 
+                     allegroOffer.external?.url ||
+                     null;
+
     const extractedData = {
       allegroOfferId: allegroOffer.id,
       allegroListingId: allegroOffer.listing?.id || allegroOffer.external?.id || null,
@@ -2269,6 +2276,7 @@ export class OffersService {
       images: images,
       deliveryOptions: deliveryOptions,
       paymentOptions: paymentOptions,
+      publicUrl: publicUrl, // Include public URL if available from API
       rawData: allegroOffer as any,
     };
 

@@ -1126,7 +1126,34 @@ const OffersPage: React.FC = () => {
                   <div className="font-medium flex items-center gap-2">
                     {selectedOffer.allegroOfferId}
                     <a
-                      href={`https://allegro.pl/oferta/${selectedOffer.allegroOfferId}`}
+                      href={(() => {
+                        // Try to get URL from various sources
+                        const rawData = selectedOffer.rawData as any;
+                        const url = selectedOffer.publicUrl || 
+                          rawData?.url || 
+                          rawData?.publicUrl ||
+                          rawData?.webUrl ||
+                          rawData?.external?.url ||
+                          rawData?.listing?.url;
+                        
+                        // If we have a URL, use it (might be full URL or relative)
+                        if (url) {
+                          // If it's already a full URL, use it as-is
+                          if (url.startsWith('http://') || url.startsWith('https://')) {
+                            return url;
+                          }
+                          // If it's a relative URL, prepend https://allegro.cz
+                          if (url.startsWith('/')) {
+                            return `https://allegro.cz${url}`;
+                          }
+                          // Otherwise assume it's a full URL
+                          return url;
+                        }
+                        
+                        // Fallback: construct URL using Czech domain (allegro.cz)
+                        // Try produkt format first (newer format), then oferta (older format)
+                        return `https://allegro.cz/oferta/${selectedOffer.allegroOfferId}`;
+                      })()}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="text-blue-600 hover:text-blue-800 text-xs"
