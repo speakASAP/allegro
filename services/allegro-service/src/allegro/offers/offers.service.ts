@@ -642,7 +642,45 @@ export class OffersService {
             throw new Error('OAuth token is missing');
           }
           
-          await this.allegroApi.updateOfferWithOAuthToken(oauthToken, offer.allegroOfferId, allegroPayload);
+          // Retry logic for timeout errors (Allegro API can be slow)
+          let lastError: any;
+          const maxRetries = 2;
+          for (let attempt = 0; attempt <= maxRetries; attempt++) {
+            try {
+              if (attempt > 0) {
+                this.logger.log('[Async Sync] Retrying Allegro API update after timeout', {
+                  offerId: id,
+                  allegroOfferId: offer.allegroOfferId,
+                  attempt: attempt + 1,
+                  maxRetries: maxRetries + 1,
+                });
+                // Wait before retry (exponential backoff: 5s, 10s)
+                await new Promise(resolve => setTimeout(resolve, 5000 * attempt));
+              }
+              
+              await this.allegroApi.updateOfferWithOAuthToken(oauthToken, offer.allegroOfferId, allegroPayload);
+              
+              // Success - break out of retry loop
+              break;
+            } catch (error: any) {
+              lastError = error;
+              const isTimeout = error.code === 'ECONNABORTED' || error.message?.includes('timeout');
+              
+              if (isTimeout && attempt < maxRetries) {
+                // Will retry
+                this.logger.warn('[Async Sync] Timeout error, will retry', {
+                  offerId: id,
+                  allegroOfferId: offer.allegroOfferId,
+                  attempt: attempt + 1,
+                  error: error.message,
+                });
+                continue;
+              } else {
+                // Not a timeout or max retries reached - throw
+                throw error;
+              }
+            }
+          }
           
           this.logger.log('[Async Sync] Allegro API update successful, updating database sync status', {
             offerId: id,

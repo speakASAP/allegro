@@ -238,7 +238,7 @@ export class AllegroApiService {
           'Content-Type': 'application/vnd.allegro.public.v1+json',
           'Accept': 'application/vnd.allegro.public.v1+json',
         },
-        timeout: 20000, // 20 seconds timeout for updating offer
+        timeout: 60000, // 60 seconds timeout for updating offer (Allegro API can be slow)
       };
 
       // Use PATCH for partial updates (recommended by Allegro)
