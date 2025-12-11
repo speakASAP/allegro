@@ -3651,7 +3651,6 @@ export class OffersService {
               } as any,
             });
 
-            const offerDuration = Date.now() - offerStartTime;
             results.push({
               offerId,
               status: 'failed',
@@ -3945,9 +3944,6 @@ export class OffersService {
               code: errorData.code,
               path: errorData.path,
               timestamp: new Date().toISOString(),
-              status: error.response?.status,
-              errorData,
-              errorDetails,
             });
 
             await this.prisma.allegroOffer.update({
@@ -3958,7 +3954,6 @@ export class OffersService {
               } as any,
             });
 
-            const offerDuration = Date.now() - offerStartTime;
             results.push({
               offerId,
               status: 'failed',
@@ -3966,7 +3961,7 @@ export class OffersService {
             });
             failed++;
 
-            this.logger.warn(`[${requestId}] [publishOffersToAllegro] Offer creation failed`, {
+            this.logger.warn(`[${finalRequestId}] [publishOffersToAllegro] OFFER ${processedCount}: Create failed summary`, {
               offerId,
               error: errorMessage,
               offerDuration: `${offerDuration}ms`,
