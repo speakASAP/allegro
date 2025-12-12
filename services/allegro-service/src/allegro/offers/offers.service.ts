@@ -3350,9 +3350,22 @@ export class OffersService {
       userId,
       offerCount: offerIds.length,
       offerIds: offerIds.slice(0, 10), // Log first 10 IDs
+      allOfferIds: offerIds, // Log all IDs for debugging
       timestamp: new Date().toISOString(),
       requestId: finalRequestId,
       nodeEnv: process.env.NODE_ENV,
+      memoryUsage: process.memoryUsage(),
+      nodeVersion: process.version,
+    });
+    
+    // Log initial state
+    this.logger.log(`[${finalRequestId}] [publishOffersToAllegro] Initial state check`, {
+      userId,
+      offerIdsCount: offerIds.length,
+      hasOfferIds: offerIds.length > 0,
+      firstOfferId: offerIds[0] || null,
+      lastOfferId: offerIds[offerIds.length - 1] || null,
+      timestamp: new Date().toISOString(),
     });
 
     const results: Array<{ offerId: string; status: 'success' | 'failed'; error?: string; allegroOfferId?: string }> = [];
@@ -3366,16 +3379,31 @@ export class OffersService {
       this.logger.log(`[${finalRequestId}] [publishOffersToAllegro] STEP 1: Fetching OAuth token`, { 
         userId,
         timestamp: new Date().toISOString(),
+        step: '1/5',
+        description: 'Getting OAuth access token for Allegro API',
       });
+      
+      // Add detailed logging before token fetch
+      this.logger.log(`[${finalRequestId}] [publishOffersToAllegro] STEP 1.1: Calling getUserOAuthToken`, {
+        userId,
+        timestamp: new Date().toISOString(),
+      });
+      
       oauthToken = await this.getUserOAuthToken(userId);
       const tokenDuration = Date.now() - tokenStartTime;
+      
       this.logger.log(`[${finalRequestId}] [publishOffersToAllegro] STEP 1 COMPLETE: OAuth token obtained`, {
         userId,
         tokenDuration: `${tokenDuration}ms`,
+        tokenDurationSeconds: Math.round(tokenDuration / 1000),
         tokenLength: oauthToken?.length || 0,
         hasToken: !!oauthToken,
         tokenPreview: oauthToken ? `${oauthToken.substring(0, 20)}...${oauthToken.substring(oauthToken.length - 10)}` : 'null',
+        tokenFirstChars: oauthToken ? oauthToken.substring(0, 30) : 'null',
+        tokenLastChars: oauthToken ? oauthToken.substring(oauthToken.length - 20) : 'null',
         timestamp: new Date().toISOString(),
+        step: '1/5',
+        status: 'SUCCESS',
       });
     } catch (error: any) {
       const tokenDuration = Date.now() - tokenStartTime;
@@ -3383,29 +3411,53 @@ export class OffersService {
         userId,
         error: error.message,
         errorCode: error.code,
+        errorStatus: error.status,
+        errorResponse: error.response?.data ? JSON.stringify(error.response.data, null, 2) : undefined,
         errorStack: error.stack,
         tokenDuration: `${tokenDuration}ms`,
         timestamp: new Date().toISOString(),
+        step: '1/5',
+        status: 'FAILED',
+        willAbort: true,
       });
       throw error;
     }
 
     // Process each offer
     let processedCount = 0;
+    this.logger.log(`[${finalRequestId}] [publishOffersToAllegro] STEP 2: Starting offer processing loop`, {
+      userId,
+      totalOffers: offerIds.length,
+      timestamp: new Date().toISOString(),
+      step: '2/5',
+      description: 'Iterating through offers to publish',
+    });
+    
     for (const offerId of offerIds) {
       const offerStartTime = Date.now();
       processedCount++;
+      const offerRequestId = `${finalRequestId}-offer-${processedCount}`;
+      
       try {
-        this.logger.log(`[${finalRequestId}] [publishOffersToAllegro] ========== PROCESSING OFFER ${processedCount}/${offerIds.length} ==========`, {
+        this.logger.log(`[${offerRequestId}] [publishOffersToAllegro] ========== PROCESSING OFFER ${processedCount}/${offerIds.length} ==========`, {
           offerId,
           userId,
+          offerRequestId,
           progress: `${Math.round((processedCount / offerIds.length) * 100)}%`,
           elapsed: `${Date.now() - startTime}ms`,
+          elapsedSeconds: Math.round((Date.now() - startTime) / 1000),
           timestamp: new Date().toISOString(),
+          step: `2.${processedCount}/5`,
         });
 
         // Load offer from database with relations
         const dbLoadStartTime = Date.now();
+        this.logger.log(`[${offerRequestId}] [publishOffersToAllegro] STEP 2.${processedCount}.1: Loading offer from database`, {
+          offerId,
+          userId,
+          timestamp: new Date().toISOString(),
+        });
+        
         const offer = await this.prisma.allegroOffer.findUnique({
           where: { id: offerId },
           include: {
@@ -3418,18 +3470,28 @@ export class OffersService {
           } as any,
         });
         const dbLoadDuration = Date.now() - dbLoadStartTime;
+        
+        this.logger.log(`[${offerRequestId}] [publishOffersToAllegro] STEP 2.${processedCount}.1 COMPLETE: Database query completed`, {
+          offerId,
+          dbLoadDuration: `${dbLoadDuration}ms`,
+          offerFound: !!offer,
+          timestamp: new Date().toISOString(),
+        });
 
         if (!offer) {
-          this.logger.error(`[${finalRequestId}] [publishOffersToAllegro] OFFER ${processedCount}: Offer not found in database`, {
+          this.logger.error(`[${offerRequestId}] [publishOffersToAllegro] OFFER ${processedCount}: Offer not found in database`, {
             offerId,
             userId,
             dbLoadDuration: `${dbLoadDuration}ms`,
             timestamp: new Date().toISOString(),
+            step: `2.${processedCount}.1`,
+            status: 'FAILED',
+            error: 'OFFER_NOT_FOUND',
           });
           throw new Error(`Offer not found: ${offerId}`);
         }
 
-        this.logger.log(`[${finalRequestId}] [publishOffersToAllegro] OFFER ${processedCount}: Loaded from database`, {
+        this.logger.log(`[${offerRequestId}] [publishOffersToAllegro] OFFER ${processedCount}: Loaded from database`, {
           offerId,
           title: offer.title,
           allegroOfferId: offer.allegroOfferId,
@@ -3450,32 +3512,43 @@ export class OffersService {
         });
 
         // Check if offer already exists on Allegro
+        this.logger.log(`[${offerRequestId}] [publishOffersToAllegro] STEP 2.${processedCount}.2: Checking if offer exists on Allegro`, {
+          offerId,
+          hasAllegroOfferId: !!offer.allegroOfferId,
+          allegroOfferId: offer.allegroOfferId || null,
+          isLocalOffer: offer.allegroOfferId?.startsWith('local-') || false,
+          timestamp: new Date().toISOString(),
+        });
+        
         if (offer.allegroOfferId && !offer.allegroOfferId.startsWith('local-')) {
           // Offer exists on Allegro - update it
           try {
             const updateStartTime = Date.now();
-            this.logger.log(`[${finalRequestId}] [publishOffersToAllegro] OFFER ${processedCount}: Updating existing offer on Allegro`, {
+            this.logger.log(`[${offerRequestId}] [publishOffersToAllegro] STEP 2.${processedCount}.3: Updating existing offer on Allegro`, {
               offerId,
               allegroOfferId: offer.allegroOfferId,
               timestamp: new Date().toISOString(),
+              step: `2.${processedCount}.3`,
+              action: 'UPDATE',
             });
 
             // Fetch current offer from Allegro to get all required fields
             let currentAllegroOffer: any = null;
             const fetchStartTime = Date.now();
             try {
-              this.logger.log(`[${finalRequestId}] [publishOffersToAllegro] OFFER ${processedCount}: Fetching current offer from Allegro API`, {
+              this.logger.log(`[${offerRequestId}] [publishOffersToAllegro] STEP 2.${processedCount}.3.1: Fetching current offer from Allegro API`, {
                 offerId,
                 allegroOfferId: offer.allegroOfferId,
                 endpoint: `/sale/product-offers/${offer.allegroOfferId}`,
                 method: 'GET',
                 timestamp: new Date().toISOString(),
+                step: `2.${processedCount}.3.1`,
               });
               
               currentAllegroOffer = await this.allegroApi.getOfferWithOAuthToken(oauthToken, offer.allegroOfferId);
               const fetchDuration = Date.now() - fetchStartTime;
               
-              this.logger.log(`[${finalRequestId}] [publishOffersToAllegro] OFFER ${processedCount}: Successfully fetched current offer from Allegro`, {
+              this.logger.log(`[${offerRequestId}] [publishOffersToAllegro] STEP 2.${processedCount}.3.1 COMPLETE: Successfully fetched current offer from Allegro`, {
                 offerId,
                 allegroOfferId: offer.allegroOfferId,
                 fetchDuration: `${fetchDuration}ms`,
@@ -3492,7 +3565,7 @@ export class OffersService {
             } catch (fetchError: any) {
               const fetchDuration = Date.now() - fetchStartTime;
               const fetchErrorData = fetchError.response?.data || {};
-              this.logger.warn(`[${finalRequestId}] [publishOffersToAllegro] OFFER ${processedCount}: Failed to fetch current offer, using stored rawData`, {
+              this.logger.warn(`[${offerRequestId}] [publishOffersToAllegro] STEP 2.${processedCount}.3.1 WARNING: Failed to fetch current offer, using stored rawData`, {
                 offerId,
                 allegroOfferId: offer.allegroOfferId,
                 error: fetchError.message,
@@ -3599,19 +3672,20 @@ export class OffersService {
             });
 
             const apiCallStartTime = Date.now();
-            this.logger.log(`[${finalRequestId}] [publishOffersToAllegro] OFFER ${processedCount}: Calling Allegro API PUT`, {
+            this.logger.log(`[${offerRequestId}] [publishOffersToAllegro] STEP 2.${processedCount}.3.2: Calling Allegro API PUT`, {
               offerId,
               allegroOfferId: offer.allegroOfferId,
               endpoint: `/sale/product-offers/${offer.allegroOfferId}`,
               method: 'PUT',
               payloadSize: `${payloadSize} bytes`,
               timestamp: new Date().toISOString(),
+              step: `2.${processedCount}.3.2`,
             });
 
             const updateResponse = await this.allegroApi.updateOfferWithOAuthToken(oauthToken, offer.allegroOfferId, updatePayload);
             const apiCallDuration = Date.now() - apiCallStartTime;
             
-            this.logger.log(`[${finalRequestId}] [publishOffersToAllegro] OFFER ${processedCount}: Allegro API PUT response received`, {
+            this.logger.log(`[${offerRequestId}] [publishOffersToAllegro] STEP 2.${processedCount}.3.2 COMPLETE: Allegro API PUT response received`, {
               offerId,
               allegroOfferId: offer.allegroOfferId,
               apiCallDuration: `${apiCallDuration}ms`,
@@ -3621,6 +3695,14 @@ export class OffersService {
             });
 
             // Update sync status in database
+            const dbUpdateStartTime = Date.now();
+            this.logger.log(`[${offerRequestId}] [publishOffersToAllegro] STEP 2.${processedCount}.3.3: Updating database sync status`, {
+              offerId,
+              syncStatus: 'SYNCED',
+              timestamp: new Date().toISOString(),
+              step: `2.${processedCount}.3.3`,
+            });
+            
             await this.prisma.allegroOffer.update({
               where: { id: offerId },
               data: {
@@ -3629,6 +3711,13 @@ export class OffersService {
                 lastSyncedAt: new Date(),
                 syncError: null,
               } as any,
+            });
+            
+            const dbUpdateDuration = Date.now() - dbUpdateStartTime;
+            this.logger.log(`[${offerRequestId}] [publishOffersToAllegro] STEP 2.${processedCount}.3.3 COMPLETE: Database updated`, {
+              offerId,
+              dbUpdateDuration: `${dbUpdateDuration}ms`,
+              timestamp: new Date().toISOString(),
             });
 
             const offerDuration = Date.now() - offerStartTime;
@@ -3639,15 +3728,19 @@ export class OffersService {
             });
             successful++;
 
-            this.logger.log(`[${finalRequestId}] [publishOffersToAllegro] OFFER ${processedCount}: ✅ SUCCESS - Offer updated successfully`, {
+            this.logger.log(`[${offerRequestId}] [publishOffersToAllegro] OFFER ${processedCount}: ✅ SUCCESS - Offer updated successfully`, {
               offerId,
               allegroOfferId: offer.allegroOfferId,
               offerDuration: `${offerDuration}ms`,
+              offerDurationSeconds: Math.round(offerDuration / 1000),
               progress: `${processedCount}/${offerIds.length}`,
               successful,
               failed,
               remaining: offerIds.length - processedCount,
               timestamp: new Date().toISOString(),
+              step: `2.${processedCount}`,
+              status: 'SUCCESS',
+              action: 'UPDATE',
             });
           } catch (error: any) {
             const errorData = error.response?.data || {};
@@ -3689,7 +3782,7 @@ export class OffersService {
               }
             }
 
-            this.logger.error(`[${finalRequestId}] [publishOffersToAllegro] OFFER ${processedCount}: ❌ FAILED - Failed to update offer`, {
+            this.logger.error(`[${offerRequestId}] [publishOffersToAllegro] OFFER ${processedCount}: ❌ FAILED - Failed to update offer`, {
               offerId,
               allegroOfferId: offer.allegroOfferId,
               error: error.message,
@@ -3745,14 +3838,16 @@ export class OffersService {
           // Offer doesn't exist on Allegro - create it
           try {
             const createStartTime = Date.now();
-            this.logger.log(`[${finalRequestId}] [publishOffersToAllegro] OFFER ${processedCount}: Creating new offer on Allegro`, { 
+            this.logger.log(`[${offerRequestId}] [publishOffersToAllegro] STEP 2.${processedCount}.4: Creating new offer on Allegro`, { 
               offerId,
               timestamp: new Date().toISOString(),
+              step: `2.${processedCount}.4`,
+              action: 'CREATE',
             });
 
             // Search for product on Allegro
             const searchStartTime = Date.now();
-            this.logger.log(`[${finalRequestId}] [publishOffersToAllegro] OFFER ${processedCount}: Searching for product on Allegro`, {
+            this.logger.log(`[${offerRequestId}] [publishOffersToAllegro] STEP 2.${processedCount}.4.1: Searching for product on Allegro`, {
               offerId,
               hasEAN: !!((offer as any)?.product?.ean || (offer as any)?.allegroProduct?.ean),
               hasManufacturerCode: !!((offer as any)?.product?.manufacturerCode || (offer as any)?.allegroProduct?.manufacturerCode),
@@ -3763,7 +3858,7 @@ export class OffersService {
             let allegroProductId: string | null = await this.searchProductOnAllegro(oauthToken, offer);
             const searchDuration = Date.now() - searchStartTime;
             
-            this.logger.log(`[${finalRequestId}] [publishOffersToAllegro] OFFER ${processedCount}: Product search completed`, {
+            this.logger.log(`[${offerRequestId}] [publishOffersToAllegro] STEP 2.${processedCount}.4.1 COMPLETE: Product search completed`, {
               offerId,
               searchDuration: `${searchDuration}ms`,
               productFound: !!allegroProductId,
@@ -3774,15 +3869,16 @@ export class OffersService {
             // If product not found, create it
             if (!allegroProductId) {
               const createProductStartTime = Date.now();
-              this.logger.log(`[${finalRequestId}] [publishOffersToAllegro] OFFER ${processedCount}: Product not found, creating new product`, {
+              this.logger.log(`[${offerRequestId}] [publishOffersToAllegro] STEP 2.${processedCount}.4.2: Product not found, creating new product`, {
                 offerId,
                 timestamp: new Date().toISOString(),
+                step: `2.${processedCount}.4.2`,
               });
               
               allegroProductId = await this.createProductOnAllegro(oauthToken, offer);
               const createProductDuration = Date.now() - createProductStartTime;
               
-              this.logger.log(`[${finalRequestId}] [publishOffersToAllegro] OFFER ${processedCount}: Product created successfully`, {
+              this.logger.log(`[${offerRequestId}] [publishOffersToAllegro] STEP 2.${processedCount}.4.2 COMPLETE: Product created successfully`, {
                 offerId,
                 allegroProductId,
                 createProductDuration: `${createProductDuration}ms`,
@@ -3866,7 +3962,7 @@ export class OffersService {
             }
             
             const finalPayloadSize = JSON.stringify(offerPayload).length;
-            this.logger.log(`[${finalRequestId}] [publishOffersToAllegro] OFFER ${processedCount}: Final offer payload prepared`, {
+            this.logger.log(`[${offerRequestId}] [publishOffersToAllegro] STEP 2.${processedCount}.4.3: Final offer payload prepared`, {
               offerId,
               payloadSize: `${finalPayloadSize} bytes`,
               payloadKeys: Object.keys(offerPayload),
@@ -3932,18 +4028,19 @@ export class OffersService {
 
             // Create offer on Allegro
             const apiCallStartTime = Date.now();
-            this.logger.log(`[${finalRequestId}] [publishOffersToAllegro] OFFER ${processedCount}: Calling Allegro API POST to create offer`, {
+            this.logger.log(`[${offerRequestId}] [publishOffersToAllegro] STEP 2.${processedCount}.4.4: Calling Allegro API POST to create offer`, {
               offerId,
               endpoint: '/sale/product-offers',
               method: 'POST',
               payloadSize: `${finalPayloadSize} bytes`,
               timestamp: new Date().toISOString(),
+              step: `2.${processedCount}.4.4`,
             });
             
             const createdOffer = await this.allegroApi.createOfferWithOAuthToken(oauthToken, offerPayload);
             const apiCallDuration = Date.now() - apiCallStartTime;
             
-            this.logger.log(`[${finalRequestId}] [publishOffersToAllegro] OFFER ${processedCount}: Allegro API POST response received`, {
+            this.logger.log(`[${offerRequestId}] [publishOffersToAllegro] STEP 2.${processedCount}.4.4 COMPLETE: Allegro API POST response received`, {
               offerId,
               apiCallDuration: `${apiCallDuration}ms`,
               responseKeys: createdOffer ? Object.keys(createdOffer) : [],
@@ -3957,6 +4054,14 @@ export class OffersService {
             }
 
             // Update offer in database with Allegro offer ID
+            const dbUpdateStartTime = Date.now();
+            this.logger.log(`[${offerRequestId}] [publishOffersToAllegro] STEP 2.${processedCount}.4.5: Updating database with new Allegro offer ID`, {
+              offerId,
+              newAllegroOfferId: createdOffer.id,
+              timestamp: new Date().toISOString(),
+              step: `2.${processedCount}.4.5`,
+            });
+            
             await this.prisma.allegroOffer.update({
               where: { id: offerId },
               data: {
@@ -3969,6 +4074,14 @@ export class OffersService {
                 publicationStatus: createdOffer.publication?.status || 'INACTIVE',
               } as any,
             });
+            
+            const dbUpdateDuration = Date.now() - dbUpdateStartTime;
+            this.logger.log(`[${offerRequestId}] [publishOffersToAllegro] STEP 2.${processedCount}.4.5 COMPLETE: Database updated with Allegro offer ID`, {
+              offerId,
+              allegroOfferId: createdOffer.id,
+              dbUpdateDuration: `${dbUpdateDuration}ms`,
+              timestamp: new Date().toISOString(),
+            });
 
             const offerDuration = Date.now() - offerStartTime;
             results.push({
@@ -3978,15 +4091,19 @@ export class OffersService {
             });
             successful++;
 
-            this.logger.log(`[${finalRequestId}] [publishOffersToAllegro] OFFER ${processedCount}: ✅ SUCCESS - Offer created successfully`, {
+            this.logger.log(`[${offerRequestId}] [publishOffersToAllegro] OFFER ${processedCount}: ✅ SUCCESS - Offer created successfully`, {
               offerId,
               allegroOfferId: createdOffer.id,
               offerDuration: `${offerDuration}ms`,
+              offerDurationSeconds: Math.round(offerDuration / 1000),
               progress: `${processedCount}/${offerIds.length}`,
               successful,
               failed,
               remaining: offerIds.length - processedCount,
               timestamp: new Date().toISOString(),
+              step: `2.${processedCount}`,
+              status: 'SUCCESS',
+              action: 'CREATE',
             });
           } catch (error: any) {
             const errorData = error.response?.data || {};
@@ -4029,7 +4146,7 @@ export class OffersService {
             }
 
             const offerDuration = Date.now() - offerStartTime;
-            this.logger.error(`[${finalRequestId}] [publishOffersToAllegro] OFFER ${processedCount}: ❌ FAILED - Failed to create offer`, {
+            this.logger.error(`[${offerRequestId}] [publishOffersToAllegro] OFFER ${processedCount}: ❌ FAILED - Failed to create offer`, {
               offerId,
               error: error.message,
               errorCode: error.code,
@@ -4120,7 +4237,7 @@ export class OffersService {
             }
           }
           
-          this.logger.error(`[${finalRequestId}] [publishOffersToAllegro] OFFER ${processedCount}: ❌ CRITICAL ERROR - Failed to process offer`, {
+          this.logger.error(`[${offerRequestId}] [publishOffersToAllegro] OFFER ${processedCount}: ❌ CRITICAL ERROR - Failed to process offer`, {
             offerId,
             error: error.message,
             errorCode: error.code,

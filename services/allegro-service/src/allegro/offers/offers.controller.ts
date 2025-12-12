@@ -662,15 +662,19 @@ export class OffersController {
     const startTime = Date.now();
     
     try {
-      this.logger.log(`[${requestId}] [publishAllOffers] Publish all request received`, {
+      this.logger.log(`[${requestId}] [publishAllOffers] ========== PUBLISH ALL REQUEST RECEIVED ==========`, {
         userId,
         requestId,
         offerIdsProvided: !!body.offerIds,
         offerIdsCount: body.offerIds?.length || 0,
+        offerIds: body.offerIds || [],
         hasFilters: !!(query.status || query.search || query.categoryId),
         queryParams: query,
         bodyKeys: Object.keys(body),
+        bodyContent: JSON.stringify(body, null, 2),
+        queryContent: JSON.stringify(query, null, 2),
         timestamp: new Date().toISOString(),
+        step: 'CONTROLLER_ENTRY',
       });
 
       let offerIds: string[] = [];
@@ -733,17 +737,37 @@ export class OffersController {
         };
       }
 
-      this.logger.log(`[${requestId}] [publishAllOffers] Starting publish operation`, {
+      this.logger.log(`[${requestId}] [publishAllOffers] ========== STARTING PUBLISH OPERATION ==========`, {
         userId,
         offerCount: offerIds.length,
         offerIds: offerIds.slice(0, 10), // Log first 10
+        allOfferIds: offerIds, // Log all for debugging
         requestId,
         timestamp: new Date().toISOString(),
+        step: 'BEFORE_SERVICE_CALL',
+        memoryUsage: process.memoryUsage(),
       });
 
       // Wait for publish operation to complete and return results
       try {
+        this.logger.log(`[${requestId}] [publishAllOffers] Calling publishOffersToAllegro service method`, {
+          userId,
+          offerCount: offerIds.length,
+          requestId,
+          timestamp: new Date().toISOString(),
+          step: 'SERVICE_CALL_START',
+        });
+        
         const result = await this.offersService.publishOffersToAllegro(userId, offerIds, requestId);
+        
+        this.logger.log(`[${requestId}] [publishAllOffers] Service method returned`, {
+          userId,
+          requestId,
+          hasResult: !!result,
+          resultKeys: result ? Object.keys(result) : [],
+          timestamp: new Date().toISOString(),
+          step: 'SERVICE_CALL_COMPLETE',
+        });
 
         const totalDuration = Date.now() - startTime;
         this.logger.log(`[${requestId}] [publishAllOffers] Publish completed`, {

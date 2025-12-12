@@ -140,6 +140,32 @@ export class GatewayService {
         timeout,
         isBulkOperation,
         defaultTimeout,
+        isPublishAll,
+      });
+    }
+    
+    // Enhanced logging for publish-all requests
+    if (isPublishAll) {
+      this.sharedLogger.log(`[${requestId}] ========== GATEWAY: PUBLISH-ALL REQUEST ==========`, {
+        serviceName,
+        method,
+        url,
+        path,
+        baseUrl,
+        hasBody: !!body,
+        bodySize: body ? JSON.stringify(body).length : 0,
+        bodyContent: body ? JSON.stringify(body, null, 2) : null,
+        bodyKeys: body && typeof body === 'object' ? Object.keys(body) : [],
+        offerIdsCount: body?.offerIds?.length || 0,
+        offerIds: body?.offerIds || [],
+        headers: Object.keys(headers || {}),
+        authorizationHeader: headers?.Authorization ? 'present' : 'missing',
+        timeout: config.timeout,
+        timeoutSeconds: Math.round(config.timeout / 1000),
+        isBulkOperation,
+        isPublishAll,
+        timestamp: new Date().toISOString(),
+        step: 'GATEWAY_FORWARD_START',
       });
     }
     
@@ -156,6 +182,7 @@ export class GatewayService {
       authorizationHeader: headers?.Authorization ? 'present' : 'missing',
       timeout: config.timeout,
       isBulkOperation,
+      isPublishAll,
       timestamp: new Date().toISOString(),
     });
     this.logger.debug(`[${requestId}] Forwarding ${method} ${url}`, {
@@ -192,6 +219,31 @@ export class GatewayService {
       const responseSize = JSON.stringify(responseData).length;
       const responseKeys = responseData && typeof responseData === 'object' ? Object.keys(responseData) : [];
       
+      // Enhanced logging for publish-all responses
+      if (isPublishAll) {
+        this.sharedLogger.log(`[${requestId}] ========== GATEWAY: PUBLISH-ALL RESPONSE ==========`, {
+          serviceName,
+          method,
+          url,
+          path,
+          statusCode: response.status,
+          statusText: response.statusText,
+          duration: `${duration}ms`,
+          durationSeconds: Math.round(duration / 1000),
+          responseSize,
+          responseSizeKB: Math.round(responseSize / 1024 * 100) / 100,
+          responseKeys,
+          hasData: !!responseData,
+          success: responseData?.success,
+          total: responseData?.data?.total,
+          successful: responseData?.data?.successful,
+          failed: responseData?.data?.failed,
+          responsePreview: responseData ? JSON.stringify(responseData, null, 2).substring(0, 2000) : null,
+          timestamp: new Date().toISOString(),
+          step: 'GATEWAY_FORWARD_COMPLETE',
+        });
+      }
+      
       this.sharedLogger.info(`[${requestId}] Request successful`, {
         serviceName,
         method,
@@ -211,6 +263,7 @@ export class GatewayService {
         responseHeaders: Object.keys(response.headers || {}),
         timestamp: new Date().toISOString(),
         throughput: responseSize > 0 ? `${Math.round((responseSize / duration) * 1000)} bytes/sec` : 'N/A',
+        isPublishAll,
       });
       this.logger.debug(`[${requestId}] ${method} ${url} - ${response.status} (${duration}ms)`, {
         responseSize,
@@ -232,6 +285,30 @@ export class GatewayService {
       const duration = Date.now() - startTime;
       const errorResponse = error.response;
       const errorData = errorResponse?.data;
+      
+      // Enhanced logging for publish-all errors
+      if (isPublishAll) {
+        this.sharedLogger.error(`[${requestId}] ========== GATEWAY: PUBLISH-ALL ERROR ==========`, {
+          serviceName,
+          method,
+          url,
+          path,
+          baseUrl,
+          error: error.message,
+          errorCode: error.code,
+          status: errorResponse?.status,
+          statusText: errorResponse?.statusText,
+          duration: `${duration}ms`,
+          durationSeconds: Math.round(duration / 1000),
+          isTimeout: error.code === 'ECONNABORTED' || error.message?.includes('timeout'),
+          errorData: JSON.stringify(errorData, null, 2),
+          errorResponseKeys: errorData && typeof errorData === 'object' ? Object.keys(errorData) : [],
+          errorStack: error.stack,
+          timestamp: new Date().toISOString(),
+          step: 'GATEWAY_FORWARD_ERROR',
+        });
+      }
+      
       const errorDetails = {
         serviceName,
         method,
@@ -240,6 +317,7 @@ export class GatewayService {
         baseUrl,
         duration: `${duration}ms`,
         durationMs: duration,
+        isPublishAll,
         errorCode: error.code,
         errorMessage: error.message,
         errorName: error.name,
