@@ -11,7 +11,7 @@ services:
       - SERVICE_NAME=${SERVICE_NAME:-allegro}
       - API_GATEWAY_PORT=${API_GATEWAY_PORT:-3411}
       - ALLEGRO_SERVICE_URL=${ALLEGRO_SERVICE_URL:-http://allegro-service-green:3403}
-      - IMPORT_SERVICE_URL=${IMPORT_SERVICE_URL:-http://import-service-green:3406}
+      - IMPORT_SERVICE_URL=${IMPORT_SERVICE_URL:-http://allegro-import-service-green:3406}
       - SETTINGS_SERVICE_URL=${SETTINGS_SERVICE_URL:-http://allegro-settings-service-green:3408}
       - ALLEGRO_SETTINGS_SERVICE_PORT=${ALLEGRO_SETTINGS_SERVICE_PORT:-3408}
       - AUTH_SERVICE_URL=${AUTH_SERVICE_URL}
@@ -79,11 +79,11 @@ services:
       retries: 3
       start_period: 60s
 
-  import-service:
+  allegro-import-service:
     build:
       context: .
       dockerfile: services/import-service/Dockerfile
-    container_name: import-service-green
+    container_name: allegro-import-service-green
     ports:
       - "${IMPORT_SERVICE_PORT:-3406}:3406"
     environment:
