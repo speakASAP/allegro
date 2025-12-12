@@ -5,12 +5,14 @@
 ### If OAuth Authorization Fails
 
 1. **Check Client ID and Secret**
+
    ```bash
    # Verify they are saved in database
    ssh statex "docker exec -i db-server-postgres psql -U dbadmin -d allegro -c 'SELECT \"userId\", \"allegroClientId\" IS NOT NULL as has_client_id, \"allegroClientSecret\" IS NOT NULL as has_client_secret FROM user_settings WHERE \"userId\" = '\''6'\'';'"
    ```
 
 2. **Check Service Logs**
+
    ```bash
    # Allegro Service logs
    ssh statex "cd /home/statex/allegro && docker logs allegro-service-green --tail 100 | grep -E 'OAuth|error|Error'"
@@ -20,12 +22,14 @@
    ```
 
 3. **Verify OAuth State**
+
    ```bash
    # Check if state exists in database
    ssh statex "docker exec -i db-server-postgres psql -U dbadmin -d allegro -c 'SELECT \"userId\", \"allegroOAuthState\" IS NOT NULL as has_state FROM user_settings WHERE \"userId\" = '\''6'\'';'"
    ```
 
 4. **Check Token Storage**
+
    ```bash
    # Verify tokens are stored correctly
    ssh statex "docker exec -i db-server-postgres psql -U dbadmin -d allegro -c 'SELECT \"userId\", \"allegroAccessToken\" IS NOT NULL as has_access_token, LENGTH(\"allegroAccessToken\") as token_length, \"allegroTokenExpiresAt\" FROM user_settings WHERE \"userId\" = '\''6'\'';'"
@@ -145,4 +149,3 @@ ssh statex "cd /home/statex/allegro && git pull && docker compose -f docker-comp
 - [Complete Troubleshooting Guide](./OAUTH_TROUBLESHOOTING_COMPLETE.md) - Full documentation of all issues and fixes
 - [OAuth Implementation Plan](./OAUTH_IMPLEMENTATION_PLAN.md) - Initial implementation plan
 - [OAuth 400 Error Troubleshooting](./OAUTH_400_ERROR_TROUBLESHOOTING.md) - Specific guide for 400 errors
-

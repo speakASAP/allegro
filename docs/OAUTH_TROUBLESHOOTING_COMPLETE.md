@@ -164,6 +164,7 @@ The Allegro API requires OAuth 2.0 Authorization Code Flow with PKCE for accessi
 **When**: Clicking "Import from Allegro API" button
 
 **Root Cause**:
+
 - The `previewOffersFromAllegro` method attempted to use OAuth tokens first
 - When OAuth failed (not authorized), it fell back to client credentials
 - The `/sale/offers` endpoint requires OAuth, so the fallback also failed
@@ -181,6 +182,7 @@ The Allegro API requires OAuth 2.0 Authorization Code Flow with PKCE for accessi
 **When**: Clicking "📥 Import from Sales Center" button
 
 **Root Cause**:
+
 - The Sales Center endpoint, like `/sale/offers`, requires OAuth authorization
 - Client credentials are not sufficient for accessing user-specific resources
 - OAuth authorization flow was not yet implemented
@@ -196,6 +198,7 @@ The Allegro API requires OAuth 2.0 Authorization Code Flow with PKCE for accessi
 **When**: Attempting to click "Authorize with Allegro" button
 
 **Root Cause**:
+
 - The `handleAuthorizeOAuth` function checked component state variables (`allegroClientId`, `allegroClientSecret`)
 - These state variables might not reflect the *saved* values in the backend
 - The API call to `/allegro/oauth/authorize` requires credentials to be present in the user's settings in the database
@@ -203,6 +206,7 @@ The Allegro API requires OAuth 2.0 Authorization Code Flow with PKCE for accessi
 **Fix Applied**: Modified `handleAuthorizeOAuth` to check `settings?.allegroClientId` (loaded from backend) instead of local state variables.
 
 **Code Change**:
+
 ```typescript
 // Before
 if (!allegroClientId || !allegroClientSecret) {
@@ -233,6 +237,7 @@ if (!settings?.allegroClientId) {
 **Error**: `Authorization failed: Missing required parameters for token exchange: clientSecret`
 
 **Root Cause**:
+
 - The `allegroClientSecret` was not being sent in the PUT request from frontend to settings service
 - The `handleSaveAllegro` function checked if `allegroClientSecret` was equal to the masked value `'********'` and didn't include it in the payload
 - Since `loadSettings` set `allegroClientSecret` state to `'********'` if it existed, the save function would never send the actual secret unless the user manually re-typed it
@@ -240,6 +245,7 @@ if (!settings?.allegroClientId) {
 **Fix Applied**: Modified `handleSaveAllegro` to only send `allegroClientSecret` if it's not the masked placeholder `'********'`.
 
 **Code Change**:
+
 ```typescript
 // Only include Client Secret if it's not the masked placeholder
 if (allegroClientSecret && allegroClientSecret !== '********') {
@@ -252,15 +258,18 @@ if (allegroClientSecret && allegroClientSecret !== '********') {
 **Error**: `400 Bad Request` with redirect URI mismatch
 
 **Root Cause**:
+
 - Redirect URIs must match exactly between authorization URL generation and token exchange
 - Trailing slashes, whitespace, or case differences cause mismatches
 - The redirect URI used in authorization URL didn't match the one used in token exchange
 
-**Fix Applied**: 
+**Fix Applied**:
+
 - Implemented `normalizeUrl` helper function to consistently trim whitespace and remove trailing slashes
 - Applied normalization to redirect URIs in both `generateAuthorizationUrl` and `exchangeCodeForToken`
 
 **Code Change**:
+
 ```typescript
 // Helper function
 private normalizeUrl(url: string): string {
@@ -279,11 +288,13 @@ const normalizedRedirectUri = redirectUri.trim().replace(/\/+$/, '');
 **Error**: `Authorization failed: Failed to exchange authorization code: Client authentication failed: code (invalid_grant)`
 
 **Root Cause**:
+
 - Authorization codes can only be used once
 - Codes expire after a short time (typically 10 minutes)
 - If the code was already used or expired, Allegro returns `invalid_grant`
 
 **Investigation**: Added extensive logging to capture:
+
 - Exact request parameters sent to Allegro
 - Full error response from Allegro
 - Code and code verifier lengths
@@ -300,15 +311,18 @@ const normalizedRedirectUri = redirectUri.trim().replace(/\/+$/, '');
 **When**: Loading settings page
 
 **Root Cause**:
+
 - The frontend `loadSettings` function set `allegroClientSecret` to an empty string if decryption failed or if no secret existed
 - Users expected to see `********` if a secret was saved, even if decryption failed
 
 **Fix Applied**: Modified `loadSettings` to:
+
 - Set `allegroClientSecret` to `'********'` if a secret exists in the database (even if decryption failed)
 - Set to empty string only if no secret exists at all
 - Display detailed error information if decryption fails
 
 **Code Change**:
+
 ```typescript
 // Check if Client Secret exists in database (regardless of decryption success)
 const secretExistsInDb = data._allegroClientSecretDecryptionError || 
@@ -336,14 +350,17 @@ if (data._allegroClientSecretDecryptionError && data.allegroClientSecret === nul
 **When**: Processing OAuth callback after user authorization
 
 **Root Cause**:
+
 - OAuth state was not trimmed consistently when stored vs. when retrieved
 - If state was stored with leading/trailing whitespace, it wouldn't match the trimmed state from the callback URL
 
-**Fix Applied**: 
+**Fix Applied**:
+
 - Added `state.trim()` when storing the state in the `authorize` endpoint
 - State is now consistently trimmed in both storage and retrieval
 
 **Code Change**:
+
 ```typescript
 // In authorize endpoint
 const trimmedState = state.trim();
@@ -372,6 +389,7 @@ const settings = await this.prisma.userSettings.findFirst({
 **When**: After successful token exchange, attempting to save encrypted tokens to database
 
 **Root Cause**:
+
 - Encrypted OAuth tokens exceeded the database column limits
 - Original schema had:
   - `allegroAccessToken`: `VARCHAR(2000)`
@@ -384,12 +402,14 @@ const settings = await this.prisma.userSettings.findFirst({
   - Scopes: 423 characters
 
 **Fix Applied**:
+
 1. Updated Prisma schema to increase column sizes:
    - `allegroAccessToken`: `VARCHAR(2000)` → `VARCHAR(5000)`
    - `allegroRefreshToken`: `VARCHAR(2000)` → `VARCHAR(5000)`
    - `allegroTokenScopes`: `VARCHAR(500)` → `VARCHAR(1000)`
 
 2. Created and applied database migration:
+
    ```sql
    ALTER TABLE user_settings ALTER COLUMN "allegroAccessToken" SET DATA TYPE VARCHAR(5000);
    ALTER TABLE user_settings ALTER COLUMN "allegroRefreshToken" SET DATA TYPE VARCHAR(5000);
@@ -397,6 +417,7 @@ const settings = await this.prisma.userSettings.findFirst({
    ```
 
 3. Added truncation safety check for scopes:
+
    ```typescript
    const maxScopesLength = 1000;
    const truncatedScopes = scopes.length > maxScopesLength 
@@ -405,6 +426,7 @@ const settings = await this.prisma.userSettings.findFirst({
    ```
 
 4. Added logging to capture token lengths before database save:
+
    ```typescript
    this.logger.log('Token lengths before database save', {
      userId: settings.userId,
@@ -425,11 +447,13 @@ const settings = await this.prisma.userSettings.findFirst({
 **When**: Starting the Settings Service container
 
 **Root Cause**:
+
 - The `docker-compose.green.yml` file for `allegro-settings-service` was missing required environment variables:
   - `HTTP_TIMEOUT`
   - `AUTH_SERVICE_TIMEOUT`
 
 **Fix Applied**: Added missing environment variables to `docker-compose.green.yml`:
+
 ```yaml
 environment:
   - HTTP_TIMEOUT=${HTTP_TIMEOUT:-30000}
@@ -445,6 +469,7 @@ environment:
 **When**: Testing OAuth flow locally
 
 **Root Cause**:
+
 - Documentation suggested `http://localhost:3410/auth/callback` for local development
 - However, OAuth callbacks should go through the API Gateway (port 3411), not directly to the frontend service
 
@@ -457,6 +482,7 @@ environment:
 ### Step 1: Error Analysis
 
 For each error encountered:
+
 1. Captured exact error message and stack trace
 2. Checked service logs (Allegro Service, Settings Service, API Gateway)
 3. Verified database state
@@ -465,6 +491,7 @@ For each error encountered:
 ### Step 2: Logging Enhancement
 
 Added extensive logging at critical points:
+
 - OAuth authorization URL generation
 - OAuth callback processing
 - Token exchange requests and responses
@@ -472,6 +499,7 @@ Added extensive logging at critical points:
 - Client Secret encryption/decryption
 
 **Logging Locations**:
+
 - `services/allegro-service/src/allegro/oauth/oauth.controller.ts`
 - `services/allegro-service/src/allegro/allegro-oauth.service.ts`
 - `services/allegro-settings-service/src/settings/settings.service.ts`
@@ -481,12 +509,14 @@ Added extensive logging at critical points:
 ### Step 3: Database Verification
 
 For database-related issues:
+
 1. Connected to production database via SSH
 2. Checked column definitions and sizes
 3. Verified data types and constraints
 4. Tested queries to understand data structure
 
 **Commands Used**:
+
 ```bash
 # Check table structure
 docker exec -i db-server-postgres psql -U dbadmin -d allegro -c '\d user_settings'
@@ -501,6 +531,7 @@ docker exec -i db-server-postgres psql -U dbadmin -d allegro -c 'SELECT "userId"
 ### Step 4: Code Review
 
 Reviewed relevant code sections:
+
 - OAuth flow implementation
 - Token encryption/decryption logic
 - Database schema definitions
@@ -510,6 +541,7 @@ Reviewed relevant code sections:
 ### Step 5: Testing
 
 For each fix:
+
 1. Applied the fix
 2. Rebuilt and redeployed the service
 3. Tested the OAuth flow end-to-end
@@ -557,12 +589,14 @@ if (!response || !response.offers) {
 **File**: `services/allegro-frontend-service/src/pages/SettingsPage.tsx`
 
 **Changes**:
+
 1. Added OAuth Authorization section to Settings page
 2. Added state management for OAuth status
 3. Added handlers for authorize and revoke actions
 4. Fixed validation to check saved settings instead of local state
 
 **Key Code**:
+
 ```typescript
 const [oauthStatus, setOauthStatus] = useState<{
   authorized: boolean;
@@ -678,6 +712,7 @@ allegroTokenScopes       String?   @db.VarChar(1000) // Comma-separated scopes
 ```
 
 **Migration SQL**:
+
 ```sql
 ALTER TABLE user_settings ALTER COLUMN "allegroAccessToken" SET DATA TYPE VARCHAR(5000);
 ALTER TABLE user_settings ALTER COLUMN "allegroRefreshToken" SET DATA TYPE VARCHAR(5000);
@@ -730,6 +765,7 @@ if (scopes.length > maxScopesLength) {
 **File**: `services/allegro-frontend-service/src/pages/SettingsPage.tsx`
 
 **Changes**:
+
 1. Fixed `loadSettings` to show `********` if secret exists (even if decryption fails)
 2. Fixed `handleSaveAllegro` to only send secret if it's not the masked value
 
@@ -808,11 +844,13 @@ allegro-settings-service:
 **Status**: ✅ **PASSED**
 
 **Token Lengths Verified**:
+
 - Encrypted Access Token: 2,529 characters (within 5,000 limit) ✅
 - Encrypted Refresh Token: 2,657 characters (within 5,000 limit) ✅
 - Scopes: 423 characters (within 1,000 limit) ✅
 
 **Database Verification**:
+
 ```sql
 SELECT 
   "userId",
@@ -830,6 +868,7 @@ WHERE "userId" = '6';
 ```
 
 **Log Verification**:
+
 ```
 [OAuth Callback] Token lengths before database save {
   userId: '6',
@@ -850,6 +889,7 @@ WHERE "userId" = '6';
 ### 1. Encryption Increases Data Size
 
 **Lesson**: When storing encrypted data in databases, account for the size increase. Encrypted data can be 2-3x the size of plain data due to:
+
 - Hex encoding (2x size)
 - IV (Initialization Vector) storage
 - Formatting (e.g., `iv:encrypted`)
@@ -860,7 +900,8 @@ WHERE "userId" = '6';
 
 **Lesson**: OAuth state must be handled consistently throughout the flow. Any trimming, normalization, or transformation must be applied identically when storing and retrieving.
 
-**Recommendation**: 
+**Recommendation**:
+
 - Use helper functions for normalization
 - Apply normalization at the earliest point (when generating state)
 - Document the normalization rules
@@ -870,6 +911,7 @@ WHERE "userId" = '6';
 **Lesson**: OAuth providers require exact matching of redirect URIs. Even minor differences (trailing slashes, whitespace) cause failures.
 
 **Recommendation**:
+
 - Normalize redirect URIs consistently
 - Use the same normalization function in all places
 - Log the exact redirect URI used in requests
@@ -879,6 +921,7 @@ WHERE "userId" = '6';
 **Lesson**: OAuth flows involve multiple services and external APIs. Without detailed logging, debugging is nearly impossible.
 
 **Recommendation**:
+
 - Log all request parameters (excluding secrets)
 - Log all response data
 - Log database operations
@@ -889,6 +932,7 @@ WHERE "userId" = '6';
 **Lesson**: Frontend component state may not reflect the actual backend state, especially for sensitive data like secrets.
 
 **Recommendation**:
+
 - Always check backend state (via API) for critical validations
 - Use backend state as the source of truth
 - Sync frontend state with backend state after operations
@@ -898,6 +942,7 @@ WHERE "userId" = '6';
 **Lesson**: Database column sizes should be planned with encryption and future growth in mind.
 
 **Recommendation**:
+
 - Calculate maximum expected size (plain data × encryption factor × growth factor)
 - Add safety margin (e.g., 2x calculated size)
 - Document size calculations in schema comments
@@ -907,6 +952,7 @@ WHERE "userId" = '6';
 **Lesson**: Generic error messages like "400 Bad Request" don't help users or developers.
 
 **Recommendation**:
+
 - Include specific error codes and descriptions
 - Provide actionable guidance (e.g., "Please re-authorize")
 - Log detailed error information for debugging
@@ -916,6 +962,7 @@ WHERE "userId" = '6';
 **Lesson**: Individual component tests may pass, but end-to-end flows can still fail due to integration issues.
 
 **Recommendation**:
+
 - Always test complete user flows
 - Test with realistic data
 - Test error scenarios
@@ -973,4 +1020,3 @@ The OAuth 2.0 Authorization Code Flow with PKCE has been successfully implemente
 **Last Updated**: December 10, 2025  
 **Author**: AI Development Team  
 **Review Status**: Complete
-
