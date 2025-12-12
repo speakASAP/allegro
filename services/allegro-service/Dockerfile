@@ -10,9 +10,12 @@ RUN npm ci
 # Copy prisma schema to original location and generate Prisma client
 WORKDIR /app
 COPY prisma ./prisma
+# Ensure output directory exists
+RUN mkdir -p /app/shared/node_modules/.prisma/client
 # Create symlink so Prisma can find @prisma/client in shared/node_modules
 RUN ln -s /app/shared/node_modules ./node_modules
-RUN npx prisma@5.7.1 generate --schema=./prisma/schema.prisma
+# Use Prisma from shared/node_modules to avoid auto-install issues
+RUN /app/shared/node_modules/.bin/prisma generate --schema=./prisma/schema.prisma
 # Remove symlink
 RUN rm ./node_modules
 # Fix: Copy index.js to default.js so @prisma/client can find the real client (not the stub)
