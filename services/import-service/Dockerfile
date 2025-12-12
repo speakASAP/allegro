@@ -10,8 +10,11 @@ RUN npm ci
 # Copy prisma schema to original location and generate Prisma client
 WORKDIR /app
 COPY prisma ./prisma
-# Generate Prisma client - output goes to shared/node_modules/.prisma/client as configured in schema
-RUN PRISMA_GENERATE_DATAPROXY=0 npx prisma@5.7.1 generate --schema=./prisma/schema.prisma --generator=client
+# Copy shared package.json to /app so Prisma can find @prisma/client dependency
+COPY shared/package.json ./package.json
+RUN npx prisma@5.7.1 generate --schema=./prisma/schema.prisma
+# Remove temporary package.json
+RUN rm ./package.json
 # Fix: Copy index.js to default.js so @prisma/client can find the real client (not the stub)
 RUN cp /app/shared/node_modules/.prisma/client/index.js /app/shared/node_modules/.prisma/client/default.js || true
 WORKDIR /app/shared
