@@ -40,8 +40,13 @@ export class OffersController {
   @Get()
   @UseGuards(JwtAuthGuard)
   async getOffers(@Query() query: OfferQueryDto, @Request() req: any): Promise<{ success: boolean; data: any }> {
+    const controllerStartTime = Date.now();
+    const timestamp = new Date().toISOString();
+    this.logger.log(`[${timestamp}] [TIMING] OffersController.getOffers START - Request received at controller`);
+    
     const userId = String(req.user?.id || 'unknown');
     try {
+      const serviceStartTime = Date.now();
       this.logger.log('Getting offers list', {
         userId,
         filters: {
@@ -55,7 +60,17 @@ export class OffersController {
         },
       });
       const result = await this.offersService.getOffers(query);
+      const serviceDuration = Date.now() - serviceStartTime;
+      const totalDuration = Date.now() - controllerStartTime;
+      
       this.metricsService.incrementListRequests();
+      this.logger.log(`[${new Date().toISOString()}] [TIMING] OffersController.getOffers COMPLETE (${totalDuration}ms total, service: ${serviceDuration}ms)`, {
+        userId,
+        total: result.pagination?.total || 0,
+        returned: result.items?.length || 0,
+        totalDurationMs: totalDuration,
+        serviceDurationMs: serviceDuration,
+      });
       this.logger.log('Offers list retrieved', {
         userId,
         total: result.pagination?.total || 0,

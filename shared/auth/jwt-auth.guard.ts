@@ -28,10 +28,18 @@ export class JwtAuthGuard implements CanActivate {
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const request = context.switchToHttp().getRequest();
     const startTime = Date.now();
+    const timestamp = new Date().toISOString();
     const path = request.url || request.path || 'unknown';
     
+    console.log(`[${timestamp}] [TIMING] JwtAuthGuard.canActivate START - Guard execution started`, {
+      path,
+      method: request.method,
+    });
+    
     try {
+      const tokenExtractStartTime = Date.now();
       const token = this.extractTokenFromHeader(request);
+      const tokenExtractDuration = Date.now() - tokenExtractStartTime;
 
       if (!token) {
         throw new UnauthorizedException('No token provided');
@@ -51,6 +59,15 @@ export class JwtAuthGuard implements CanActivate {
         }
 
         const validationDuration = Date.now() - validationStartTime;
+        const totalGuardDuration = Date.now() - startTime;
+
+        console.log(`[${new Date().toISOString()}] [TIMING] JwtAuthGuard.canActivate COMPLETE (${totalGuardDuration}ms total, token extract: ${tokenExtractDuration}ms, validation: ${validationDuration}ms)`, {
+          path,
+          method: request.method,
+          totalDurationMs: totalGuardDuration,
+          tokenExtractDurationMs: tokenExtractDuration,
+          validationDurationMs: validationDuration,
+        });
 
         // Log decoded token structure for debugging (temporarily enabled to diagnose issue)
         console.log('[JwtAuthGuard] Decoded token structure', {

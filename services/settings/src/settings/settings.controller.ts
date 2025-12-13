@@ -29,8 +29,23 @@ export class SettingsController {
   @Get()
   @UseGuards(JwtAuthGuard)
   async getSettings(@Request() req: any): Promise<{ success: boolean; data: any }> {
+    const controllerStartTime = Date.now();
+    const timestamp = new Date().toISOString();
+    this.logger.log(`[${timestamp}] [TIMING] SettingsController.getSettings START - Request received at controller`);
+    
     const userId = String(req.user.id); // Convert to string as Prisma expects String
+    
+    const serviceStartTime = Date.now();
     const settings = await this.settingsService.getSettings(userId);
+    const serviceDuration = Date.now() - serviceStartTime;
+    
+    const totalDuration = Date.now() - controllerStartTime;
+    this.logger.log(`[${new Date().toISOString()}] [TIMING] SettingsController.getSettings COMPLETE (${totalDuration}ms total, service: ${serviceDuration}ms)`, {
+      userId,
+      totalDurationMs: totalDuration,
+      serviceDurationMs: serviceDuration,
+    });
+    
     return { success: true, data: settings };
   }
 

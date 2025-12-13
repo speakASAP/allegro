@@ -19,7 +19,21 @@ export class OrdersController {
   @Get()
   @UseGuards(JwtAuthGuard)
   async getOrders(@Query() query: any): Promise<{ success: boolean; data: any }> {
+    const controllerStartTime = Date.now();
+    const timestamp = new Date().toISOString();
+    // Note: LoggerService needs to be injected to use logger here
+    console.log(`[${timestamp}] [TIMING] OrdersController.getOrders START - Request received at controller`);
+    
+    const serviceStartTime = Date.now();
     const result = await this.ordersService.getOrders(query);
+    const serviceDuration = Date.now() - serviceStartTime;
+    const totalDuration = Date.now() - controllerStartTime;
+    
+    console.log(`[${new Date().toISOString()}] [TIMING] OrdersController.getOrders COMPLETE (${totalDuration}ms total, service: ${serviceDuration}ms)`, {
+      totalDurationMs: totalDuration,
+      serviceDurationMs: serviceDuration,
+    });
+    
     return { success: true, data: result };
   }
 
