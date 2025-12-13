@@ -4,7 +4,7 @@
     "outDir": "./dist",
     "baseUrl": "./",
     "paths": {
-      "@allegro/shared/*": ["../../shared/*"]
+      "@allegro/shared": ["../../shared/dist"]
     },
     "types": ["node"]
   },

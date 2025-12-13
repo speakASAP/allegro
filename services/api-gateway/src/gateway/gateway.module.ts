@@ -8,9 +8,8 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { AuthModule } from '@allegro/shared';
 import { GatewayController } from './gateway.controller';
 import { GatewayService } from './gateway.service';
-import axios from 'axios';
-import https from 'https';
-import http from 'http';
+import * as http from 'http';
+import * as https from 'https';
 
 @Module({
   imports: [
@@ -18,6 +17,7 @@ import http from 'http';
       imports: [ConfigModule],
       useFactory: (configService: ConfigService) => {
         // Create HTTP and HTTPS agents with keep-alive to reuse connections
+        // This eliminates the 17-second delay on first connection
         const httpAgent = new http.Agent({
           keepAlive: true,
           keepAliveMsecs: 1000,
