@@ -54,22 +54,16 @@ export class GatewayService {
     
     // Log agent creation and configuration
     const agentCreationTime = Date.now() - agentStartTime;
-    console.log(`[${new Date().toISOString()}] [TIMING] GatewayService: Agents created (${agentCreationTime}ms)`, {
-      httpAgentKeepAlive: this.httpAgent.options.keepAlive,
+    const agentConfig = {
       httpAgentMaxSockets: this.httpAgent.maxSockets,
-      httpsAgentKeepAlive: this.httpsAgent.options.keepAlive,
+      httpAgentMaxFreeSockets: this.httpAgent.maxFreeSockets,
       httpsAgentMaxSockets: this.httpsAgent.maxSockets,
+      httpsAgentMaxFreeSockets: this.httpsAgent.maxFreeSockets,
       axiosDefaultsHttpAgent: !!this.httpService.axiosRef.defaults.httpAgent,
       axiosDefaultsHttpsAgent: !!this.httpService.axiosRef.defaults.httpsAgent,
-    });
-    this.sharedLogger.info(`[${new Date().toISOString()}] [TIMING] GatewayService: Agents created (${agentCreationTime}ms)`, {
-      httpAgentKeepAlive: this.httpAgent.options.keepAlive,
-      httpAgentMaxSockets: this.httpAgent.maxSockets,
-      httpsAgentKeepAlive: this.httpsAgent.options.keepAlive,
-      httpsAgentMaxSockets: this.httpsAgent.maxSockets,
-      axiosDefaultsHttpAgent: !!this.httpService.axiosRef.defaults.httpAgent,
-      axiosDefaultsHttpsAgent: !!this.httpService.axiosRef.defaults.httpsAgent,
-    });
+    };
+    console.log(`[${new Date().toISOString()}] [TIMING] GatewayService: Agents created (${agentCreationTime}ms)`, agentConfig);
+    this.sharedLogger.info(`[${new Date().toISOString()}] [TIMING] GatewayService: Agents created (${agentCreationTime}ms)`, agentConfig);
     
     const nodeEnv = this.configService.get<string>('NODE_ENV') || 'development';
     const isDevelopment = nodeEnv === 'development';
