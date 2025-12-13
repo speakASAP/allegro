@@ -20,6 +20,8 @@ export class OrdersService {
    * Get orders from database
    */
   async getOrders(query: any): Promise<{ items: any[]; pagination: any }> {
+    const startTime = Date.now();
+    const timestamp = new Date().toISOString();
     const page = query.page || 1;
     const limit = query.limit || 20;
     const skip = (page - 1) * limit;
@@ -32,8 +34,17 @@ export class OrdersService {
       where.paymentStatus = query.paymentStatus;
     }
 
+    this.logger.log(`[${timestamp}] [TIMING] OrdersService.getOrders START`, {
+      filters: {
+        status: query.status,
+        paymentStatus: query.paymentStatus,
+      },
+      pagination: { page, limit, skip },
+    });
+
     // Optimized: Load orders without relations for faster list loading
     // Relations can be loaded on-demand when viewing order details
+    const dbQueryStartTime = Date.now();
     const [items, total] = await Promise.all([
       this.prisma.allegroOrder.findMany({
         where,
@@ -66,6 +77,23 @@ export class OrdersService {
       }),
       this.prisma.allegroOrder.count({ where }),
     ]);
+    const dbQueryDuration = Date.now() - dbQueryStartTime;
+    const totalDuration = Date.now() - startTime;
+
+    this.logger.log(`[${new Date().toISOString()}] [TIMING] OrdersService.getOrders: Database query completed (${dbQueryDuration}ms)`, {
+      total,
+      returned: items.length,
+      page,
+      limit,
+    });
+    this.logger.log(`[${new Date().toISOString()}] [TIMING] OrdersService.getOrders COMPLETE (${totalDuration}ms total)`, {
+      total,
+      returned: items.length,
+      page,
+      limit,
+      dbQueryDurationMs: dbQueryDuration,
+      totalDurationMs: totalDuration,
+    });
 
     return {
       items,

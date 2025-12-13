@@ -106,10 +106,19 @@ export class SettingsService {
    * Get user settings
    */
   async getSettings(userId: string): Promise<any> {
+    const startTime = Date.now();
+    const timestamp = new Date().toISOString();
+    this.logger.log(`[${timestamp}] [TIMING] SettingsService.getSettings START for userId: ${userId}`);
     this.logger.log('SettingsService.getSettings START', { userId });
 
+    const dbQueryStartTime = Date.now();
     let settings = await this.prisma.userSettings.findUnique({
       where: { userId },
+    });
+    const dbQueryDuration = Date.now() - dbQueryStartTime;
+    this.logger.log(`[${new Date().toISOString()}] [TIMING] SettingsService.getSettings: Database query completed (${dbQueryDuration}ms)`, {
+      userId,
+      found: !!settings,
     });
 
     this.logger.log('SettingsService.getSettings: Database query completed', {
@@ -227,7 +236,8 @@ export class SettingsService {
     delete result.allegroOAuthState;
     delete result.allegroOAuthCodeVerifier;
 
-    this.logger.log('SettingsService.getSettings: Returning result', {
+    const totalDuration = Date.now() - startTime;
+    this.logger.log(`[${new Date().toISOString()}] [TIMING] SettingsService.getSettings: Returning result (${totalDuration}ms total)`, {
       userId,
       resultKeys: Object.keys(result),
       hasClientId: !!result.allegroClientId,
@@ -235,6 +245,7 @@ export class SettingsService {
       clientSecretLength: result.allegroClientSecret?.length,
       hasDecryptionError: !!result._allegroClientSecretDecryptionError,
       oauthAuthorized: result.oauthStatus?.authorized,
+      totalDurationMs: totalDuration,
     });
 
     return result;

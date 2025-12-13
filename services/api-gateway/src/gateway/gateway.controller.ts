@@ -229,8 +229,15 @@ export class GatewayController {
     const body = method !== 'GET' && method !== 'DELETE' ? req.body : undefined;
     const requestId = `req-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
     const startTime = Date.now();
+    const timestamp = new Date().toISOString();
 
     // Log incoming request
+    this.sharedLogger.info(`[${timestamp}] [TIMING] GatewayController.routeRequest START`, {
+      requestId,
+      serviceName,
+      method,
+      path,
+    });
     this.sharedLogger.info(`[${requestId}] Incoming API request`, {
       serviceName,
       method,
@@ -254,6 +261,14 @@ export class GatewayController {
       );
       
       const duration = Date.now() - startTime;
+      this.sharedLogger.info(`[${new Date().toISOString()}] [TIMING] GatewayController.routeRequest COMPLETE (${duration}ms)`, {
+        requestId,
+        serviceName,
+        method,
+        path,
+        statusCode: 200,
+        durationMs: duration,
+      });
       this.sharedLogger.info(`[${requestId}] Request completed successfully`, {
         serviceName,
         method,

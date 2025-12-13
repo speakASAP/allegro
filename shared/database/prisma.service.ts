@@ -85,21 +85,33 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
   }
 
   async onModuleInit() {
+    const initStartTime = Date.now();
+    const timestamp = new Date().toISOString();
+    this.logger.log(`[${timestamp}] [TIMING] Prisma onModuleInit START`);
+    
     try {
+      const connectStartTime = Date.now();
       await this.$connect();
-      this.logger.log('Prisma Client connected to database');
+      const connectDuration = Date.now() - connectStartTime;
+      this.logger.log(`[${new Date().toISOString()}] [TIMING] Prisma Client connected to database (${connectDuration}ms)`);
       
       // Warm up the connection pool with a simple query to prevent cold start delays
       // This ensures the connection is ready and reduces the 9+ second delay on first request
       try {
+        const warmupStartTime = Date.now();
         await this.$queryRaw`SELECT 1`;
-        this.logger.log('Prisma connection pool warmed up');
+        const warmupDuration = Date.now() - warmupStartTime;
+        this.logger.log(`[${new Date().toISOString()}] [TIMING] Prisma connection pool warmed up (${warmupDuration}ms)`);
       } catch (warmupError) {
         // Non-critical - connection is still established, just warmup query failed
-        this.logger.warn('Prisma connection warmup query failed (non-critical)', warmupError);
+        this.logger.warn(`[${new Date().toISOString()}] [TIMING] Prisma connection warmup query failed (non-critical)`, warmupError);
       }
+      
+      const totalInitDuration = Date.now() - initStartTime;
+      this.logger.log(`[${new Date().toISOString()}] [TIMING] Prisma onModuleInit COMPLETE (${totalInitDuration}ms)`);
     } catch (error) {
-      this.logger.error('Failed to connect to database', error);
+      const totalInitDuration = Date.now() - initStartTime;
+      this.logger.error(`[${new Date().toISOString()}] [TIMING] Failed to connect to database (${totalInitDuration}ms)`, error);
       throw error;
     }
   }

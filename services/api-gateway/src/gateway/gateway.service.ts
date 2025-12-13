@@ -192,6 +192,14 @@ export class GatewayService {
     });
 
     const startTime = Date.now();
+    const timestamp = new Date().toISOString();
+    this.sharedLogger.log(`[${timestamp}] [TIMING] GatewayService.forwardRequest START`, {
+      requestId,
+      serviceName,
+      method,
+      url,
+      path,
+    });
     try {
       let response;
       switch (method.toUpperCase()) {
@@ -218,6 +226,16 @@ export class GatewayService {
       const responseData = response.data;
       const responseSize = JSON.stringify(responseData).length;
       const responseKeys = responseData && typeof responseData === 'object' ? Object.keys(responseData) : [];
+      
+      this.sharedLogger.log(`[${new Date().toISOString()}] [TIMING] GatewayService.forwardRequest COMPLETE (${duration}ms)`, {
+        requestId,
+        serviceName,
+        method,
+        url,
+        path,
+        statusCode: response.status,
+        durationMs: duration,
+      });
       
       // Enhanced logging for publish-all responses
       if (isPublishAll) {

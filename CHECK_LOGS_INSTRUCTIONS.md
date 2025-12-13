@@ -77,4 +77,3 @@ When checking logs, look for:
 - **404 Not Found**: Offer or product was deleted
 - **429 Rate Limit**: Too many requests - need to wait
 - **Network/Timeout Errors**: Connection issues with Allegro API
-

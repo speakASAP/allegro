@@ -84,7 +84,13 @@ api.interceptors.request.use(
       ? `${config.baseURL}${config.url.startsWith('/') ? '' : '/'}${config.url}`
       : config.url || 'unknown';
     
-    console.log('[API Request]', {
+    // Store start time for timing measurement
+    (config as any).metadata = {
+      startTime: Date.now(),
+      timestamp: new Date().toISOString(),
+    };
+    
+    console.log(`[${new Date().toISOString()}] [TIMING] [FRONTEND] API Request START`, {
       method: config.method?.toUpperCase() || 'UNKNOWN',
       baseURL: config.baseURL,
       url: config.url,
@@ -137,21 +143,55 @@ let refreshPromise: Promise<string> | null = null;
 // Response interceptor to handle errors
 api.interceptors.response.use(
   (response) => {
-    // Log successful responses (production logging)
+    // Calculate duration from request start time
+    const metadata = (response.config as any).metadata;
+    const duration = metadata?.startTime ? Date.now() - metadata.startTime : null;
+    const timestamp = new Date().toISOString();
+    
+    // Log successful responses with timing (production logging)
+    console.log(`[${timestamp}] [TIMING] [FRONTEND] API Response COMPLETE${duration ? ` (${duration}ms)` : ''}`, {
+      method: response.config.method?.toUpperCase() || 'UNKNOWN',
+      url: response.config.url,
+      baseURL: response.config.baseURL,
+      status: response.status,
+      statusText: response.statusText,
+      durationMs: duration,
+      timestamp,
+    });
     console.log('[API Response]', {
       method: response.config.method?.toUpperCase() || 'UNKNOWN',
       url: response.config.url,
       baseURL: response.config.baseURL,
       status: response.status,
       statusText: response.statusText,
-      timestamp: new Date().toISOString(),
+      timestamp,
     });
     return response;
   },
   async (error: AxiosError) => {
     const connectionError = error as ConnectionAxiosError;
     
-    // Log error details (production logging)
+    // Calculate duration from request start time
+    const metadata = (error.config as any)?.metadata;
+    const duration = metadata?.startTime ? Date.now() - metadata.startTime : null;
+    const timestamp = new Date().toISOString();
+    
+    // Log error details with timing (production logging)
+    console.error(`[${timestamp}] [TIMING] [FRONTEND] API Error${duration ? ` (${duration}ms)` : ''}`, {
+      method: error.config?.method?.toUpperCase() || 'UNKNOWN',
+      url: error.config?.url,
+      baseURL: error.config?.baseURL,
+      fullUrl: error.config?.baseURL && error.config?.url 
+        ? `${error.config.baseURL}${error.config.url.startsWith('/') ? '' : '/'}${error.config.url}`
+        : error.config?.url || 'unknown',
+      status: error.response?.status,
+      statusText: error.response?.statusText,
+      message: error.message,
+      code: connectionError.code,
+      responseData: error.response?.data,
+      durationMs: duration,
+      timestamp,
+    });
     console.error('[API Error]', {
       method: error.config?.method?.toUpperCase() || 'UNKNOWN',
       url: error.config?.url,
@@ -164,7 +204,7 @@ api.interceptors.response.use(
       message: error.message,
       code: connectionError.code,
       responseData: error.response?.data,
-      timestamp: new Date().toISOString(),
+      timestamp,
     });
     
     // Handle connection errors with helpful messages

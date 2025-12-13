@@ -55,6 +55,8 @@ export class OffersService {
    * Get offers from database
    */
   async getOffers(query: any): Promise<{ items: any[]; pagination: any }> {
+    const startTime = Date.now();
+    const timestamp = new Date().toISOString();
     const page = query.page || 1;
     const limit = query.limit || 20;
     const skip = (page - 1) * limit;
@@ -73,7 +75,7 @@ export class OffersService {
       };
     }
 
-    this.logger.log('Fetching offers from database', {
+    this.logger.log(`[${timestamp}] [TIMING] OffersService.getOffers START`, {
       filters: {
         status: query.status,
         categoryId: query.categoryId,
@@ -83,6 +85,7 @@ export class OffersService {
     });
 
     // Optimized: Load offers without relations first (fast), relations can be loaded on-demand
+    const dbQueryStartTime = Date.now();
     const [items, total] = await Promise.all([
       this.prisma.allegroOffer.findMany({
         where,
@@ -129,12 +132,22 @@ export class OffersService {
       }),
       this.prisma.allegroOffer.count({ where }),
     ]);
+    const dbQueryDuration = Date.now() - dbQueryStartTime;
+    const totalDuration = Date.now() - startTime;
 
-    this.logger.log('Offers fetched from database', {
+    this.logger.log(`[${new Date().toISOString()}] [TIMING] OffersService.getOffers: Database query completed (${dbQueryDuration}ms)`, {
       total,
       returned: items.length,
       page,
       limit,
+    });
+    this.logger.log(`[${new Date().toISOString()}] [TIMING] OffersService.getOffers COMPLETE (${totalDuration}ms total)`, {
+      total,
+      returned: items.length,
+      page,
+      limit,
+      dbQueryDurationMs: dbQueryDuration,
+      totalDurationMs: totalDuration,
     });
 
     return {
