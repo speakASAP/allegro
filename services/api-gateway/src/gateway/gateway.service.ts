@@ -305,22 +305,30 @@ export class GatewayService implements OnModuleInit {
 
   /**
    * Warm up a single service connection by making a health check request
+   * If baseUrl is gateway-proxy, use the correct Nginx route path
    */
   private async warmupServiceConnection(serviceName: string, baseUrl: string): Promise<void> {
     const warmupStartTime = Date.now();
     const timestamp = new Date().toISOString();
     
-    // Determine health check endpoint based on service
-    let healthPath = '/health';
-    if (serviceName === 'allegro') {
-      healthPath = '/health';
-    } else if (serviceName === 'settings') {
-      healthPath = '/health';
-    } else if (serviceName === 'import') {
-      healthPath = '/health';
+    // If using Nginx proxy (gateway-proxy), construct the correct path
+    // Otherwise use direct service health endpoint
+    let healthUrl: string;
+    if (baseUrl.includes('gateway-proxy')) {
+      // Nginx routes: /allegro/*, /settings, /import/*
+      if (serviceName === 'allegro') {
+        healthUrl = `${baseUrl}/allegro/health`;
+      } else if (serviceName === 'settings') {
+        healthUrl = `${baseUrl}/settings/health`;
+      } else if (serviceName === 'import') {
+        healthUrl = `${baseUrl}/import/health`;
+      } else {
+        healthUrl = `${baseUrl}/health`;
+      }
+    } else {
+      // Direct service connection
+      healthUrl = `${baseUrl}/health`;
     }
-
-    const healthUrl = `${baseUrl}${healthPath}`;
     
     this.logger.log(`[${timestamp}] [WARMUP] Warming up connection to ${serviceName} at ${healthUrl}`);
     
