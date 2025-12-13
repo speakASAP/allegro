@@ -10,9 +10,9 @@ services:
       - NODE_ENV=${NODE_ENV:-production}
       - SERVICE_NAME=${SERVICE_NAME:-allegro}
       - API_GATEWAY_PORT=${API_GATEWAY_PORT:-3411}
-      - ALLEGRO_SERVICE_URL=${ALLEGRO_SERVICE_URL:-http://allegro-service-blue:3403}
-      - IMPORT_SERVICE_URL=${IMPORT_SERVICE_URL:-http://allegro-imports-blue:3406}
-      - SETTINGS_SERVICE_URL=${SETTINGS_SERVICE_URL:-http://settings-blue:3408}
+      - ALLEGRO_SERVICE_URL=${ALLEGRO_SERVICE_URL:-http://allegro:3403}
+      - IMPORT_SERVICE_URL=${IMPORT_SERVICE_URL:-http://imports:3406}
+      - SETTINGS_SERVICE_URL=${SETTINGS_SERVICE_URL:-http://settings:3408}
       - ALLEGRO_SETTINGS_SERVICE_PORT=${ALLEGRO_SETTINGS_SERVICE_PORT:-3408}
       - AUTH_SERVICE_URL=${AUTH_SERVICE_URL}
       - JWT_SECRET=${JWT_SECRET}
@@ -43,11 +43,11 @@ services:
       retries: 3
       start_period: 60s
 
-  allegro-service:
+  allegro:
     build:
       context: .
       dockerfile: services/allegro-service/Dockerfile
-    container_name: allegro-service-blue
+    container_name: allegro-blue
     ports:
       - "${ALLEGRO_SERVICE_PORT:-3403}:3403"
     volumes:
@@ -88,7 +88,7 @@ services:
       retries: 3
       start_period: 60s
 
-  allegro-imports:
+  imports:
     build:
       context: .
       dockerfile: services/imports/Dockerfile
@@ -103,7 +103,7 @@ services:
       - JWT_SECRET=${JWT_SECRET}
       - NOTIFICATION_SERVICE_URL=${NOTIFICATION_SERVICE_URL}
       - LOGGING_SERVICE_URL=${LOGGING_SERVICE_URL}
-      - ALLEGRO_SERVICE_URL=${ALLEGRO_SERVICE_URL:-http://allegro-service-blue:3403}
+      - ALLEGRO_SERVICE_URL=${ALLEGRO_SERVICE_URL:-http://allegro:3403}
       - IMPORT_CSV_MAX_SIZE=${IMPORT_CSV_MAX_SIZE:-104857600}
       - IMPORT_CSV_BATCH_SIZE=${IMPORT_CSV_BATCH_SIZE:-50}
       - NOTIFICATION_ORDER_CREATED=${NOTIFICATION_ORDER_CREATED:-true}
@@ -129,8 +129,8 @@ services:
   settings:
     build:
       context: .
-      dockerfile: ./services/settings/Dockerfile
-    container_name: settings-blue
+      dockerfile: services/settings/Dockerfile
+    container_name: allegro-settings-blue
     ports:
       - "${ALLEGRO_SETTINGS_SERVICE_PORT:-3408}:3408"
     environment:
@@ -166,7 +166,7 @@ services:
       dockerfile: services/frontend/Dockerfile
       args:
         - FRONTEND_API_URL=${FRONTEND_API_URL}
-    container_name: frontend-blue
+    container_name: allegro-frontend-blue
     ports:
       - "${ALLEGRO_FRONTEND_SERVICE_PORT:-3410}:3410"
     environment:
