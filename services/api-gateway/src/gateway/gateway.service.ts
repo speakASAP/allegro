@@ -3,7 +3,7 @@
  * Routes requests to appropriate microservices
  */
 
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { HttpService } from '@nestjs/axios';
 import { ConfigService } from '@nestjs/config';
 import { firstValueFrom } from 'rxjs';
@@ -13,7 +13,7 @@ import { Agent as HttpAgent } from 'http';
 import { Agent as HttpsAgent } from 'https';
 
 @Injectable()
-export class GatewayService {
+export class GatewayService implements OnModuleInit {
   private readonly logger = new Logger(GatewayService.name);
   private readonly sharedLogger: LoggerService;
   private readonly serviceUrls: Record<string, string>;
@@ -34,20 +34,23 @@ export class GatewayService {
     const existingHttpsAgent = this.httpService.axiosRef.defaults.httpsAgent as HttpsAgent;
     
     // Create agents with aggressive keep-alive settings to prevent connection delays
+    // maxFreeSockets increased to 20 to keep more connections ready for instant reuse
     this.httpAgent = existingHttpAgent || new HttpAgent({
       keepAlive: true,
       keepAliveMsecs: 1000,
       maxSockets: 50,
-      maxFreeSockets: 10,
+      maxFreeSockets: 20, // Keep more idle connections ready
       timeout: 60000,
+      scheduling: 'fifo', // Reuse oldest connections first
     });
     
     this.httpsAgent = existingHttpsAgent || new HttpsAgent({
       keepAlive: true,
       keepAliveMsecs: 1000,
       maxSockets: 50,
-      maxFreeSockets: 10,
+      maxFreeSockets: 20, // Keep more idle connections ready
       timeout: 60000,
+      scheduling: 'fifo', // Reuse oldest connections first
     });
     
     // Ensure agents are set on the HttpService's Axios instance defaults
@@ -245,6 +248,121 @@ export class GatewayService {
     });
     this.logger.log('Service URLs configured:');
     this.logger.log(JSON.stringify(this.serviceUrls, null, 2));
+  }
+
+  /**
+   * Pre-warm connections to all backend services on startup
+   * This eliminates the 24-30 second cold start delay by establishing TCP connections immediately
+   */
+  async onModuleInit() {
+    const warmupStartTime = Date.now();
+    const timestamp = new Date().toISOString();
+    this.logger.log(`[${timestamp}] [WARMUP] Starting connection warmup for all backend services...`);
+    this.sharedLogger.info(`[${timestamp}] [WARMUP] Starting connection warmup`, {
+      services: Object.keys(this.serviceUrls),
+    });
+
+    const warmupPromises: Promise<void>[] = [];
+
+    // Warm up connections to all configured services
+    for (const [serviceName, baseUrl] of Object.entries(this.serviceUrls)) {
+      // Skip auth service if it's HTTPS (external service, not in Docker network)
+      if (serviceName === 'auth' && baseUrl.startsWith('https://')) {
+        this.logger.log(`[${timestamp}] [WARMUP] Skipping ${serviceName} (external HTTPS service)`);
+        continue;
+      }
+
+      const warmupPromise = this.warmupServiceConnection(serviceName, baseUrl)
+        .catch((error) => {
+          // Log but don't fail startup if warmup fails
+          this.logger.warn(`[${timestamp}] [WARMUP] Failed to warmup ${serviceName}: ${error.message}`);
+          this.sharedLogger.warn(`[${timestamp}] [WARMUP] Failed to warmup ${serviceName}`, {
+            serviceName,
+            error: error.message,
+          });
+        });
+      
+      warmupPromises.push(warmupPromise);
+    }
+
+    // Wait for all warmup requests to complete (or timeout)
+    try {
+      await Promise.allSettled(warmupPromises);
+      const warmupDuration = Date.now() - warmupStartTime;
+      this.logger.log(`[${new Date().toISOString()}] [WARMUP] Connection warmup completed (${warmupDuration}ms)`);
+      this.sharedLogger.info(`[${new Date().toISOString()}] [WARMUP] Connection warmup completed`, {
+        durationMs: warmupDuration,
+      });
+    } catch (error) {
+      const warmupDuration = Date.now() - warmupStartTime;
+      this.logger.error(`[${new Date().toISOString()}] [WARMUP] Connection warmup completed with errors (${warmupDuration}ms)`, error);
+      this.sharedLogger.error(`[${new Date().toISOString()}] [WARMUP] Connection warmup completed with errors`, {
+        durationMs: warmupDuration,
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
+  }
+
+  /**
+   * Warm up a single service connection by making a health check request
+   */
+  private async warmupServiceConnection(serviceName: string, baseUrl: string): Promise<void> {
+    const warmupStartTime = Date.now();
+    const timestamp = new Date().toISOString();
+    
+    // Determine health check endpoint based on service
+    let healthPath = '/health';
+    if (serviceName === 'allegro') {
+      healthPath = '/health';
+    } else if (serviceName === 'settings') {
+      healthPath = '/health';
+    } else if (serviceName === 'import') {
+      healthPath = '/health';
+    }
+
+    const healthUrl = `${baseUrl}${healthPath}`;
+    
+    this.logger.log(`[${timestamp}] [WARMUP] Warming up connection to ${serviceName} at ${healthUrl}`);
+    
+    try {
+      const config: AxiosRequestConfig = {
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        timeout: 10000, // 10 second timeout for warmup (faster than normal requests)
+        maxRedirects: 0,
+        validateStatus: (status) => status >= 200 && status < 500, // Accept any response
+        // Use keep-alive agents to establish and reuse connections
+        httpAgent: this.httpAgent,
+        httpsAgent: this.httpsAgent,
+      };
+
+      const response = await firstValueFrom(this.httpService.get(healthUrl, config));
+      const warmupDuration = Date.now() - warmupStartTime;
+      
+      this.logger.log(`[${new Date().toISOString()}] [WARMUP] ${serviceName} connection warmed up (${warmupDuration}ms) - Status: ${response.status}`);
+      this.sharedLogger.info(`[${new Date().toISOString()}] [WARMUP] ${serviceName} connection warmed up`, {
+        serviceName,
+        healthUrl,
+        status: response.status,
+        durationMs: warmupDuration,
+      });
+    } catch (error: any) {
+      const warmupDuration = Date.now() - warmupStartTime;
+      // Don't throw - warmup failures shouldn't prevent startup
+      // The connection might still be established even if the health check fails
+      this.logger.warn(`[${new Date().toISOString()}] [WARMUP] ${serviceName} warmup request failed (${warmupDuration}ms): ${error.message}`);
+      this.sharedLogger.warn(`[${new Date().toISOString()}] [WARMUP] ${serviceName} warmup request failed`, {
+        serviceName,
+        healthUrl,
+        durationMs: warmupDuration,
+        error: error.message,
+        errorCode: error.code,
+      });
+      
+      // Even if the request fails, the TCP connection might have been established
+      // This is still valuable for eliminating the cold start delay
+    }
   }
 
   /**
