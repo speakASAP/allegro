@@ -17,6 +17,20 @@ async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   const configService = app.get(ConfigService);
   
+  // Add request logging middleware to track incoming requests
+  app.use((req: any, res: any, next: any) => {
+    const timestamp = new Date().toISOString();
+    console.log(`[${timestamp}] [HTTP] Incoming request: ${req.method} ${req.url}`);
+    const startTime = Date.now();
+    
+    res.on('finish', () => {
+      const duration = Date.now() - startTime;
+      console.log(`[${new Date().toISOString()}] [HTTP] Request completed: ${req.method} ${req.url} - ${res.statusCode} (${duration}ms)`);
+    });
+    
+    next();
+  });
+  
   app.useGlobalPipes(
     new ValidationPipe({
       whitelist: true,
