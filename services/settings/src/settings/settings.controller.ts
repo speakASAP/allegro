@@ -31,15 +31,19 @@ export class SettingsController {
   async getSettings(@Request() req: any): Promise<{ success: boolean; data: any }> {
     const controllerStartTime = Date.now();
     const timestamp = new Date().toISOString();
+    // Use console.log for immediate visibility in Docker logs
+    console.log(`[${timestamp}] [TIMING] SettingsController.getSettings START - Request received at controller`);
     this.logger.log(`[${timestamp}] [TIMING] SettingsController.getSettings START - Request received at controller`);
     
-    const userId = String(req.user.id); // Convert to string as Prisma expects String
+    const userId = String(req.user?.id || req.user?.sub || 'unknown');
+    console.log(`[${timestamp}] [TIMING] SettingsController.getSettings - userId extracted: ${userId}`);
     
     const serviceStartTime = Date.now();
     const settings = await this.settingsService.getSettings(userId);
     const serviceDuration = Date.now() - serviceStartTime;
     
     const totalDuration = Date.now() - controllerStartTime;
+    console.log(`[${new Date().toISOString()}] [TIMING] SettingsController.getSettings COMPLETE (${totalDuration}ms total, service: ${serviceDuration}ms)`);
     this.logger.log(`[${new Date().toISOString()}] [TIMING] SettingsController.getSettings COMPLETE (${totalDuration}ms total, service: ${serviceDuration}ms)`, {
       userId,
       totalDurationMs: totalDuration,

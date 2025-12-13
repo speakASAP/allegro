@@ -42,9 +42,12 @@ export class OffersController {
   async getOffers(@Query() query: OfferQueryDto, @Request() req: any): Promise<{ success: boolean; data: any }> {
     const controllerStartTime = Date.now();
     const timestamp = new Date().toISOString();
+    // Use console.log for immediate visibility in Docker logs
+    console.log(`[${timestamp}] [TIMING] OffersController.getOffers START - Request received at controller`);
     this.logger.log(`[${timestamp}] [TIMING] OffersController.getOffers START - Request received at controller`);
     
-    const userId = String(req.user?.id || 'unknown');
+    const userId = String(req.user?.id || req.user?.sub || 'unknown');
+    console.log(`[${timestamp}] [TIMING] OffersController.getOffers - userId extracted: ${userId}`);
     try {
       const serviceStartTime = Date.now();
       this.logger.log('Getting offers list', {
@@ -64,6 +67,7 @@ export class OffersController {
       const totalDuration = Date.now() - controllerStartTime;
       
       this.metricsService.incrementListRequests();
+      console.log(`[${new Date().toISOString()}] [TIMING] OffersController.getOffers COMPLETE (${totalDuration}ms total, service: ${serviceDuration}ms)`);
       this.logger.log(`[${new Date().toISOString()}] [TIMING] OffersController.getOffers COMPLETE (${totalDuration}ms total, service: ${serviceDuration}ms)`, {
         userId,
         total: result.pagination?.total || 0,
