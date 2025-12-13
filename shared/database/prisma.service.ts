@@ -51,8 +51,21 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
       // URL encode password to handle special characters (/, +, =, @, etc.)
       const encodedPassword = encodeURIComponent(dbPassword);
       
-      databaseUrl = `postgresql://${dbUser}:${encodedPassword}@${dbHost}:${dbPort}/${dbName}?schema=public`;
+      // Add connection pool parameters to keep connections warm and reduce cold start delays
+      // connection_limit: Maximum number of connections in the pool (Prisma default is num_physical_cpus * 2 + 1)
+      // pool_timeout: How long to wait for a connection (default 10s)
+      // connect_timeout: How long to wait when establishing a connection (default 5s)
+      // This helps prevent the 9+ second delay on first request after idle period
+      databaseUrl = `postgresql://${dbUser}:${encodedPassword}@${dbHost}:${dbPort}/${dbName}?schema=public&connection_limit=10&pool_timeout=5&connect_timeout=2`;
       process.env.DATABASE_URL = databaseUrl;
+    } else {
+      // DATABASE_URL is valid, but ensure it has connection pool parameters for faster cold starts
+      // Only add if not already present
+      if (databaseUrl && !databaseUrl.includes('connection_limit=')) {
+        const separator = databaseUrl.includes('?') ? '&' : '?';
+        databaseUrl = `${databaseUrl}${separator}connection_limit=10&pool_timeout=5&connect_timeout=2`;
+        process.env.DATABASE_URL = databaseUrl;
+      }
     }
 
     // Pass datasources explicitly to PrismaClient to ensure correct URL is used
@@ -75,6 +88,16 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
     try {
       await this.$connect();
       this.logger.log('Prisma Client connected to database');
+      
+      // Warm up the connection pool with a simple query to prevent cold start delays
+      // This ensures the connection is ready and reduces the 9+ second delay on first request
+      try {
+        await this.$queryRaw`SELECT 1`;
+        this.logger.log('Prisma connection pool warmed up');
+      } catch (warmupError) {
+        // Non-critical - connection is still established, just warmup query failed
+        this.logger.warn('Prisma connection warmup query failed (non-critical)', warmupError);
+      }
     } catch (error) {
       this.logger.error('Failed to connect to database', error);
       throw error;

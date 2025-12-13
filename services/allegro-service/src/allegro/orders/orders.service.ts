@@ -32,18 +32,35 @@ export class OrdersService {
       where.paymentStatus = query.paymentStatus;
     }
 
+    // Optimized: Load orders without relations for faster list loading
+    // Relations can be loaded on-demand when viewing order details
     const [items, total] = await Promise.all([
       this.prisma.allegroOrder.findMany({
         where,
         skip,
         take: limit,
-        include: {
-          offer: {
-            include: {
-              product: true,
-            },
-          },
-          product: true,
+        select: {
+          id: true,
+          allegroOrderId: true,
+          buyerEmail: true,
+          buyerLogin: true,
+          quantity: true,
+          price: true,
+          totalPrice: true,
+          currency: true,
+          status: true,
+          paymentStatus: true,
+          fulfillmentStatus: true,
+          orderDate: true,
+          createdAt: true,
+          updatedAt: true,
+          // Relations removed for faster list loading - can be loaded on-demand when viewing details
+          // offer: {
+          //   include: {
+          //     product: true,
+          //   },
+          // },
+          // product: true,
         },
         orderBy: { orderDate: 'desc' },
       }),

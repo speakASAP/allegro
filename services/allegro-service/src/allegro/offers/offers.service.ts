@@ -3857,10 +3857,13 @@ export class OffersService {
               } as any,
             });
 
+            // Ensure error message is never empty
+            const finalErrorMessage = errorMessage || 'Unknown error occurred. Please check logs for details.';
+            
             results.push({
               offerId,
               status: 'failed',
-              error: errorMessage,
+              error: finalErrorMessage,
               allegroOfferId: offer.allegroOfferId,
             });
             failed++;
@@ -4220,10 +4223,13 @@ export class OffersService {
               } as any,
             });
 
+            // Ensure error message is never empty
+            const finalErrorMessage = errorMessage || 'Unknown error occurred. Please check logs for details.';
+            
             results.push({
               offerId,
               status: 'failed',
-              error: errorMessage,
+              error: finalErrorMessage,
               allegroOfferId: offer.allegroOfferId,
             });
             failed++;
@@ -4295,10 +4301,13 @@ export class OffersService {
             timestamp: new Date().toISOString(),
           });
 
+        // Ensure error message is never empty
+        const finalErrorMessage = errorMessage || 'Unknown error occurred. Please check logs for details.';
+        
         results.push({
           offerId,
           status: 'failed',
-          error: errorMessage,
+          error: finalErrorMessage,
         });
         failed++;
       }

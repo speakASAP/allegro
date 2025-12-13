@@ -245,7 +245,12 @@ const OffersPage: React.FC = () => {
         params.search = searchQuery.trim();
       }
 
-      const response = await api.get('/allegro/offers', { params });
+      // Use shorter timeout for fast database queries (5 seconds is more than enough)
+      // Database queries should complete in <100ms, so 5s gives plenty of buffer
+      const response = await api.get('/allegro/offers', { 
+        params,
+        timeout: 5000, // 5 seconds for database queries (should complete in <100ms)
+      });
       if (response.data.success) {
         const data = response.data.data;
         setOffers(data.items || []);
@@ -1890,7 +1895,7 @@ const OffersPage: React.FC = () => {
                         {result.allegroOfferId && (
                           <div className="text-xs text-gray-600">Allegro ID: {result.allegroOfferId}</div>
                         )}
-                        <div className="text-red-700 mt-1">{result.error}</div>
+                        <div className="text-red-700 mt-1">{result.error || 'An error occurred (no error message provided)'}</div>
                       </div>
                     ))}
                 </div>

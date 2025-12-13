@@ -386,14 +386,12 @@ const SettingsPage: React.FC = () => {
     }
   };
 
-
-  if (loading) {
-    return <div>Loading settings...</div>;
-  }
+  // Page renders immediately, no blocking loading screen
+  // Loading state is used for showing loading indicators in the UI, not blocking render
 
   return (
     <div className="space-y-6">
-      <h2 className="text-2xl font-bold">Settings</h2>
+      <h2 className="text-2xl font-bold">Settings {loading && <span className="text-sm text-gray-500">(Loading...)</span>}</h2>
 
       {error && (
         <div className="p-4 bg-red-100 border border-red-400 text-red-700 rounded whitespace-pre-line">
