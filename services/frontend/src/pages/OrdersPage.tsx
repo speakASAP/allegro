@@ -73,7 +73,7 @@ const OrdersPage: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      <h2 className="text-2xl font-bold">Orders</h2>
+      <h2 className="text-2xl font-bold">Orders{loading && <span className="ml-2 text-sm text-gray-500">(Loading...)</span>}</h2>
 
       {error && (
         <div className="p-4 bg-red-100 border border-red-400 text-red-700 rounded whitespace-pre-line">
