@@ -9,18 +9,39 @@ import { ConfigService } from '@nestjs/config';
 import { firstValueFrom } from 'rxjs';
 import { AxiosRequestConfig } from 'axios';
 import { LoggerService } from '@allegro/shared';
+import { Agent as HttpAgent } from 'http';
+import { Agent as HttpsAgent } from 'https';
 
 @Injectable()
 export class GatewayService {
   private readonly logger = new Logger(GatewayService.name);
   private readonly sharedLogger: LoggerService;
   private readonly serviceUrls: Record<string, string>;
+  private readonly httpAgent: HttpAgent;
+  private readonly httpsAgent: HttpsAgent;
 
   constructor(
     private readonly httpService: HttpService,
     private readonly configService: ConfigService,
     loggerService: LoggerService,
   ) {
+    // Create HTTP and HTTPS agents with keep-alive to reuse connections
+    // These are shared across all requests to eliminate connection delays
+    this.httpAgent = new HttpAgent({
+      keepAlive: true,
+      keepAliveMsecs: 1000,
+      maxSockets: 50,
+      maxFreeSockets: 10,
+      timeout: 60000,
+    });
+    
+    this.httpsAgent = new HttpsAgent({
+      keepAlive: true,
+      keepAliveMsecs: 1000,
+      maxSockets: 50,
+      maxFreeSockets: 10,
+      timeout: 60000,
+    });
     this.sharedLogger = loggerService;
     this.sharedLogger.setContext('GatewayService');
     
@@ -131,10 +152,9 @@ export class GatewayService {
       timeout,
       maxRedirects: followRedirects ? 5 : 0,
       validateStatus: (status) => status >= 200 && status < 400, // Accept redirects
-      // Explicitly use the agents configured in HttpModule
-      // HttpService should inherit these, but explicitly setting ensures they're used
-      ...(isHttps ? {} : { httpAgent: this.httpService.axiosRef.defaults.httpAgent }),
-      ...(isHttps ? { httpsAgent: this.httpService.axiosRef.defaults.httpsAgent } : {}),
+      // Explicitly use keep-alive agents to reuse connections
+      // This eliminates the 17-second delay on first connection
+      ...(isHttps ? { httpsAgent: this.httpsAgent } : { httpAgent: this.httpAgent }),
     };
 
     // Log request details
