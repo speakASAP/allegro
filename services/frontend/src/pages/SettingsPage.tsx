@@ -312,22 +312,6 @@ const SettingsPage: React.FC = () => {
     }
   };
 
-  const loadOAuthStatus = async () => {
-    try {
-      const response = await oauthApi.getStatus();
-      if (response.data.success) {
-        setOauthStatus(response.data.data);
-      } else {
-        // If response is not successful, set as not authorized
-        setOauthStatus({ authorized: false });
-      }
-    } catch (err: unknown) {
-      // On error, set as not authorized (don't leave as null to avoid infinite loading)
-      console.error('Failed to load OAuth status', err);
-      setOauthStatus({ authorized: false });
-    }
-  };
-
   const handleAuthorizeOAuth = async () => {
     // Check if Client ID is configured (Client Secret might not be returned by API for security)
     const hasClientId = allegroClientId || settings?.allegroClientId;
