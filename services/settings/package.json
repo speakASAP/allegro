@@ -1,5 +1,5 @@
 {
-  "name": "allegro-settings-service",
+  "name": "settings",
   "version": "1.0.0",
   "description": "Settings Service for Allegro Integration System",
   "main": "dist/main.js",

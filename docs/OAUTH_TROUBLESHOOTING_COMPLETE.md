@@ -448,7 +448,7 @@ const settings = await this.prisma.userSettings.findFirst({
 
 **Root Cause**:
 
-- The `docker-compose.green.yml` file for `allegro-settings-service` was missing required environment variables:
+- The `docker-compose.green.yml` file for `settings` was missing required environment variables:
   - `HTTP_TIMEOUT`
   - `AUTH_SERVICE_TIMEOUT`
 
@@ -502,9 +502,9 @@ Added extensive logging at critical points:
 
 - `services/allegro-service/src/allegro/oauth/oauth.controller.ts`
 - `services/allegro-service/src/allegro/allegro-oauth.service.ts`
-- `services/allegro-settings-service/src/settings/settings.service.ts`
-- `services/allegro-settings-service/src/settings/settings.controller.ts`
-- `services/allegro-frontend-service/src/pages/SettingsPage.tsx`
+- `services/settings/src/settings/settings.service.ts`
+- `services/settings/src/settings/settings.controller.ts`
+- `services/frontend/src/pages/SettingsPage.tsx`
 
 ### Step 3: Database Verification
 
@@ -586,7 +586,7 @@ if (!response || !response.offers) {
 
 ### Fix #2: OAuth Authorization UI
 
-**File**: `services/allegro-frontend-service/src/pages/SettingsPage.tsx`
+**File**: `services/frontend/src/pages/SettingsPage.tsx`
 
 **Changes**:
 
@@ -762,7 +762,7 @@ if (scopes.length > maxScopesLength) {
 
 ### Fix #7: Client Secret Handling
 
-**File**: `services/allegro-frontend-service/src/pages/SettingsPage.tsx`
+**File**: `services/frontend/src/pages/SettingsPage.tsx`
 
 **Changes**:
 
@@ -803,7 +803,7 @@ if (allegroClientSecret && allegroClientSecret !== '********') {
 **Change**: Added missing environment variables
 
 ```yaml
-allegro-settings-service:
+settings:
   environment:
     # ... existing variables ...
     - HTTP_TIMEOUT=${HTTP_TIMEOUT:-30000}
@@ -985,12 +985,12 @@ WHERE "userId" = '6';
    - `services/allegro-service/src/allegro/oauth/oauth.controller.ts`
    - `services/allegro-service/src/allegro/allegro-oauth.service.ts`
    - `services/allegro-service/src/allegro/offers/offers.service.ts`
-   - `services/allegro-settings-service/src/settings/settings.service.ts`
-   - `services/allegro-settings-service/src/settings/settings.controller.ts`
+   - `services/settings/src/settings/settings.service.ts`
+   - `services/settings/src/settings/settings.controller.ts`
 
 2. **Frontend**:
-   - `services/allegro-frontend-service/src/pages/SettingsPage.tsx`
-   - `services/allegro-frontend-service/src/services/api.ts`
+   - `services/frontend/src/pages/SettingsPage.tsx`
+   - `services/frontend/src/services/api.ts`
 
 3. **Database**:
    - `prisma/schema.prisma`

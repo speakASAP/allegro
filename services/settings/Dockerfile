@@ -25,14 +25,14 @@ RUN npm run build
 
 # Copy service files
 WORKDIR /app
-COPY services/allegro-settings-service/package*.json ./services/allegro-settings-service/
-COPY services/allegro-settings-service/tsconfig.json ./services/allegro-settings-service/
-COPY services/allegro-settings-service/src ./services/allegro-settings-service/src
+COPY services/settings/package*.json ./services/settings/
+COPY services/settings/tsconfig.json ./services/settings/
+COPY services/settings/src ./services/settings/src
 COPY tsconfig.json ./
 COPY package*.json ./
 
 # Install dependencies and build
-WORKDIR /app/services/allegro-settings-service
+WORKDIR /app/services/settings
 RUN npm ci
 RUN npm run build
 
@@ -48,12 +48,12 @@ WORKDIR /app
 COPY --from=builder /app/shared ./shared
 
 # Copy service files maintaining directory structure for file: references
-COPY --from=builder /app/services/allegro-settings-service ./services/allegro-settings-service
+COPY --from=builder /app/services/settings ./services/settings
 
 # Copy root package.json for shared dependencies
 COPY --from=builder /app/package*.json ./
 
-WORKDIR /app/services/allegro-settings-service
+WORKDIR /app/services/settings
 
 EXPOSE 3408
 

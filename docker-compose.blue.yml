@@ -11,8 +11,8 @@ services:
       - SERVICE_NAME=${SERVICE_NAME:-allegro}
       - API_GATEWAY_PORT=${API_GATEWAY_PORT:-3411}
       - ALLEGRO_SERVICE_URL=${ALLEGRO_SERVICE_URL:-http://allegro-service-blue:3403}
-      - IMPORT_SERVICE_URL=${IMPORT_SERVICE_URL:-http://allegro-import-service-blue:3406}
-      - SETTINGS_SERVICE_URL=${SETTINGS_SERVICE_URL:-http://allegro-settings-service-blue:3408}
+      - IMPORT_SERVICE_URL=${IMPORT_SERVICE_URL:-http://allegro-imports-blue:3406}
+      - SETTINGS_SERVICE_URL=${SETTINGS_SERVICE_URL:-http://settings-blue:3408}
       - ALLEGRO_SETTINGS_SERVICE_PORT=${ALLEGRO_SETTINGS_SERVICE_PORT:-3408}
       - AUTH_SERVICE_URL=${AUTH_SERVICE_URL}
       - JWT_SECRET=${JWT_SECRET}
@@ -88,11 +88,11 @@ services:
       retries: 3
       start_period: 60s
 
-  allegro-import-service:
+  allegro-imports:
     build:
       context: .
-      dockerfile: services/import-service/Dockerfile
-    container_name: allegro-import-service-blue
+      dockerfile: services/imports/Dockerfile
+    container_name: allegro-imports-blue
     ports:
       - "${IMPORT_SERVICE_PORT:-3406}:3406"
     environment:
@@ -126,11 +126,11 @@ services:
       retries: 3
       start_period: 60s
 
-  allegro-settings-service:
+  settings:
     build:
       context: .
-      dockerfile: ./services/allegro-settings-service/Dockerfile
-    container_name: allegro-settings-service-blue
+      dockerfile: ./services/settings/Dockerfile
+    container_name: settings-blue
     ports:
       - "${ALLEGRO_SETTINGS_SERVICE_PORT:-3408}:3408"
     environment:
@@ -163,10 +163,10 @@ services:
   frontend:
     build:
       context: .
-      dockerfile: services/allegro-frontend-service/Dockerfile
+      dockerfile: services/frontend/Dockerfile
       args:
         - FRONTEND_API_URL=${FRONTEND_API_URL}
-    container_name: allegro-frontend-service-blue
+    container_name: frontend-blue
     ports:
       - "${ALLEGRO_FRONTEND_SERVICE_PORT:-3410}:3410"
     environment:

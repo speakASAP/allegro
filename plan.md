@@ -13,13 +13,13 @@
    - Note any missing keys for `.env.example` (names only, no secrets).
 2. Collect production logs around failures
    - Check API Gateway logs for `/api/import/jobs` 500s.
-   - Check import-service logs for errors on `/import/jobs`.
+   - Check imports logs for errors on `/import/jobs`.
    - Check allegro-service logs for OAuth/access-denied on preview/import/export.
 3. Reproduce locally (if needed)
    - Ensure `shared` built and services running.
    - Hit `/api/import/jobs` and import/preview/export endpoints to confirm behavior with current code.
 4. Backend fixes: import jobs 500 and performance
-   - Add safe error handling and pagination/limits in `import-service` list path if needed.
+   - Add safe error handling and pagination/limits in `imports` list path if needed.
    - Ensure Prisma query uses numeric pagination and guards null values; add logging context.
    - Consider adding index usage or limit to 100 and default sort; verify DB connectivity.
 5. Backend fixes: Allegro OAuth/credentials
@@ -40,9 +40,9 @@
 ### Checklist (to execute after approval)
 
 1. SSH to prod and read `.env`; record relevant keys (names only) and values needed for debugging.
-2. Collect prod logs for API Gateway, import-service, allegro-service around `/import/jobs`, preview/import/export.
+2. Collect prod logs for API Gateway, imports, allegro-service around `/import/jobs`, preview/import/export.
 3. (If needed) Start local services and reproduce `/import/jobs` and import flows.
-4. Patch import-service: harden `/import/jobs` (validation, safe pagination, error handling, logging).
+4. Patch imports: harden `/import/jobs` (validation, safe pagination, error handling, logging).
 5. Patch allegro-service: ensure Sales Center and preview/import use OAuth token; improve error messages; avoid client_credentials where not allowed.
 6. Patch frontend ImportJobsPage: currency display uses data; clear preview after import; disable Import button appropriately; better error/OAuth prompts; handle export errors gracefully.
 7. Update `.env.example` with any missing non-secret keys identified; back up `.env` before any edits (if required).

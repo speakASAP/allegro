@@ -22,7 +22,7 @@
 
 ## Current Baseline (Allegro)
 
-- Services kept: **api-gateway**, **allegro-service**, **import-service**, **allegro-settings-service**, **allegro-frontend-service**.
+- Services kept: **api-gateway**, **allegro-service**, **imports**, **settings**, **frontend**.
 - Prisma models already in place:
   - `Product`: canonical product data (descriptions, SEO, media URLs, prices, dimensions, attributes, tags, categories).
   - `AllegroOffer`: platform offer projection with price, stock, status, images, delivery/payment JSON, sync metadata, **rawData JSONB** ✅.
@@ -38,7 +38,7 @@
 - **Taxonomy & Attributes Mapping**: mapping tables to translate canonical categories/attributes to each platform’s taxonomy; keep per-platform required/optional attributes, value dictionaries, and last-validated state.
 - **Ingestion/Import**:
   - Allegro: existing OAuth-based import (offers and Sales Center).
-  - CSV/manual: continue via import-service for canonical products.
+  - CSV/manual: continue via imports for canonical products.
   - Future: platform APIs (Aukro/Heureka/Bazos) for imports when available; otherwise CSV/XML scrapes mapped into canonical products.
 - **Export/Publish**:
   - Use per-platform mappers to transform canonical product + platform config into platform offer payloads.

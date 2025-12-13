@@ -10,9 +10,8 @@ export class HealthController {
   async getHealth() {
     return {
       status: 'ok',
-      service: 'import-service',
+      service: 'settings',
       timestamp: new Date().toISOString(),
     };
   }
 }
-

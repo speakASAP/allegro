@@ -18,7 +18,7 @@
    ssh statex "cd /home/statex/allegro && docker logs allegro-service-green --tail 100 | grep -E 'OAuth|error|Error'"
    
    # Settings Service logs
-   ssh statex "cd /home/statex/allegro && docker logs allegro-settings-service-green --tail 100 | grep -E 'error|Error'"
+   ssh statex "cd /home/statex/allegro && docker logs settings-green --tail 100 | grep -E 'error|Error'"
    ```
 
 3. **Verify OAuth State**

@@ -25,14 +25,14 @@ RUN npm run build
 
 # Copy service files
 WORKDIR /app
-COPY services/import-service/package*.json ./services/import-service/
-COPY services/import-service/tsconfig.json ./services/import-service/
-COPY services/import-service/src ./services/import-service/src
+COPY services/imports/package*.json ./services/imports/
+COPY services/imports/tsconfig.json ./services/imports/
+COPY services/imports/src ./services/imports/src
 COPY tsconfig.json ./
 COPY package*.json ./
 
 # Install dependencies and build
-WORKDIR /app/services/import-service
+WORKDIR /app/services/imports
 RUN npm ci
 RUN npm run build
 
@@ -48,12 +48,12 @@ WORKDIR /app
 COPY --from=builder /app/shared ./shared
 
 # Copy service files maintaining directory structure for file: references
-COPY --from=builder /app/services/import-service ./services/import-service
+COPY --from=builder /app/services/imports ./services/imports
 
 # Copy root package.json for shared dependencies
 COPY --from=builder /app/package*.json ./
 
-WORKDIR /app/services/import-service
+WORKDIR /app/services/imports
 
 EXPOSE 3406
 

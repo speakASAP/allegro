@@ -1,5 +1,5 @@
 {
-  "name": "allegro-frontend-service",
+  "name": "frontend",
   "version": "1.0.0",
   "description": "Frontend Service for Allegro Integration System",
   "private": true,

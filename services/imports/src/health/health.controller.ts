@@ -10,8 +10,9 @@ export class HealthController {
   async getHealth() {
     return {
       status: 'ok',
-      service: 'allegro-settings-service',
+      service: 'imports',
       timestamp: new Date().toISOString(),
     };
   }
 }
+
