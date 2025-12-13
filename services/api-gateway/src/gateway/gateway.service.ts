@@ -183,16 +183,24 @@ export class GatewayService {
     
     // Log agent usage and connection details for debugging
     const agentCheckTime = Date.now();
+    // Count sockets/requests instead of serializing them (they contain circular references)
+    const httpSocketsCount = Object.keys(this.httpAgent.sockets || {}).length;
+    const httpFreeSocketsCount = Object.keys(this.httpAgent.freeSockets || {}).length;
+    const httpRequestsCount = Object.keys(this.httpAgent.requests || {}).length;
+    const httpsSocketsCount = Object.keys(this.httpsAgent.sockets || {}).length;
+    const httpsFreeSocketsCount = Object.keys(this.httpsAgent.freeSockets || {}).length;
+    const httpsRequestsCount = Object.keys(this.httpsAgent.requests || {}).length;
+    
     const agentInfo = {
       hasHttpAgent: !!config.httpAgent,
       hasHttpsAgent: !!config.httpsAgent,
       isHttps,
-      httpAgentSockets: this.httpAgent.sockets,
-      httpAgentFreeSockets: this.httpAgent.freeSockets,
-      httpAgentRequests: this.httpAgent.requests,
-      httpsAgentSockets: this.httpsAgent.sockets,
-      httpsAgentFreeSockets: this.httpsAgent.freeSockets,
-      httpsAgentRequests: this.httpsAgent.requests,
+      httpAgentSockets: httpSocketsCount,
+      httpAgentFreeSockets: httpFreeSocketsCount,
+      httpAgentRequests: httpRequestsCount,
+      httpsAgentSockets: httpsSocketsCount,
+      httpsAgentFreeSockets: httpsFreeSocketsCount,
+      httpsAgentRequests: httpsRequestsCount,
       axiosDefaultsHttpAgent: !!this.httpService.axiosRef.defaults.httpAgent,
       axiosDefaultsHttpsAgent: !!this.httpService.axiosRef.defaults.httpsAgent,
     };
