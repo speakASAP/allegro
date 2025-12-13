@@ -389,7 +389,7 @@ const OffersPage: React.FC = () => {
         const detailResponse = await api.get(`/allegro/offers/${selectedOffer.id}`);
         if (detailResponse.data.success) {
           setSelectedOffer(detailResponse.data.data);
-          loadAllOffers();
+          loadOffers();
           console.log('[handleSyncToAllegro] Offer details updated');
         }
       } else {
@@ -424,7 +424,7 @@ const OffersPage: React.FC = () => {
         const detailResponse = await api.get(`/allegro/offers/${selectedOffer.id}`);
         if (detailResponse.data.success) {
           setSelectedOffer(detailResponse.data.data);
-          loadAllOffers();
+          loadOffers();
         }
       }
     } catch (err) {
@@ -513,7 +513,7 @@ const OffersPage: React.FC = () => {
               setIsEditMode(false);
               setEditedOffer(null);
               // Refresh offers list to show updated data
-              loadAllOffers();
+              loadOffers();
             }
           }
         } catch (err) {
@@ -583,7 +583,7 @@ const OffersPage: React.FC = () => {
           setIsEditMode(false);
           setEditedOffer(null);
           // Refresh offers list to show updated data
-          loadAllOffers();
+          loadOffers();
         }
       }
     } catch (err) {

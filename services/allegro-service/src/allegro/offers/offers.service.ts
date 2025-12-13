@@ -91,7 +91,8 @@ export class OffersService {
           id: true,
           allegroOfferId: true,
           title: true,
-          description: true,
+          // Exclude description for list view (it's TEXT and can be very large)
+          // description: true,
           categoryId: true,
           price: true,
           currency: true,
@@ -101,7 +102,8 @@ export class OffersService {
           lastSyncedAt: true,
           syncSource: true,
           validationStatus: true,
-          validationErrors: true,
+          // Exclude validationErrors for list view (it's JSON and can be large)
+          // validationErrors: true,
           lastValidatedAt: true,
           createdAt: true,
           updatedAt: true,
