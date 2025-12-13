@@ -20,14 +20,16 @@ interface Order {
 
 const OrdersPage: React.FC = () => {
   const [orders, setOrders] = useState<Order[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false); // Start as false to render immediately
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    // Load orders in background (non-blocking)
     loadOrders();
   }, []);
 
   const loadOrders = async () => {
+    setLoading(true); // Set loading only during the API call
     try {
       const response = await api.get('/allegro/orders');
       if (response.data.success) {
@@ -66,9 +68,8 @@ const OrdersPage: React.FC = () => {
     }
   };
 
-  if (loading) {
-    return <div>Loading orders...</div>;
-  }
+  // Page renders immediately, no blocking loading screen
+  // Loading state is used for showing loading indicators in the UI, not blocking render
 
   return (
     <div className="space-y-6">
