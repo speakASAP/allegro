@@ -544,8 +544,32 @@ export class OffersController {
   @UseGuards(JwtAuthGuard)
   async syncToAllegro(@Param('id') id: string, @Request() req: any): Promise<{ success: boolean; data: any }> {
     const userId = String(req.user?.id || 'unknown');
-    const result = await this.offersService.updateOffer(id, { syncToAllegro: true }, userId);
-    return { success: true, data: result };
+    this.logger.log('[syncToAllegro] Sync-to-Allegro endpoint called', {
+      offerId: id,
+      userId,
+      timestamp: new Date().toISOString(),
+    });
+    try {
+      const result = await this.offersService.updateOffer(id, { syncToAllegro: true }, userId);
+      this.logger.log('[syncToAllegro] Sync-to-Allegro completed successfully', {
+        offerId: id,
+        userId,
+        hasResult: !!result,
+        resultKeys: result ? Object.keys(result) : [],
+        timestamp: new Date().toISOString(),
+      });
+      return { success: true, data: result };
+    } catch (error: any) {
+      this.logger.error('[syncToAllegro] Sync-to-Allegro failed', {
+        offerId: id,
+        userId,
+        error: error.message,
+        errorStack: error.stack,
+        errorStatus: error.status,
+        timestamp: new Date().toISOString(),
+      });
+      throw error;
+    }
   }
 
   @Post(':id/sync-from-allegro')

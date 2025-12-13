@@ -225,23 +225,32 @@ const OffersPage: React.FC = () => {
   const [total, setTotal] = useState(0);
   const limit = 20;
 
-  // Store all offers for client-side filtering
-  const [allOffers, setAllOffers] = useState<Offer[]>([]);
-
-  // Load all offers once on mount (client-side filtering for instant filtering)
-  const loadAllOffers = useCallback(async () => {
+  // Server-side filtering with pagination (fast, only loads what's needed)
+  const loadOffers = useCallback(async () => {
     setLoading(true);
     try {
-      // Load all offers without pagination for client-side filtering
-      const response = await api.get('/allegro/offers', { 
-        params: { 
-          limit: 1000, // Load all offers at once
-          page: 1 
-        } 
-      });
+      const params: any = {
+        limit,
+        page,
+      };
+      
+      // Apply filters for server-side filtering
+      if (statusFilter && statusFilter.trim()) {
+        params.status = statusFilter;
+      }
+      if (categoryFilter && categoryFilter.trim()) {
+        params.categoryId = categoryFilter;
+      }
+      if (searchQuery && searchQuery.trim()) {
+        params.search = searchQuery.trim();
+      }
+
+      const response = await api.get('/allegro/offers', { params });
       if (response.data.success) {
-        const items = response.data.data.items || [];
-        setAllOffers(items);
+        const data = response.data.data;
+        setOffers(data.items || []);
+        setTotalPages(data.pagination?.totalPages || 1);
+        setTotal(data.pagination?.total || 0);
         setError(null);
       }
     } catch (err) {
@@ -259,50 +268,17 @@ const OffersPage: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [limit, page, statusFilter, categoryFilter, searchQuery]);
 
+  // Load offers when filters or page change
   useEffect(() => {
-    loadAllOffers();
-  }, [loadAllOffers]);
+    loadOffers();
+  }, [loadOffers]);
 
   // Save filters to localStorage whenever they change
   useEffect(() => {
     saveFilters(statusFilter, searchQuery, categoryFilter, page);
   }, [statusFilter, searchQuery, categoryFilter, page]);
-
-  // Client-side filtering - instant!
-  useEffect(() => {
-    let filtered = [...allOffers];
-
-    // Apply search filter
-    if (searchQuery && searchQuery.trim()) {
-      const query = searchQuery.toLowerCase().trim();
-      filtered = filtered.filter(offer => 
-        offer.title?.toLowerCase().includes(query)
-      );
-    }
-
-    // Apply status filter
-    if (statusFilter && statusFilter.trim()) {
-      filtered = filtered.filter(offer => offer.status === statusFilter);
-    }
-
-    // Apply category filter
-    if (categoryFilter && categoryFilter.trim()) {
-      filtered = filtered.filter(offer => offer.categoryId === categoryFilter);
-    }
-
-    // Calculate pagination
-    const totalFiltered = filtered.length;
-    const totalPagesFiltered = Math.ceil(totalFiltered / limit);
-    const startIndex = (page - 1) * limit;
-    const endIndex = startIndex + limit;
-    const paginatedOffers = filtered.slice(startIndex, endIndex);
-
-    setOffers(paginatedOffers);
-    setTotalPages(totalPagesFiltered);
-    setTotal(totalFiltered);
-  }, [allOffers, searchQuery, statusFilter, categoryFilter, page, limit]);
 
   const handleViewDetails = async (offer: Offer) => {
     // Use existing offer data immediately (fast response)
@@ -395,26 +371,45 @@ const OffersPage: React.FC = () => {
   };
 
   const handleSyncToAllegro = async () => {
-    if (!selectedOffer) return;
+    if (!selectedOffer) {
+      console.error('[handleSyncToAllegro] No selected offer', { selectedOffer });
+      setError('No offer selected. Please select an offer first.');
+      return;
+    }
 
+    console.log('[handleSyncToAllegro] Starting sync', { offerId: selectedOffer.id, allegroOfferId: selectedOffer.allegroOfferId });
     setSyncingToAllegro(true);
     setError(null);
     try {
+      console.log('[handleSyncToAllegro] Sending POST request', { url: `/allegro/offers/${selectedOffer.id}/sync-to-allegro` });
       const response = await api.post(`/allegro/offers/${selectedOffer.id}/sync-to-allegro`);
+      console.log('[handleSyncToAllegro] Received response', { success: response.data?.success, data: response.data });
       if (response.data.success) {
+        console.log('[handleSyncToAllegro] Sync successful, fetching updated offer details');
         const detailResponse = await api.get(`/allegro/offers/${selectedOffer.id}`);
         if (detailResponse.data.success) {
           setSelectedOffer(detailResponse.data.data);
           loadAllOffers();
+          console.log('[handleSyncToAllegro] Offer details updated');
         }
+      } else {
+        console.warn('[handleSyncToAllegro] Response success is false', response.data);
+        setError('Sync completed but response indicates failure');
       }
     } catch (err) {
-      console.error('Failed to sync to Allegro', err);
+      console.error('[handleSyncToAllegro] Failed to sync to Allegro', err);
       const axiosError = err as AxiosError & { response?: { data?: { error?: { message?: string } } } };
       const errorMessage = axiosError.response?.data?.error?.message || (err as Error).message || 'Failed to sync to Allegro';
+      console.error('[handleSyncToAllegro] Error details', {
+        message: errorMessage,
+        status: axiosError.response?.status,
+        statusText: axiosError.response?.statusText,
+        data: axiosError.response?.data,
+      });
       setError(errorMessage);
     } finally {
       setSyncingToAllegro(false);
+      console.log('[handleSyncToAllegro] Sync process completed');
     }
   };
 
@@ -947,7 +942,7 @@ const OffersPage: React.FC = () => {
       await api.post('/allegro/offers', payload);
       console.log('[handleCreateOffer] Success!');
       setShowCreateModal(false);
-      await loadAllOffers();
+          await loadOffers();
     } catch (err) {
       console.error('[handleCreateOffer] Failed to create offer', err);
       const axiosErr = err as AxiosError & { serviceErrorMessage?: string };
@@ -967,29 +962,41 @@ const OffersPage: React.FC = () => {
     setPublishing(true);
     setError(null);
     try {
-      // Get IDs of all filtered offers (use allOffers which contains all filtered results)
-      const filteredOffers = allOffers.filter((offer) => {
-        // Apply same filters as the client-side filtering
-        if (searchQuery && searchQuery.trim()) {
-          const query = searchQuery.toLowerCase().trim();
-          if (!offer.title?.toLowerCase().includes(query)) {
-            return false;
-          }
-        }
+      // Get IDs of all filtered offers by fetching all pages
+      const allOfferIds: string[] = [];
+      let currentPage = 1;
+      let hasMore = true;
+      
+      while (hasMore) {
+        const params: any = {
+          limit: 100, // Fetch in batches
+          page: currentPage,
+        };
+        
         if (statusFilter && statusFilter.trim()) {
-          if (offer.status !== statusFilter) {
-            return false;
-          }
+          params.status = statusFilter;
         }
         if (categoryFilter && categoryFilter.trim()) {
-          if (offer.categoryId !== categoryFilter) {
-            return false;
-          }
+          params.categoryId = categoryFilter;
         }
-        return true;
-      });
+        if (searchQuery && searchQuery.trim()) {
+          params.search = searchQuery.trim();
+        }
+        
+        const response = await api.get('/allegro/offers', { params });
+        if (response.data.success) {
+          const items = response.data.data.items || [];
+          allOfferIds.push(...items.map((offer: Offer) => offer.id));
+          
+          const totalPages = response.data.data.pagination?.totalPages || 1;
+          hasMore = currentPage < totalPages;
+          currentPage++;
+        } else {
+          hasMore = false;
+        }
+      }
 
-      const offerIds = filteredOffers.map((offer) => offer.id);
+      const offerIds = allOfferIds;
 
       // Use longer timeout for bulk publish operation (90 seconds)
       const response = await api.post('/allegro/offers/publish-all', {
@@ -1002,7 +1009,7 @@ const OffersPage: React.FC = () => {
         setPublishResults(response.data.data);
         setShowPublishResultsModal(true);
         // Refresh offers list
-        await loadAllOffers();
+          await loadOffers();
       } else {
         setError(response.data.error?.message || 'Failed to publish offers');
       }
@@ -1057,6 +1064,11 @@ const OffersPage: React.FC = () => {
               onChange={(e) => {
                 setSearchQuery(e.target.value);
                 setPage(1); // Reset to first page on filter change
+              }}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  setPage(1); // Trigger reload on Enter
+                }
               }}
             />
           </div>
