@@ -93,14 +93,14 @@ model Product {
 
 // Allegro products (raw productSet data)
 model AllegroProduct {
-  id                 String  @id @default(uuid()) @db.Uuid
-  allegroProductId   String  @unique @db.VarChar(100)
-  name               String? @db.VarChar(500)
-  brand              String? @db.VarChar(255)
-  manufacturerCode   String? @db.VarChar(255)
-  ean                String? @db.VarChar(50)
-  publicationStatus  String? @db.VarChar(50)
-  isAiCoCreated      Boolean @default(false)
+  id                 String   @id @default(uuid()) @db.Uuid
+  allegroProductId   String   @unique @db.VarChar(100)
+  name               String?  @db.VarChar(500)
+  brand              String?  @db.VarChar(255)
+  manufacturerCode   String?  @db.VarChar(255)
+  ean                String?  @db.VarChar(50)
+  publicationStatus  String?  @db.VarChar(50)
+  isAiCoCreated      Boolean  @default(false)
   marketedBeforeGPSR Boolean?
   rawData            Json
   createdAt          DateTime @default(now()) @db.Timestamp(6)
@@ -115,10 +115,10 @@ model AllegroProduct {
 }
 
 model AllegroProductParameter {
-  id               String  @id @default(uuid()) @db.Uuid
-  allegroProductId String  @db.Uuid
-  parameterId      String  @db.VarChar(100)
-  name             String? @db.VarChar(255)
+  id               String   @id @default(uuid()) @db.Uuid
+  allegroProductId String   @db.Uuid
+  parameterId      String   @db.VarChar(100)
+  name             String?  @db.VarChar(255)
   values           Json?
   valuesIds        Json?
   rangeValue       Json?
@@ -171,8 +171,8 @@ model AllegroOffer {
   syncSource   String?   @db.VarChar(50) // ALLEGRO_API, SALES_CENTER, MANUAL, etc.
 
   // Validation/readiness for publish flows
-  validationStatus String?  @db.VarChar(50) // READY, WARNINGS, ERRORS
-  validationErrors Json?     // Array of validation error/warning objects
+  validationStatus String?   @db.VarChar(50) // READY, WARNINGS, ERRORS
+  validationErrors Json? // Array of validation error/warning objects
   lastValidatedAt  DateTime? @db.Timestamp(6)
 
   // Timestamps
@@ -390,7 +390,7 @@ model UserSettings {
 
   // Allegro API configuration
   allegroClientId     String? @db.VarChar(255)
-  allegroClientSecret String? @db.VarChar(500) // Encrypted
+  allegroClientSecret String? @db.Text // Encrypted (can be up to ~1000 chars when encrypted, use Text to avoid truncation)
 
   // Allegro OAuth tokens (for accessing user-specific resources)
   allegroAccessToken       String?   @db.VarChar(5000) // Encrypted
