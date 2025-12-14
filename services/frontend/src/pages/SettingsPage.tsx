@@ -224,9 +224,12 @@ const SettingsPage: React.FC = () => {
     setSuccess('');
 
     try {
+      // Use longer timeout for Allegro API validation (external API can be slow, up to 30s)
       const response = await api.post('/settings/validate/allegro', {
         clientId: allegroClientId,
         clientSecret: allegroClientSecret,
+      }, {
+        timeout: 60000, // 60 seconds - Allegro API validation can take up to 30s, plus network overhead
       });
 
       if (response.data.success && response.data.data && response.data.data.valid === true) {
