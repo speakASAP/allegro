@@ -700,7 +700,18 @@ export class OffersController {
     @Body() body: { offerIds?: string[] },
     @Query() query: OfferQueryDto,
   ): Promise<{ success: boolean; data: any }> {
-    const userId = String(req.user?.id || 'unknown');
+    // Log immediately when method is called - before any processing
+    console.log('[publishAllOffers] ========== METHOD CALLED ==========', {
+      timestamp: new Date().toISOString(),
+      hasReq: !!req,
+      hasBody: !!body,
+      hasQuery: !!query,
+      bodyType: typeof body,
+      bodyKeys: body ? Object.keys(body) : [],
+      queryKeys: query ? Object.keys(query) : [],
+    });
+    
+    const userId = String(req.user?.id || req.user?.sub || 'unknown');
     const requestId = `publish-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
     const startTime = Date.now();
     
