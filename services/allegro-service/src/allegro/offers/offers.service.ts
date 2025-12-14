@@ -2369,22 +2369,37 @@ export class OffersService {
   }
 
   private async getUserOAuthToken(userId: string): Promise<string> {
+    const tokenStartTime = Date.now();
     try {
-      this.logger.log('[getUserOAuthToken] Retrieving OAuth token', { userId });
+      this.logger.log('[getUserOAuthToken] Retrieving OAuth token - START', { 
+        userId,
+        timestamp: new Date().toISOString(),
+      });
+      
+      const dbQueryStartTime = Date.now();
       const token = await this.allegroAuth.getUserAccessToken(userId);
-      this.logger.log('[getUserOAuthToken] OAuth token retrieved successfully', {
+      const dbQueryDuration = Date.now() - dbQueryStartTime;
+      const totalDuration = Date.now() - tokenStartTime;
+      
+      this.logger.log('[getUserOAuthToken] OAuth token retrieved successfully - COMPLETE', {
         userId,
         tokenLength: token?.length || 0,
         tokenFirstChars: token?.substring(0, 20) || 'N/A',
+        dbQueryDuration: `${dbQueryDuration}ms`,
+        totalDuration: `${totalDuration}ms`,
+        timestamp: new Date().toISOString(),
       });
       return token;
     } catch (error: any) {
-      this.logger.error('[getUserOAuthToken] Failed to get OAuth token', {
+      const totalDuration = Date.now() - tokenStartTime;
+      this.logger.error('[getUserOAuthToken] Failed to get OAuth token - ERROR', {
         userId,
         error: error.message,
         errorCode: error.code,
         errorStatus: error.status,
         errorStack: error.stack,
+        totalDuration: `${totalDuration}ms`,
+        timestamp: new Date().toISOString(),
       });
       throw new HttpException(
         {

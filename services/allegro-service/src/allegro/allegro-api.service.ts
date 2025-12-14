@@ -53,7 +53,7 @@ export class AllegroApiService {
           'Content-Type': contentType,
           'Accept': 'application/vnd.allegro.public.v1+json',
         },
-        timeout: 30000, // 30 seconds for general requests (should be fast)
+        timeout: 20000, // 20 seconds for general requests - more than enough
       };
 
       let response;
@@ -400,17 +400,31 @@ export class AllegroApiService {
           'Content-Type': 'application/vnd.allegro.public.v1+json',
           'Accept': 'application/vnd.allegro.public.v1+json',
         },
-        timeout: 120000, // 120 seconds timeout for creating offer (Allegro API can be very slow)
+        timeout: 20000, // 20 seconds timeout - more than enough for Allegro API
       };
 
       this.logger.log(`[${requestId}] [createOfferWithOAuthToken] Sending HTTP POST request`, {
         url,
         headers: Object.keys(config.headers),
         timeout: config.timeout,
+        payloadSize: `${JSON.stringify(data).length} bytes`,
+        timestamp: new Date().toISOString(),
+      });
+
+      const httpRequestStartTime = Date.now();
+      this.logger.log(`[${requestId}] [createOfferWithOAuthToken] About to call firstValueFrom (HTTP request starting)`, {
+        url,
         timestamp: new Date().toISOString(),
       });
 
       const response = await firstValueFrom(this.httpService.post(url, data, config));
+      const httpRequestDuration = Date.now() - httpRequestStartTime;
+      
+      this.logger.log(`[${requestId}] [createOfferWithOAuthToken] HTTP request completed`, {
+        httpRequestDuration: `${httpRequestDuration}ms`,
+        status: response.status,
+        timestamp: new Date().toISOString(),
+      });
       const requestDuration = Date.now() - requestStartTime;
       
       this.logger.log(`[${requestId}] [createOfferWithOAuthToken] ========== ALLEGRO API RESPONSE SUCCESS ==========`, {
@@ -512,19 +526,33 @@ export class AllegroApiService {
           'Content-Type': 'application/vnd.allegro.public.v1+json',
           'Accept': 'application/vnd.allegro.public.v1+json',
         },
-        timeout: 120000, // 120 seconds timeout for updating offer (Allegro API can be very slow)
+        timeout: 20000, // 20 seconds timeout - more than enough for Allegro API
       };
 
       this.logger.log(`[${requestId}] [updateOfferWithOAuthToken] Sending HTTP PUT request`, {
         url,
         headers: Object.keys(config.headers),
         timeout: config.timeout,
+        payloadSize: `${JSON.stringify(data).length} bytes`,
+        timestamp: new Date().toISOString(),
+      });
+
+      const httpRequestStartTime = Date.now();
+      this.logger.log(`[${requestId}] [updateOfferWithOAuthToken] About to call firstValueFrom (HTTP request starting)`, {
+        url,
         timestamp: new Date().toISOString(),
       });
 
       // Use PUT for full updates (when updating multiple fields like price, stock, title, category)
       // PATCH is for single-field updates, but we're updating multiple fields so use PUT
       const response = await firstValueFrom(this.httpService.put(url, data, config));
+      const httpRequestDuration = Date.now() - httpRequestStartTime;
+      
+      this.logger.log(`[${requestId}] [updateOfferWithOAuthToken] HTTP request completed`, {
+        httpRequestDuration: `${httpRequestDuration}ms`,
+        status: response.status,
+        timestamp: new Date().toISOString(),
+      });
       const requestDuration = Date.now() - requestStartTime;
       
       this.logger.log(`[${requestId}] [updateOfferWithOAuthToken] ========== ALLEGRO API RESPONSE SUCCESS ==========`, {
