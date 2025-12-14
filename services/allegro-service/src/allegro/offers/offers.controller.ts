@@ -861,7 +861,7 @@ export class OffersController {
           totalDuration: `${totalDuration}ms`,
           totalDurationSeconds: Math.round(totalDuration / 1000),
           timestamp: new Date().toISOString(),
-        });
+        }).catch(() => {}); // Fire and forget - don't block
 
         // Return actual results
         return {
