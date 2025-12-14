@@ -3783,11 +3783,11 @@ export class OffersService {
             });
 
             const apiCallStartTime = Date.now();
-            console.log(`[${offerRequestId}] [publishOffersToAllegro] STEP 2.${processedCount}.3.2: Calling Allegro API PUT`, {
+            console.log(`[${offerRequestId}] [publishOffersToAllegro] STEP 2.${processedCount}.3.2: Calling Allegro API PATCH`, {
               offerId,
               allegroOfferId: offer.allegroOfferId,
               endpoint: `/sale/product-offers/${offer.allegroOfferId}`,
-              method: 'PUT',
+              method: 'PATCH',
               payloadSize: `${payloadSize} bytes`,
               timestamp: new Date().toISOString(),
               step: `2.${processedCount}.3.2`,
@@ -3796,7 +3796,7 @@ export class OffersService {
             const updateResponse = await this.allegroApi.updateOfferWithOAuthToken(oauthToken, offer.allegroOfferId, updatePayload);
             const apiCallDuration = Date.now() - apiCallStartTime;
             
-            console.log(`[${offerRequestId}] [publishOffersToAllegro] STEP 2.${processedCount}.3.2 COMPLETE: Allegro API PUT response received`, {
+            console.log(`[${offerRequestId}] [publishOffersToAllegro] STEP 2.${processedCount}.3.2 COMPLETE: Allegro API PATCH response received`, {
               offerId,
               allegroOfferId: offer.allegroOfferId,
               apiCallDuration: `${apiCallDuration}ms`,

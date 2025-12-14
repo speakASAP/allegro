@@ -151,6 +151,7 @@ export class Logger {
 
       const postData = JSON.stringify(logData);
 
+      const timeout = parseInt(process.env.LOGGING_SERVICE_TIMEOUT || process.env.HTTP_TIMEOUT || '5000');
       const options = {
         hostname: url.hostname,
         port: url.port || (isHttps ? 443 : 80),
@@ -160,7 +161,6 @@ export class Logger {
           'Content-Type': 'application/json',
           'Content-Length': Buffer.byteLength(postData),
         },
-        timeout: parseInt(process.env.LOGGING_SERVICE_TIMEOUT || process.env.HTTP_TIMEOUT || '5000'),
       };
 
       await new Promise<void>((resolve, reject) => {
@@ -182,7 +182,8 @@ export class Logger {
           reject(error);
         });
 
-        req.on('timeout', () => {
+        // CRITICAL: Set timeout on the request object - Node.js doesn't use timeout option automatically
+        req.setTimeout(timeout, () => {
           req.destroy();
           reject(new Error('Request timeout'));
         });

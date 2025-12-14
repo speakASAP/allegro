@@ -49,8 +49,8 @@ export class AllegroApiService {
     console.log('[AllegroApiService.request] URL prepared', { url, method });
 
     try {
-      // Allegro API requires application/vnd.allegro.public.v1+json for PUT/POST requests
-      const contentType = (method.toUpperCase() === 'PUT' || method.toUpperCase() === 'POST')
+      // Allegro API requires application/vnd.allegro.public.v1+json for PUT/POST/PATCH requests
+      const contentType = (method.toUpperCase() === 'PUT' || method.toUpperCase() === 'POST' || method.toUpperCase() === 'PATCH')
         ? 'application/vnd.allegro.public.v1+json'
         : 'application/json';
 
@@ -75,6 +75,9 @@ export class AllegroApiService {
           break;
         case 'PUT':
           response = await firstValueFrom(this.httpService.put(url, data, config));
+          break;
+        case 'PATCH':
+          response = await firstValueFrom(this.httpService.patch(url, data, config));
           break;
         case 'DELETE':
           response = await firstValueFrom(this.httpService.delete(url, config));
@@ -522,7 +525,7 @@ export class AllegroApiService {
       const payloadSize = JSON.stringify(data).length;
       this.logger.log(`[${requestId}] [updateOfferWithOAuthToken] ========== ALLEGRO API REQUEST ==========`, {
         endpoint,
-        method: 'PUT',
+        method: 'PATCH',
         url,
         offerId,
         payloadSize: `${payloadSize} bytes`,
@@ -554,7 +557,7 @@ export class AllegroApiService {
         timeout: 20000, // 20 seconds timeout - more than enough for Allegro API
       };
 
-      this.logger.log(`[${requestId}] [updateOfferWithOAuthToken] Sending HTTP PUT request`, {
+      this.logger.log(`[${requestId}] [updateOfferWithOAuthToken] Sending HTTP PATCH request`, {
         url,
         headers: Object.keys(config.headers),
         timeout: config.timeout,
@@ -568,9 +571,9 @@ export class AllegroApiService {
         timestamp: new Date().toISOString(),
       });
 
-      // Use PUT for full updates (when updating multiple fields like price, stock, title, category)
-      // PATCH is for single-field updates, but we're updating multiple fields so use PUT
-      const response = await firstValueFrom(this.httpService.put(url, data, config));
+      // Use PATCH for updates - Allegro API /sale/product-offers/{id} endpoint requires PATCH method
+      // PUT returns 405 Method Not Allowed
+      const response = await firstValueFrom(this.httpService.patch(url, data, config));
       const httpRequestDuration = Date.now() - httpRequestStartTime;
       
       this.logger.log(`[${requestId}] [updateOfferWithOAuthToken] HTTP request completed`, {
@@ -582,7 +585,7 @@ export class AllegroApiService {
       
       this.logger.log(`[${requestId}] [updateOfferWithOAuthToken] ========== ALLEGRO API RESPONSE SUCCESS ==========`, {
         endpoint,
-        method: 'PUT',
+        method: 'PATCH',
         offerId,
         status: response.status,
         statusText: response.statusText,
@@ -602,7 +605,7 @@ export class AllegroApiService {
       
       this.logger.error(`[${requestId}] [updateOfferWithOAuthToken] ========== ALLEGRO API RESPONSE ERROR ==========`, {
         endpoint,
-        method: 'PUT',
+        method: 'PATCH',
         url,
         offerId,
         error: error.message,
