@@ -722,6 +722,16 @@ export class OffersController {
     
     try {
       console.log('[publishAllOffers] Inside try block, about to call logger.log');
+      // Use console.log first to avoid blocking on logger service
+      console.log(`[${requestId}] [publishAllOffers] ========== PUBLISH ALL REQUEST RECEIVED ==========`, {
+        userId,
+        requestId,
+        offerIdsProvided: !!body.offerIds,
+        offerIdsCount: body.offerIds?.length || 0,
+        offerIds: body.offerIds || [],
+      });
+      
+      // Then call logger (may be slow, but we've already logged to console)
       this.logger.log(`[${requestId}] [publishAllOffers] ========== PUBLISH ALL REQUEST RECEIVED ==========`, {
         userId,
         requestId,
