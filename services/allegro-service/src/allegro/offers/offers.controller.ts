@@ -732,6 +732,7 @@ export class OffersController {
       });
       
       // Then call logger (may be slow, but we've already logged to console)
+      console.log('[publishAllOffers] About to call logger.log for PUBLISH ALL REQUEST RECEIVED');
       this.logger.log(`[${requestId}] [publishAllOffers] ========== PUBLISH ALL REQUEST RECEIVED ==========`, {
         userId,
         requestId,
@@ -746,7 +747,9 @@ export class OffersController {
         timestamp: new Date().toISOString(),
         step: 'CONTROLLER_ENTRY',
       });
+      console.log('[publishAllOffers] logger.log for PUBLISH ALL REQUEST RECEIVED completed');
 
+      console.log('[publishAllOffers] About to process offerIds');
       let offerIds: string[] = [];
 
       if (body.offerIds && body.offerIds.length > 0) {
@@ -807,6 +810,7 @@ export class OffersController {
         };
       }
 
+      console.log('[publishAllOffers] About to call logger.log for STARTING PUBLISH OPERATION');
       this.logger.log(`[${requestId}] [publishAllOffers] ========== STARTING PUBLISH OPERATION ==========`, {
         userId,
         offerCount: offerIds.length,
@@ -817,9 +821,11 @@ export class OffersController {
         step: 'BEFORE_SERVICE_CALL',
         memoryUsage: process.memoryUsage(),
       });
+      console.log('[publishAllOffers] logger.log for STARTING PUBLISH OPERATION completed');
 
       // Wait for publish operation to complete and return results
       try {
+        console.log('[publishAllOffers] About to call logger.log for SERVICE_CALL_START');
         this.logger.log(`[${requestId}] [publishAllOffers] Calling publishOffersToAllegro service method`, {
           userId,
           offerCount: offerIds.length,
@@ -827,8 +833,11 @@ export class OffersController {
           timestamp: new Date().toISOString(),
           step: 'SERVICE_CALL_START',
         });
+        console.log('[publishAllOffers] logger.log for SERVICE_CALL_START completed');
         
+        console.log('[publishAllOffers] About to call offersService.publishOffersToAllegro');
         const result = await this.offersService.publishOffersToAllegro(userId, offerIds, requestId);
+        console.log('[publishAllOffers] offersService.publishOffersToAllegro completed', { hasResult: !!result });
         
         this.logger.log(`[${requestId}] [publishAllOffers] Service method returned`, {
           userId,
