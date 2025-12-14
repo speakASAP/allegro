@@ -157,8 +157,8 @@ const SettingsPage: React.FC = () => {
         allegroClientId,
       };
       
-      // Only include Client Secret if it's not the masked placeholder
-      if (allegroClientSecret && allegroClientSecret !== '********') {
+      // Only include Client Secret if it's not empty
+      if (allegroClientSecret && allegroClientSecret.length > 0) {
         payload.allegroClientSecret = allegroClientSecret;
         console.log('[SettingsPage] Including Client Secret in payload', {
           clientSecretLength: allegroClientSecret.length,
@@ -166,7 +166,7 @@ const SettingsPage: React.FC = () => {
         });
       } else {
         console.log('[SettingsPage] NOT including Client Secret in payload', {
-          reason: allegroClientSecret === '********' ? 'masked value' : 'empty',
+          reason: 'empty',
           allegroClientSecret,
         });
       }
