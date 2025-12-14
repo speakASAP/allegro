@@ -53,6 +53,7 @@ export class AllegroApiService {
           'Content-Type': contentType,
           'Accept': 'application/vnd.allegro.public.v1+json',
         },
+        timeout: 30000, // 30 seconds for general requests (should be fast)
       };
 
       let response;
