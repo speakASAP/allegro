@@ -3,7 +3,7 @@ services:
     image: nginx:alpine
     container_name: allegro-gateway-proxy-green
     # Port mapping for health checks only - gateway-proxy is accessed via Docker network (http://gateway-proxy)
-    # Host port 3409 (available in 34xx range) mapped to container port 80 for health checks
+    # Host port 3409 (available in 34xx range, mapped to container port 80
     ports:
       - "${GATEWAY_PROXY_PORT:-3409}:80"
     volumes:
