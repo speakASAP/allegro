@@ -2369,17 +2369,26 @@ export class OffersService {
   }
 
   private async getUserOAuthToken(userId: string): Promise<string> {
+    console.log('[getUserOAuthToken] ========== METHOD CALLED ==========', { userId });
     const tokenStartTime = Date.now();
     try {
+      console.log('[getUserOAuthToken] About to call logger.log for START');
       this.logger.log('[getUserOAuthToken] Retrieving OAuth token - START', { 
         userId,
         timestamp: new Date().toISOString(),
       });
+      console.log('[getUserOAuthToken] logger.log for START completed');
       
+      console.log('[getUserOAuthToken] About to call allegroAuth.getUserAccessToken');
       const dbQueryStartTime = Date.now();
       const token = await this.allegroAuth.getUserAccessToken(userId);
       const dbQueryDuration = Date.now() - dbQueryStartTime;
       const totalDuration = Date.now() - tokenStartTime;
+      console.log('[getUserOAuthToken] allegroAuth.getUserAccessToken completed', { 
+        dbQueryDuration: `${dbQueryDuration}ms`,
+        totalDuration: `${totalDuration}ms`,
+        tokenLength: token?.length || 0,
+      });
       
       this.logger.log('[getUserOAuthToken] OAuth token retrieved successfully - COMPLETE', {
         userId,
@@ -3467,14 +3476,19 @@ export class OffersService {
         step: '1/5',
         description: 'Getting OAuth access token for Allegro API',
       });
+      console.log('[publishOffersToAllegro] logger.log for STEP 1 completed');
       
       // Add detailed logging before token fetch
+      console.log('[publishOffersToAllegro] About to call logger.log for STEP 1.1');
       this.logger.log(`[${finalRequestId}] [publishOffersToAllegro] STEP 1.1: Calling getUserOAuthToken`, {
         userId,
         timestamp: new Date().toISOString(),
       });
+      console.log('[publishOffersToAllegro] logger.log for STEP 1.1 completed');
       
+      console.log('[publishOffersToAllegro] About to call getUserOAuthToken');
       oauthToken = await this.getUserOAuthToken(userId);
+      console.log('[publishOffersToAllegro] getUserOAuthToken completed', { tokenLength: oauthToken?.length || 0 });
       const tokenDuration = Date.now() - tokenStartTime;
       
       this.logger.log(`[${finalRequestId}] [publishOffersToAllegro] STEP 1 COMPLETE: OAuth token obtained`, {
