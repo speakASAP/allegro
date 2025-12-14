@@ -712,10 +712,16 @@ export class OffersController {
     });
     
     const userId = String(req.user?.id || req.user?.sub || 'unknown');
+    console.log('[publishAllOffers] userId extracted:', { userId, user: req.user });
+    
     const requestId = `publish-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    console.log('[publishAllOffers] requestId created:', requestId);
+    
     const startTime = Date.now();
+    console.log('[publishAllOffers] About to enter try block');
     
     try {
+      console.log('[publishAllOffers] Inside try block, about to call logger.log');
       this.logger.log(`[${requestId}] [publishAllOffers] ========== PUBLISH ALL REQUEST RECEIVED ==========`, {
         userId,
         requestId,
