@@ -558,23 +558,25 @@ export class SettingsService {
               password: dto.clientSecret,
             },
             timeout: (() => {
+              // Use longer timeout for Allegro API validation (external API call)
+              // Check for specific timeout for Allegro validation, otherwise use default
+              const allegroTimeout = this.configService.get<string>('ALLEGRO_VALIDATION_TIMEOUT');
+              if (allegroTimeout) {
+                return parseInt(allegroTimeout);
+              }
+              // Default to 30 seconds for Allegro API validation (external API can be slow)
+              const defaultAllegroTimeout = 30000;
               const authTimeout = this.configService.get<string>('AUTH_SERVICE_TIMEOUT');
               const httpTimeout = this.configService.get<string>('HTTP_TIMEOUT');
               const timeout = authTimeout || httpTimeout;
               if (!timeout) {
-                this.logger.error('AUTH_SERVICE_TIMEOUT or HTTP_TIMEOUT not configured', { userId });
-                throw new HttpException(
-                  {
-                    success: false,
-                    error: {
-                      code: 'CONFIGURATION_ERROR',
-                      message: 'AUTH_SERVICE_TIMEOUT or HTTP_TIMEOUT must be configured in .env file',
-                    },
-                  },
-                  HttpStatus.INTERNAL_SERVER_ERROR,
-                );
+                // If no timeout configured, use default for Allegro validation
+                this.logger.log('No timeout configured, using default 30s for Allegro validation', { userId });
+                return defaultAllegroTimeout;
               }
-              return parseInt(timeout);
+              // Use configured timeout, but ensure minimum 30 seconds for external API
+              const configuredTimeout = parseInt(timeout);
+              return Math.max(configuredTimeout, defaultAllegroTimeout);
             })(),
           },
         ),
