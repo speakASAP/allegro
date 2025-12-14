@@ -3,7 +3,7 @@
  * Handles user settings and API key management
  */
 
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException, HttpException, HttpStatus } from '@nestjs/common';
 import { PrismaService, LoggerService, NotificationService } from '@allegro/shared';
 import { HttpService } from '@nestjs/axios';
 import { ConfigService } from '@nestjs/config';
@@ -522,7 +522,17 @@ export class SettingsService {
     // Always use real ALLEGRO_AUTH_URL for both environments
     const tokenUrl = this.configService.get<string>('ALLEGRO_AUTH_URL');
     if (!tokenUrl) {
-      throw new Error('ALLEGRO_AUTH_URL must be configured in .env file');
+      this.logger.error('ALLEGRO_AUTH_URL not configured', { userId });
+      throw new HttpException(
+        {
+          success: false,
+          error: {
+            code: 'CONFIGURATION_ERROR',
+            message: 'ALLEGRO_AUTH_URL must be configured in .env file',
+          },
+        },
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
     }
     
     this.logger.log('Validating Allegro API keys', { 
@@ -552,7 +562,17 @@ export class SettingsService {
               const httpTimeout = this.configService.get<string>('HTTP_TIMEOUT');
               const timeout = authTimeout || httpTimeout;
               if (!timeout) {
-                throw new Error('AUTH_SERVICE_TIMEOUT or HTTP_TIMEOUT must be configured in .env file');
+                this.logger.error('AUTH_SERVICE_TIMEOUT or HTTP_TIMEOUT not configured', { userId });
+                throw new HttpException(
+                  {
+                    success: false,
+                    error: {
+                      code: 'CONFIGURATION_ERROR',
+                      message: 'AUTH_SERVICE_TIMEOUT or HTTP_TIMEOUT must be configured in .env file',
+                    },
+                  },
+                  HttpStatus.INTERNAL_SERVER_ERROR,
+                );
               }
               return parseInt(timeout);
             })(),

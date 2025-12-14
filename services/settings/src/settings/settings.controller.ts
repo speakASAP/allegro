@@ -132,7 +132,17 @@ export class SettingsController {
     @Body() dto: ValidateAllegroKeysDto,
   ): Promise<{ success: boolean; data: any }> {
     const userId = String(req.user.id); // Convert to string as Prisma expects String
-    const result = await this.settingsService.validateAllegroKeys(userId, dto);
-    return { success: true, data: result };
+    try {
+      const result = await this.settingsService.validateAllegroKeys(userId, dto);
+      return { success: true, data: result };
+    } catch (error: any) {
+      this.logger.error('SettingsController.validateAllegroKeys error', {
+        userId,
+        error: error.message,
+        errorStack: error.stack,
+      });
+      // Re-throw to let global exception filter handle it
+      throw error;
+    }
   }
 }
