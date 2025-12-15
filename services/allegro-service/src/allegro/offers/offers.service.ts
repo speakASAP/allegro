@@ -311,15 +311,20 @@ export class OffersService {
       payload.name = existingOffer.title;
     }
 
-    // Description - Include in PUT requests (full updates)
-    // PUT requests can include description, unlike PATCH which doesn't accept it
-    if (dto.description !== undefined) {
-      payload.description = dto.description;
-    } else if (rawData.description) {
-      payload.description = rawData.description;
-    } else if (existingOffer.description) {
-      payload.description = existingOffer.description;
-    }
+    // Description - DO NOT include in PATCH requests
+    // PATCH requests to /sale/product-offers/{id} do NOT accept description field
+    // (causes 422 "Message is not readable" error)
+    // Description can only be updated via PUT request to /sale/offers/{id} endpoint (deprecated)
+    // For PATCH requests, we skip description entirely
+    // Note: This method is used for both PUT and PATCH, but since we're using PATCH now,
+    // we should not include description
+    // if (dto.description !== undefined) {
+    //   payload.description = dto.description;
+    // } else if (rawData.description) {
+    //   payload.description = rawData.description;
+    // } else if (existingOffer.description) {
+    //   payload.description = existingOffer.description;
+    // }
 
     // Category - ALWAYS REQUIRED - must be included
     if (dto.categoryId !== undefined) {
