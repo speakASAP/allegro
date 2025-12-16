@@ -3837,52 +3837,80 @@ export class OffersService {
               action: 'UPDATE',
             });
 
-            // Fetch current offer from Allegro to get all required fields
+            // OPTIMIZATION: Use stored rawData first to avoid slow API fetch
+            // Only fetch from API if rawData is missing or incomplete
             let currentAllegroOffer: any = null;
-            const fetchStartTime = Date.now();
-            try {
-              console.log(`[${offerRequestId}] [publishOffersToAllegro] STEP 2.${processedCount}.3.1: Fetching current offer from Allegro API`, {
+            const hasGoodRawData = offer.rawData && 
+              typeof offer.rawData === 'object' &&
+              (offer.rawData as any).category &&
+              Array.isArray((offer.rawData as any).parameters);
+
+            if (!hasGoodRawData) {
+              // Only fetch if rawData is missing or incomplete
+              const fetchStartTime = Date.now();
+              try {
+                console.log(`[${offerRequestId}] [publishOffersToAllegro] STEP 2.${processedCount}.3.1: Fetching current offer from Allegro API (rawData incomplete)`, {
+                  offerId,
+                  allegroOfferId: offer.allegroOfferId,
+                  endpoint: `/sale/product-offers/${offer.allegroOfferId}`,
+                  method: 'GET',
+                  hasRawData: !!offer.rawData,
+                  rawDataHasCategory: !!(offer.rawData as any)?.category,
+                  rawDataHasParameters: Array.isArray((offer.rawData as any)?.parameters),
+                  timestamp: new Date().toISOString(),
+                  step: `2.${processedCount}.3.1`,
+                });
+                
+                // Use shorter timeout with race condition to fail fast
+                const fetchPromise = this.allegroApi.getOfferWithOAuthToken(oauthToken, offer.allegroOfferId);
+                const timeoutPromise = new Promise((_, reject) => {
+                  setTimeout(() => reject(new Error('Timeout: Fetching current offer took too long')), 5000); // 5 second timeout
+                });
+                currentAllegroOffer = await Promise.race([fetchPromise, timeoutPromise]) as any;
+                const fetchDuration = Date.now() - fetchStartTime;
+                
+                console.log(`[${offerRequestId}] [publishOffersToAllegro] STEP 2.${processedCount}.3.1 COMPLETE: Successfully fetched current offer from Allegro`, {
+                  offerId,
+                  allegroOfferId: offer.allegroOfferId,
+                  fetchDuration: `${fetchDuration}ms`,
+                  hasParameters: !!currentAllegroOffer?.parameters,
+                  parametersCount: currentAllegroOffer?.parameters?.length || 0,
+                  hasCategory: !!currentAllegroOffer?.category,
+                  categoryId: currentAllegroOffer?.category?.id,
+                  hasImages: !!(currentAllegroOffer?.images && currentAllegroOffer.images.length > 0),
+                  imagesCount: currentAllegroOffer?.images?.length || 0,
+                  hasSellingMode: !!currentAllegroOffer?.sellingMode,
+                  hasStock: !!currentAllegroOffer?.stock,
+                  timestamp: new Date().toISOString(),
+                });
+              } catch (fetchError: any) {
+                const fetchDuration = Date.now() - fetchStartTime;
+                const fetchErrorData = fetchError.response?.data || {};
+                console.warn(`[${offerRequestId}] [publishOffersToAllegro] STEP 2.${processedCount}.3.1 WARNING: Failed to fetch current offer, using stored rawData`, {
+                  offerId,
+                  allegroOfferId: offer.allegroOfferId,
+                  error: fetchError.message,
+                  errorStatus: fetchError.response?.status,
+                  errorCode: fetchError.code,
+                  fetchDuration: `${fetchDuration}ms`,
+                  isTimeout: fetchError.message?.includes('Timeout') || fetchError.code === 'ECONNABORTED',
+                  errorData: JSON.stringify(fetchErrorData, null, 2),
+                  errorDetails: fetchErrorData.errors || fetchErrorData.userMessage || fetchErrorData.message,
+                  timestamp: new Date().toISOString(),
+                });
+                // Use stored rawData as fallback
+                currentAllegroOffer = offer.rawData;
+              }
+            } else {
+              console.log(`[${offerRequestId}] [publishOffersToAllegro] STEP 2.${processedCount}.3.1: Using stored rawData (skipping API fetch for speed)`, {
                 offerId,
                 allegroOfferId: offer.allegroOfferId,
-                endpoint: `/sale/product-offers/${offer.allegroOfferId}`,
-                method: 'GET',
-                timestamp: new Date().toISOString(),
-                step: `2.${processedCount}.3.1`,
-              });
-              
-              currentAllegroOffer = await this.allegroApi.getOfferWithOAuthToken(oauthToken, offer.allegroOfferId);
-              const fetchDuration = Date.now() - fetchStartTime;
-              
-              console.log(`[${offerRequestId}] [publishOffersToAllegro] STEP 2.${processedCount}.3.1 COMPLETE: Successfully fetched current offer from Allegro`, {
-                offerId,
-                allegroOfferId: offer.allegroOfferId,
-                fetchDuration: `${fetchDuration}ms`,
-                hasParameters: !!currentAllegroOffer?.parameters,
-                parametersCount: currentAllegroOffer?.parameters?.length || 0,
-                hasCategory: !!currentAllegroOffer?.category,
-                categoryId: currentAllegroOffer?.category?.id,
-                hasImages: !!(currentAllegroOffer?.images && currentAllegroOffer.images.length > 0),
-                imagesCount: currentAllegroOffer?.images?.length || 0,
-                hasSellingMode: !!currentAllegroOffer?.sellingMode,
-                hasStock: !!currentAllegroOffer?.stock,
+                hasRawData: !!offer.rawData,
+                hasCategory: !!(offer.rawData as any)?.category,
+                hasParameters: Array.isArray((offer.rawData as any)?.parameters),
+                parametersCount: Array.isArray((offer.rawData as any)?.parameters) ? (offer.rawData as any).parameters.length : 0,
                 timestamp: new Date().toISOString(),
               });
-            } catch (fetchError: any) {
-              const fetchDuration = Date.now() - fetchStartTime;
-              const fetchErrorData = fetchError.response?.data || {};
-              console.warn(`[${offerRequestId}] [publishOffersToAllegro] STEP 2.${processedCount}.3.1 WARNING: Failed to fetch current offer, using stored rawData`, {
-                offerId,
-                allegroOfferId: offer.allegroOfferId,
-                error: fetchError.message,
-                errorStatus: fetchError.response?.status,
-                errorCode: fetchError.code,
-                fetchDuration: `${fetchDuration}ms`,
-                errorData: JSON.stringify(fetchErrorData, null, 2),
-                errorDetails: fetchErrorData.errors || fetchErrorData.userMessage || fetchErrorData.message,
-                timestamp: new Date().toISOString(),
-              });
-              // Use stored rawData as fallback
-              currentAllegroOffer = offer.rawData;
             }
 
             // Use current offer from API if available, otherwise use stored rawData
