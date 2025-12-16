@@ -3886,15 +3886,29 @@ export class OffersService {
             // Use current offer from API if available, otherwise use stored rawData
             const sourceOffer = currentAllegroOffer || offer.rawData || offer;
 
-            // CRITICAL: Normalize images before passing to transformDtoToAllegroFormat
-            // Allegro API returns images as [{ url: "..." }] objects, but database stores them as ["url1", "url2"] strings
-            // We need to ensure consistent format: prefer database images (strings), but normalize them properly
-            let normalizedImagesForUpdate: any[] = [];
+            // CRITICAL: Use EXACT images from current Allegro offer (sourceOffer) if available
+            // This ensures we use the exact format Allegro expects, avoiding any transformation issues
+            // Only use database images if sourceOffer images are not available
+            let imagesForUpdate: any[] | undefined = undefined;
             
-            // Priority 1: Use database images (stored as string array from import)
-            if (offer.images && Array.isArray(offer.images) && offer.images.length > 0) {
+            // Priority 1: Use sourceOffer images EXACTLY as they come from Allegro API
+            // These are already in the correct format and haven't been transformed
+            if (sourceOffer?.images && Array.isArray(sourceOffer.images) && sourceOffer.images.length > 0) {
+              // Use images directly from Allegro - they're already in correct format
+              imagesForUpdate = sourceOffer.images;
+              console.log(`[${offerRequestId}] [publishOffersToAllegro] OFFER ${processedCount}: Using images from current Allegro offer (exact format)`, {
+                offerId,
+                allegroOfferId: offer.allegroOfferId,
+                imagesCount: imagesForUpdate.length,
+                firstImage: JSON.stringify(imagesForUpdate[0]),
+                firstImageKeys: imagesForUpdate[0] ? Object.keys(imagesForUpdate[0]) : [],
+                timestamp: new Date().toISOString(),
+              });
+            }
+            // Priority 2: Use database images (stored as string array from import)
+            else if (offer.images && Array.isArray(offer.images) && offer.images.length > 0) {
               // Database images are strings, convert to [{ url: "..." }] format
-              normalizedImagesForUpdate = offer.images
+              imagesForUpdate = offer.images
                 .filter((img: any) => img && (typeof img === 'string' || (typeof img === 'object' && img.url)))
                 .map((img: any) => {
                   if (typeof img === 'string') {
@@ -3905,27 +3919,17 @@ export class OffersService {
                   return null;
                 })
                 .filter((img: any) => img !== null && img.url);
-            }
-            // Priority 2: Use sourceOffer images (from Allegro API, already in [{ url: "..." }] format)
-            else if (sourceOffer?.images && Array.isArray(sourceOffer.images) && sourceOffer.images.length > 0) {
-              // SourceOffer images are objects, extract URL and normalize
-              normalizedImagesForUpdate = sourceOffer.images
-                .map((img: any) => {
-                  if (typeof img === 'string') {
-                    return { url: img };
-                  } else if (img && typeof img === 'object') {
-                    const url = img.url || img.path || img.href;
-                    if (url && typeof url === 'string') {
-                      return { url: url };
-                    }
-                  }
-                  return null;
-                })
-                .filter((img: any) => img !== null && img.url);
+              console.log(`[${offerRequestId}] [publishOffersToAllegro] OFFER ${processedCount}: Using images from database (normalized)`, {
+                offerId,
+                allegroOfferId: offer.allegroOfferId,
+                imagesCount: imagesForUpdate.length,
+                firstImage: imagesForUpdate[0] ? JSON.stringify(imagesForUpdate[0]) : null,
+                timestamp: new Date().toISOString(),
+              });
             }
             // Priority 3: Use rawData images as last resort
             else if ((offer.rawData as any)?.images && Array.isArray((offer.rawData as any).images)) {
-              normalizedImagesForUpdate = (offer.rawData as any).images
+              imagesForUpdate = (offer.rawData as any).images
                 .map((img: any) => {
                   if (typeof img === 'string') {
                     return { url: img };
@@ -3938,20 +3942,18 @@ export class OffersService {
                   return null;
                 })
                 .filter((img: any) => img !== null && img.url);
+              console.log(`[${offerRequestId}] [publishOffersToAllegro] OFFER ${processedCount}: Using images from rawData (normalized)`, {
+                offerId,
+                allegroOfferId: offer.allegroOfferId,
+                imagesCount: imagesForUpdate.length,
+                firstImage: imagesForUpdate[0] ? JSON.stringify(imagesForUpdate[0]) : null,
+                timestamp: new Date().toISOString(),
+              });
             }
-
-            console.log(`[${offerRequestId}] [publishOffersToAllegro] OFFER ${processedCount}: Normalized images for update`, {
-              offerId,
-              allegroOfferId: offer.allegroOfferId,
-              dbImagesCount: Array.isArray(offer.images) ? offer.images.length : 0,
-              sourceOfferImagesCount: sourceOffer?.images?.length || 0,
-              normalizedCount: normalizedImagesForUpdate.length,
-              normalizedFirst: normalizedImagesForUpdate[0] ? JSON.stringify(normalizedImagesForUpdate[0]) : null,
-              timestamp: new Date().toISOString(),
-            });
 
             // Transform offer data for update - use database values but preserve all required fields from Allegro
             // We explicitly pass all database values to ensure Allegro is updated with our data
+            // CRITICAL: Pass images as undefined if we want to use sourceOffer images directly (they're already in correct format)
             const updatePayload = this.transformDtoToAllegroFormat(
               {
                 title: offer.title, // Use database title
@@ -3960,7 +3962,7 @@ export class OffersService {
                 price: Number(offer.price), // Use database price
                 currency: offer.currency, // Use database currency
                 stockQuantity: offer.stockQuantity, // Use database stock
-                images: normalizedImagesForUpdate, // Use normalized images in [{ url: "..." }] format
+                images: imagesForUpdate, // Use images from sourceOffer (exact format) or normalized from DB
                 attributes: (offer.rawData as any)?.parameters || (sourceOffer as any)?.parameters || [], // Preserve parameters
                 deliveryOptions: offer.deliveryOptions as any || (sourceOffer as any)?.delivery, // Use database or fallback
                 paymentOptions: offer.paymentOptions as any || (sourceOffer as any)?.payments, // Use database or fallback
