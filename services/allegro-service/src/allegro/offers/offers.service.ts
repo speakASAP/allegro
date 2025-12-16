@@ -296,7 +296,8 @@ export class OffersService {
   /**
    * Transform DTO to Allegro API format
    * For PATCH requests, we must include all required fields from existing offer
-   * REQUIRED fields for PATCH: category, images, parameters, sellingMode, stock
+   * REQUIRED fields for PATCH: category, parameters, sellingMode, stock
+   * NOTE: Images are NOT supported in PATCH requests - they can only be set during offer creation
    */
   private transformDtoToAllegroFormat(dto: any, existingOffer: any): any {
     const payload: any = {};
