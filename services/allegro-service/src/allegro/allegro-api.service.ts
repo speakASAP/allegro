@@ -523,6 +523,27 @@ export class AllegroApiService {
 
     try {
       const payloadSize = JSON.stringify(data).length;
+      // Log images structure in detail
+      const imagesInfo = data.images ? {
+        count: data.images.length,
+        firstImage: data.images[0] ? JSON.stringify(data.images[0]) : null,
+        firstImageKeys: data.images[0] && typeof data.images[0] === 'object' ? Object.keys(data.images[0]) : [],
+        firstImageUrl: data.images[0]?.url || null,
+        firstImageUrlLength: data.images[0]?.url?.length || 0,
+        allImagesValid: data.images.every((img: any) => 
+          img && typeof img === 'object' && 
+          img.url && typeof img.url === 'string' && 
+          Object.keys(img).length === 1
+        ),
+        allImages: data.images.map((img: any, idx: number) => ({
+          index: idx,
+          type: typeof img,
+          keys: typeof img === 'object' && img !== null ? Object.keys(img) : [],
+          url: img?.url || null,
+          urlLength: img?.url?.length || 0,
+        })),
+      } : null;
+
       this.logger.log(`[${requestId}] [updateOfferWithOAuthToken] ========== ALLEGRO API REQUEST ==========`, {
         endpoint,
         method: 'PATCH',
@@ -539,12 +560,13 @@ export class AllegroApiService {
         hasStock: !!data.stock,
         stockAvailable: data.stock?.available,
         hasImages: !!data.images,
-        imagesCount: data.images?.length || 0,
+        imagesInfo,
         hasParameters: !!data.parameters,
         parametersCount: data.parameters?.length || 0,
         tokenLength: accessToken?.length || 0,
         tokenPreview: accessToken ? `${accessToken.substring(0, 20)}...${accessToken.substring(accessToken.length - 10)}` : 'null',
         payloadPreview: JSON.stringify(data, null, 2).substring(0, 2000),
+        fullPayload: JSON.stringify(data, null, 2),
         timestamp: new Date().toISOString(),
       });
 
