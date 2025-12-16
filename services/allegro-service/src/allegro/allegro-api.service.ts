@@ -554,7 +554,7 @@ export class AllegroApiService {
           'Content-Type': 'application/vnd.allegro.public.v1+json',
           'Accept': 'application/vnd.allegro.public.v1+json',
         },
-        timeout: 20000, // 20 seconds timeout - more than enough for Allegro API
+        timeout: 60000, // 60 seconds timeout - Allegro API can be slow for complex offers
       };
 
       this.logger.log(`[${requestId}] [updateOfferWithOAuthToken] Sending HTTP PATCH request`, {
