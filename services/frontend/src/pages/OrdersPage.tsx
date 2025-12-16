@@ -31,10 +31,10 @@ const OrdersPage: React.FC = () => {
   const loadOrders = async () => {
     setLoading(true); // Set loading only during the API call
     try {
-      // Use shorter timeout for fast database queries (5 seconds is more than enough)
-      // Database queries should complete in <100ms, so 5s gives plenty of buffer
+      // Use reasonable timeout for database queries (30 seconds to handle slow connections)
+      // Database queries should complete in <100ms, but network delays can add time
       const response = await api.get('/allegro/orders', {
-        timeout: 5000, // 5 seconds for database queries (should complete in <100ms)
+        timeout: 30000, // 30 seconds - enough for slow connections but not too long
       });
       if (response.data.success) {
         setOrders(response.data.data.items || []);
