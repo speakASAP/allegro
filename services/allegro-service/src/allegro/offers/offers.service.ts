@@ -400,11 +400,23 @@ export class OffersService {
     // Normalize all image sources to ensure consistent format: [{ url: string }]
     // The PATCH endpoint requires images to be an array of objects with ONLY 'url' property
     // Any additional properties will cause "Message is not readable" error
-    const normalizeImages = (images: any[]): any[] => {
+    const normalizeImages = (images: any[], source: string): any[] => {
       if (!Array.isArray(images) || images.length === 0) {
         return [];
       }
-      return images
+      
+      // Log input for debugging
+      this.logger.log('[transformDtoToAllegroFormat] Normalizing images', {
+        offerId: existingOffer.id,
+        allegroOfferId: existingOffer.allegroOfferId,
+        source,
+        imagesCount: images.length,
+        firstImageType: typeof images[0],
+        firstImageValue: typeof images[0] === 'object' ? JSON.stringify(images[0]).substring(0, 200) : String(images[0]).substring(0, 200),
+        firstImageKeys: typeof images[0] === 'object' && images[0] !== null ? Object.keys(images[0]) : [],
+      });
+      
+      const normalized = images
         .map((img: any, index: number) => {
           let url: string | null = null;
           
@@ -425,7 +437,18 @@ export class OffersService {
           
           // Return only { url } object - strip all other properties
           if (url && typeof url === 'string' && url.length > 0) {
-            return { url: url.trim() };
+            const normalizedImg = { url: url.trim() };
+            // Verify it only has 'url' property
+            if (Object.keys(normalizedImg).length !== 1 || !normalizedImg.url) {
+              this.logger.error('[transformDtoToAllegroFormat] Normalized image has invalid structure', {
+                offerId: existingOffer.id,
+                allegroOfferId: existingOffer.allegroOfferId,
+                imageIndex: index,
+                normalizedImage: JSON.stringify(normalizedImg),
+                keys: Object.keys(normalizedImg),
+              });
+            }
+            return normalizedImg;
           }
           
           // Log invalid image format for debugging
@@ -442,14 +465,27 @@ export class OffersService {
           return null;
         })
         .filter((img: any) => img !== null && img.url && typeof img.url === 'string' && img.url.length > 0);
+      
+      // Log normalized result
+      this.logger.log('[transformDtoToAllegroFormat] Images normalized', {
+        offerId: existingOffer.id,
+        allegroOfferId: existingOffer.allegroOfferId,
+        source,
+        inputCount: images.length,
+        outputCount: normalized.length,
+        firstNormalized: normalized[0] ? JSON.stringify(normalized[0]) : null,
+        allValid: normalized.every((img: any) => img && typeof img === 'object' && img.url && typeof img.url === 'string' && Object.keys(img).length === 1),
+      });
+      
+      return normalized;
     };
 
     if (dto.images !== undefined && Array.isArray(dto.images) && dto.images.length > 0) {
-      payload.images = normalizeImages(dto.images);
+      payload.images = normalizeImages(dto.images, 'dto');
     } else if (rawData.images && Array.isArray(rawData.images) && rawData.images.length > 0) {
-      payload.images = normalizeImages(rawData.images);
+      payload.images = normalizeImages(rawData.images, 'rawData');
     } else if (existingOffer.images && Array.isArray(existingOffer.images) && existingOffer.images.length > 0) {
-      payload.images = normalizeImages(existingOffer.images);
+      payload.images = normalizeImages(existingOffer.images, 'existingOffer');
     } else {
       // Images are required - this will cause 422 if missing
       this.logger.error('[transformDtoToAllegroFormat] Missing images - this will cause 422 error', {
