@@ -579,11 +579,28 @@ export class AllegroApiService {
         timeout: 60000, // 60 seconds timeout - Allegro API can be slow for complex offers
       };
 
+      // Log images structure in detail for debugging
+      const imagesInfo = data.images ? {
+        imagesCount: Array.isArray(data.images) ? data.images.length : 0,
+        firstImage: data.images[0] ? JSON.stringify(data.images[0]) : null,
+        firstImageType: typeof data.images[0],
+        firstImageKeys: data.images[0] && typeof data.images[0] === 'object' ? Object.keys(data.images[0]) : [],
+        allImagesValid: Array.isArray(data.images) ? data.images.every((img: any) => 
+          img && typeof img === 'object' && img.url && typeof img.url === 'string' && Object.keys(img).length === 1
+        ) : false,
+        imagesPreview: Array.isArray(data.images) ? data.images.slice(0, 3).map((img: any) => 
+          typeof img === 'object' ? JSON.stringify(img) : String(img)
+        ) : [],
+      } : null;
+
       this.logger.log(`[${requestId}] [updateOfferWithOAuthToken] Sending HTTP PATCH request`, {
         url,
         headers: Object.keys(config.headers),
         timeout: config.timeout,
         payloadSize: `${JSON.stringify(data).length} bytes`,
+        payloadKeys: Object.keys(data),
+        imagesInfo,
+        fullPayloadPreview: JSON.stringify(data, null, 2).substring(0, 3000),
         timestamp: new Date().toISOString(),
       });
 
