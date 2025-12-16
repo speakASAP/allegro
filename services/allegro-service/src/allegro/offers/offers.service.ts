@@ -397,19 +397,53 @@ export class OffersService {
     }
 
     // Images - ALWAYS REQUIRED - must have at least one
+    // Normalize all image sources to ensure consistent format: [{ url: string }]
+    // The PATCH endpoint requires images to be an array of objects with only 'url' property
+    const normalizeImages = (images: any[]): any[] => {
+      if (!Array.isArray(images) || images.length === 0) {
+        return [];
+      }
+      return images
+        .map((img: any) => {
+          // Handle string URLs
+          if (typeof img === 'string') {
+            return { url: img };
+          }
+          // Handle objects with url property
+          if (img && typeof img === 'object' && img.url) {
+            return { url: img.url };
+          }
+          // Handle objects with path property
+          if (img && typeof img === 'object' && img.path) {
+            return { url: img.path };
+          }
+          return null;
+        })
+        .filter((img: any) => img && img.url && typeof img.url === 'string' && img.url.length > 0);
+    };
+
     if (dto.images !== undefined && Array.isArray(dto.images) && dto.images.length > 0) {
-      payload.images = dto.images.map((url: string) => ({ url })).filter((img: any) => img.url);
+      payload.images = normalizeImages(dto.images);
     } else if (rawData.images && Array.isArray(rawData.images) && rawData.images.length > 0) {
-      payload.images = rawData.images;
+      payload.images = normalizeImages(rawData.images);
     } else if (existingOffer.images && Array.isArray(existingOffer.images) && existingOffer.images.length > 0) {
-      payload.images = existingOffer.images.map((img: any) => ({
-        url: typeof img === 'string' ? img : img.url || img.path,
-      })).filter((img: any) => img.url);
+      payload.images = normalizeImages(existingOffer.images);
     } else {
       // Images are required - this will cause 422 if missing
       this.logger.error('[transformDtoToAllegroFormat] Missing images - this will cause 422 error', {
         offerId: existingOffer.id,
         allegroOfferId: existingOffer.allegroOfferId,
+      });
+    }
+
+    // Ensure we have at least one valid image
+    if (!payload.images || payload.images.length === 0) {
+      this.logger.error('[transformDtoToAllegroFormat] No valid images found after normalization', {
+        offerId: existingOffer.id,
+        allegroOfferId: existingOffer.allegroOfferId,
+        dtoImages: dto.images,
+        rawDataImages: rawData.images,
+        existingOfferImages: existingOffer.images,
       });
     }
 
