@@ -366,8 +366,9 @@ export const oauthApi = {
   /**
    * Get authorization URL
    */
-  authorize: async (accountId: string) => {
-    return api.get('/allegro/oauth/authorize', { params: { accountId } });
+  authorize: async (accountId?: string) => {
+    const params = accountId ? { accountId } : {};
+    return api.get('/allegro/oauth/authorize', { params });
   },
 
   /**

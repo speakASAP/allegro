@@ -226,7 +226,11 @@ const ImportJobsPage: React.FC = () => {
 
   const handleAuthorizeOAuth = async () => {
     try {
-      const response = await oauthApi.authorize();
+      // Get active account ID from settings
+      const settingsResponse = await api.get('/settings');
+      const activeAccountId = settingsResponse.data?.data?.activeAccountId || null;
+      
+      const response = await oauthApi.authorize(activeAccountId || undefined);
       if (response.data.success && response.data.data?.authorizationUrl) {
         // Redirect to Allegro authorization page
         window.location.href = response.data.data.authorizationUrl;
