@@ -168,14 +168,15 @@ export class OffersService {
    */
   async getOffer(id: string): Promise<any> {
     // Fast path: Load from database only (no Allegro API calls)
+    // Optimized: Load product and allegroProduct without parameters first (faster)
+    // Parameters can be loaded separately if needed
     const offer = await this.prisma.allegroOffer.findUnique({
       where: { id },
       include: {
         product: true,
         allegroProduct: {
-          include: {
-            parameters: true,
-          },
+          // Don't include parameters by default - they can be large and slow
+          // Parameters will be loaded separately if needed
         },
       } as any,
     }) as any;

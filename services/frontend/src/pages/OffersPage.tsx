@@ -287,12 +287,14 @@ const OffersPage: React.FC = () => {
   }, [statusFilter, searchQuery, categoryFilter, page]);
 
   const handleViewDetails = async (offer: Offer) => {
-    // Use existing offer data immediately (fast response)
+    // Use existing offer data immediately (fast response) - like Publish All does
     setSelectedOffer(offer);
     setShowDetailModal(true);
     setError(null);
     setSuccess(null);
+    setLoadingDetail(false); // Don't show loading - we already have the data
     
+    // Try to fetch updated data in background (non-blocking, like sync operations)
     // Only fetch if we don't have rawData (optimization: skip fetch if data is already complete)
     const rawData = offer.rawData as AllegroRawData | undefined;
     const hasCompleteData = rawData && 
@@ -300,26 +302,27 @@ const OffersPage: React.FC = () => {
       (offer.images || rawData.images);
     
     if (!hasCompleteData) {
-      // Only fetch if data is incomplete
+      // Fetch in background without blocking UI (similar to how sync works)
+      // User can see the offer immediately, and we'll update it if fetch succeeds
       setLoadingDetail(true);
-      try {
-        const response = await api.get<{ success: boolean; data: Offer }>(`/allegro/offers/${offer.id}`);
-        if (response.data.success && response.data.data) {
-          setSelectedOffer(response.data.data);
-        } else {
-          setError('Failed to load offer details: Invalid response');
-        }
-      } catch (err) {
-        console.error('Failed to load offer details', err);
-        const axiosError = err as AxiosError & { response?: { data?: { error?: { message?: string } } } };
-        const errorMessage = axiosError.response?.data?.error?.message || (err as Error).message || 'Failed to load offer details';
-        setError(errorMessage);
-      } finally {
-        setLoadingDetail(false);
-      }
-    } else {
-      // Data is already complete, no need to fetch
-      setLoadingDetail(false);
+      api.get<{ success: boolean; data: Offer }>(`/allegro/offers/${offer.id}`, {
+        timeout: 30000, // 30 seconds - reasonable timeout for DB query
+      })
+        .then((response) => {
+          if (response.data.success && response.data.data) {
+            setSelectedOffer(response.data.data);
+            setLoadingDetail(false);
+          } else {
+            setLoadingDetail(false);
+            // Don't show error - we already have the data displayed
+          }
+        })
+        .catch((err) => {
+          console.error('Failed to load offer details in background', err);
+          setLoadingDetail(false);
+          // Don't show error - we already have the data displayed
+          // User can still see and use the offer with the data we have
+        });
     }
   };
 
