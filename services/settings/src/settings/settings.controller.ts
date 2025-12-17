@@ -173,7 +173,7 @@ export class SettingsController {
   ): Promise<{ success: boolean; data: any }> {
     const userId = String(req.user.id);
     try {
-      const result = await this.settingsService.validateAllegroKeys(userId, accountId, dto);
+      const result = await this.settingsService.validateAllegroAccountKeys(userId, accountId, dto);
       return { success: true, data: result };
     } catch (error: any) {
       this.logger.error('SettingsController.validateAllegroAccountKeys error', {
