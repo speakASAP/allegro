@@ -74,6 +74,14 @@ export class ValidateAllegroKeysDto {
   clientSecret: string;
 }
 
+export class ValidateAllegroAccountKeysDto {
+  @IsString()
+  clientId: string;
+
+  @IsString()
+  clientSecret: string;
+}
+
 export class CreateAllegroAccountDto {
   @IsString()
   name: string;

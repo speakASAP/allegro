@@ -17,7 +17,7 @@ import {
 import { SettingsService } from './settings.service';
 import { JwtAuthGuard } from '@allegro/shared';
 import { LoggerService } from '@allegro/shared';
-import { UpdateSettingsDto, AddSupplierConfigDto, UpdateSupplierConfigDto, ValidateAllegroKeysDto, CreateAllegroAccountDto, UpdateAllegroAccountDto } from './dto/update-settings.dto';
+import { UpdateSettingsDto, AddSupplierConfigDto, UpdateSupplierConfigDto, ValidateAllegroKeysDto, ValidateAllegroAccountKeysDto, CreateAllegroAccountDto, UpdateAllegroAccountDto } from './dto/update-settings.dto';
 
 @Controller('settings')
 export class SettingsController {
@@ -169,7 +169,7 @@ export class SettingsController {
   async validateAllegroAccountKeys(
     @Request() req: any,
     @Param('id') accountId: string,
-    @Body() dto: ValidateAllegroKeysDto,
+    @Body() dto: ValidateAllegroAccountKeysDto,
   ): Promise<{ success: boolean; data: any }> {
     const userId = String(req.user.id);
     try {
