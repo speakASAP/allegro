@@ -503,10 +503,13 @@ export class SettingsService {
   async getAllegroAccounts(userId: string): Promise<any[]> {
     this.logger.log('Getting Allegro accounts', { userId });
 
-    const accounts = await this.prisma.allegroAccount.findMany({
-      where: { userId },
-      orderBy: { createdAt: 'asc' },
-    });
+    try {
+      const accounts = await this.prisma.allegroAccount.findMany({
+        where: { userId },
+        orderBy: { createdAt: 'asc' },
+      });
+      
+      this.logger.log('Found Allegro accounts', { userId, count: accounts.length });
 
     return await Promise.all(accounts.map(async (account) => {
       const accountData: any = {
