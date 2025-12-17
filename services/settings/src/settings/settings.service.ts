@@ -898,7 +898,7 @@ export class SettingsService {
   /**
    * Validate Allegro API keys for specific account
    */
-  async validateAllegroKeys(userId: string, accountId: string, dto: ValidateAllegroKeysDto): Promise<{ valid: boolean; message?: string }> {
+  async validateAllegroAccountKeys(userId: string, accountId: string, dto: ValidateAllegroAccountKeysDto): Promise<{ valid: boolean; message?: string }> {
     // Always use real ALLEGRO_AUTH_URL for both environments
     const tokenUrl = this.configService.get<string>('ALLEGRO_AUTH_URL');
     if (!tokenUrl) {
