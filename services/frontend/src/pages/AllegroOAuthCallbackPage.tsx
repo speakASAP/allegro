@@ -27,6 +27,8 @@ const AllegroOAuthCallbackPage: React.FC = () => {
       
       if (error === 'access_denied') {
         errorMessage = 'Authorization was denied. Please try again and grant the required permissions.';
+      } else if (error === 'invalid_state' || error === 'state_mismatch') {
+        errorMessage = 'OAuth state validation failed. This usually happens if the authorization process took too long or was interrupted. Please try authorizing again by clicking the "Authorize OAuth" button.';
       } else if (error === 'client_secret_missing' || error.includes('clientSecret')) {
         errorMessage = 'Client Secret is missing. Please go to Settings, enter your Allegro Client Secret, and click Save before authorizing.';
       } else if (error === 'client_secret_empty') {

@@ -276,9 +276,22 @@ export class OAuthController {
       });
 
       if (!account) {
+        // Log all accounts with OAuth state for debugging
+        const accountsWithState = await this.prisma.allegroAccount.findMany({
+          where: { oAuthState: { not: null } },
+          select: { id: true, userId: true, name: true, oAuthState: true },
+        });
+        
         this.logger.error('OAuth state not found', { 
           state: trimmedState,
           stateLength: trimmedState.length,
+          accountsWithState: accountsWithState.map(acc => ({
+            id: acc.id,
+            userId: acc.userId,
+            name: acc.name,
+            stateLength: acc.oAuthState?.length,
+            stateMatch: acc.oAuthState === trimmedState,
+          })),
         });
         return res.redirect(`${this.getFrontendUrl()}/auth/callback?error=invalid_state`);
       }
