@@ -795,55 +795,60 @@ export class SettingsService {
   async setActiveAccount(userId: string, accountId: string): Promise<void> {
     this.logger.log('Setting active Allegro account', { userId, accountId });
 
-    // Use a transaction to ensure atomicity and improve performance
-    await this.prisma.$transaction(async (tx) => {
-      // Verify account exists and belongs to user
-      const account = await tx.allegroAccount.findFirst({
-        where: {
-          id: accountId,
-          userId,
-        },
-      });
-
-      if (!account) {
-        throw new NotFoundException(`Allegro account with ID ${accountId} not found`);
-      }
-
-      // Set all accounts to inactive, then set selected account as active
-      // Using updateMany with conditional logic in a single operation
-      await Promise.all([
-        tx.allegroAccount.updateMany({
-          where: { userId, id: { not: accountId } },
-          data: { isActive: false },
-        }),
-        tx.allegroAccount.update({
-          where: { id: accountId },
-          data: { isActive: true },
-        }),
-      ]);
-
-      // Update preferences - get existing first, then upsert
-      const existingSettings = await tx.userSettings.findUnique({
-        where: { userId },
-      });
-
-      if (existingSettings) {
-        const preferences = (existingSettings.preferences || {}) as any;
-        preferences.activeAllegroAccountId = accountId;
-        await tx.userSettings.update({
-          where: { userId },
-          data: { preferences },
-        });
-      } else {
-        await tx.userSettings.create({
-          data: {
-            userId,
-            preferences: { activeAllegroAccountId: accountId },
-            supplierConfigs: [],
-          },
-        });
-      }
+    // Verify account exists and belongs to user
+    const account = await this.prisma.allegroAccount.findFirst({
+      where: {
+        id: accountId,
+        userId,
+      },
     });
+
+    if (!account) {
+      throw new NotFoundException(`Allegro account with ID ${accountId} not found`);
+    }
+
+    // Use a transaction with timeout to ensure atomicity
+    await this.prisma.$transaction(
+      async (tx) => {
+        // Set all accounts to inactive, then set selected account as active
+        // Using Promise.all for parallel execution
+        await Promise.all([
+          tx.allegroAccount.updateMany({
+            where: { userId, id: { not: accountId } },
+            data: { isActive: false },
+          }),
+          tx.allegroAccount.update({
+            where: { id: accountId },
+            data: { isActive: true },
+          }),
+        ]);
+
+        // Update preferences
+        const existingSettings = await tx.userSettings.findUnique({
+          where: { userId },
+        });
+
+        if (existingSettings) {
+          const preferences = (existingSettings.preferences || {}) as any;
+          preferences.activeAllegroAccountId = accountId;
+          await tx.userSettings.update({
+            where: { userId },
+            data: { preferences },
+          });
+        } else {
+          await tx.userSettings.create({
+            data: {
+              userId,
+              preferences: { activeAllegroAccountId: accountId },
+              supplierConfigs: [],
+            },
+          });
+        }
+      },
+      {
+        timeout: 10000, // 10 second timeout for transaction
+      },
+    );
 
     this.logger.log('Active Allegro account set', { userId, accountId });
   }
