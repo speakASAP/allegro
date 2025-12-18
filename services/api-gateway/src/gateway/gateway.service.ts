@@ -429,7 +429,7 @@ export class GatewayService implements OnModuleInit {
         },
         timeout,
         maxRedirects: followRedirects ? 5 : 0,
-        validateStatus: (status) => status >= 200 && status < 400, // Accept redirects
+        validateStatus: (status) => status >= 200 && status < 600, // Accept all HTTP status codes (including errors)
         // Explicitly use keep-alive agents to reuse connections
         // This eliminates the 17-second delay on first connection
         httpAgent: this.httpAgent,
