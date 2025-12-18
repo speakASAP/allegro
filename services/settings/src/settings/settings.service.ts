@@ -807,48 +807,34 @@ export class SettingsService {
       throw new NotFoundException(`Allegro account with ID ${accountId} not found`);
     }
 
-    // Use a transaction with timeout to ensure atomicity
-    await this.prisma.$transaction(
-      async (tx) => {
-        // Set all accounts to inactive, then set selected account as active
-        // Using Promise.all for parallel execution
-        await Promise.all([
-          tx.allegroAccount.updateMany({
-            where: { userId, id: { not: accountId } },
-            data: { isActive: false },
-          }),
-          tx.allegroAccount.update({
-            where: { id: accountId },
-            data: { isActive: true },
-          }),
-        ]);
+    // Update accounts - no transaction needed, these are simple flag updates
+    // Set all accounts to inactive first, then set selected account as active
+    await Promise.all([
+      this.prisma.allegroAccount.updateMany({
+        where: { userId, id: { not: accountId } },
+        data: { isActive: false },
+      }),
+      this.prisma.allegroAccount.update({
+        where: { id: accountId },
+        data: { isActive: true },
+      }),
+    ]);
 
-        // Update preferences
-        const existingSettings = await tx.userSettings.findUnique({
-          where: { userId },
-        });
-
-        if (existingSettings) {
-          const preferences = (existingSettings.preferences || {}) as any;
-          preferences.activeAllegroAccountId = accountId;
-          await tx.userSettings.update({
-            where: { userId },
-            data: { preferences },
-          });
-        } else {
-          await tx.userSettings.create({
-            data: {
-              userId,
-              preferences: { activeAllegroAccountId: accountId },
-              supplierConfigs: [],
-            },
-          });
-        }
+    // Update preferences using upsert for simplicity
+    await this.prisma.userSettings.upsert({
+      where: { userId },
+      update: {
+        preferences: {
+          ...((await this.prisma.userSettings.findUnique({ where: { userId } }))?.preferences as any || {}),
+          activeAllegroAccountId: accountId,
+        },
       },
-      {
-        timeout: 10000, // 10 second timeout for transaction
+      create: {
+        userId,
+        preferences: { activeAllegroAccountId: accountId },
+        supplierConfigs: [],
       },
-    );
+    });
 
     this.logger.log('Active Allegro account set', { userId, accountId });
   }
