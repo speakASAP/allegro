@@ -117,18 +117,19 @@ export class GatewayController {
   /**
    * Route settings requests (requires auth)
    * Handle both /api/settings and /api/settings/*
+   * IMPORTANT: settings/* must come BEFORE settings to match /api/settings/* first
    */
-  @All('settings')
-  @UseGuards(JwtAuthGuard)
-  async settingsBaseRoute(@Req() req: ExpressRequest, @Res() res: ExpressResponse) {
-    const path = req.url.replace('/api/settings', '') || '';
-    return this.routeRequest('settings', `/settings${path}`, req, res);
-  }
-
   @All('settings/*')
   @UseGuards(JwtAuthGuard)
   async settingsRoute(@Req() req: ExpressRequest, @Res() res: ExpressResponse) {
     const path = req.url.replace('/api/settings', '');
+    return this.routeRequest('settings', `/settings${path}`, req, res);
+  }
+
+  @All('settings')
+  @UseGuards(JwtAuthGuard)
+  async settingsBaseRoute(@Req() req: ExpressRequest, @Res() res: ExpressResponse) {
+    const path = req.url.replace('/api/settings', '') || '';
     return this.routeRequest('settings', `/settings${path}`, req, res);
   }
 
