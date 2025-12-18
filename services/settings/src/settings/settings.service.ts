@@ -820,21 +820,27 @@ export class SettingsService {
       }),
     ]);
 
-    // Update preferences using upsert for simplicity
-    await this.prisma.userSettings.upsert({
+    // Update preferences
+    const existingSettings = await this.prisma.userSettings.findUnique({
       where: { userId },
-      update: {
-        preferences: {
-          ...((await this.prisma.userSettings.findUnique({ where: { userId } }))?.preferences as any || {}),
-          activeAllegroAccountId: accountId,
-        },
-      },
-      create: {
-        userId,
-        preferences: { activeAllegroAccountId: accountId },
-        supplierConfigs: [],
-      },
     });
+
+    if (existingSettings) {
+      const preferences = (existingSettings.preferences || {}) as any;
+      preferences.activeAllegroAccountId = accountId;
+      await this.prisma.userSettings.update({
+        where: { userId },
+        data: { preferences },
+      });
+    } else {
+      await this.prisma.userSettings.create({
+        data: {
+          userId,
+          preferences: { activeAllegroAccountId: accountId },
+          supplierConfigs: [],
+        },
+      });
+    }
 
     this.logger.log('Active Allegro account set', { userId, accountId });
   }
