@@ -795,50 +795,49 @@ export class SettingsService {
   async setActiveAccount(userId: string, accountId: string): Promise<void> {
     this.logger.log('Setting active Allegro account', { userId, accountId });
 
-    const account = await this.prisma.allegroAccount.findFirst({
-      where: {
-        id: accountId,
-        userId,
-      },
-    });
-
-    if (!account) {
-      throw new NotFoundException(`Allegro account with ID ${accountId} not found`);
-    }
-
-    // Set all accounts to inactive
-    await this.prisma.allegroAccount.updateMany({
-      where: { userId },
-      data: { isActive: false },
-    });
-
-    // Set selected account as active
-    await this.prisma.allegroAccount.update({
-      where: { id: accountId },
-      data: { isActive: true },
-    });
-
-    // Update preferences
-    const settings = await this.prisma.userSettings.findUnique({
-      where: { userId },
-    });
-
-    if (settings) {
-      const preferences = (settings.preferences || {}) as any;
-      preferences.activeAllegroAccountId = accountId;
-      await this.prisma.userSettings.update({
-        where: { userId },
-        data: { preferences },
+    // Use a transaction to ensure atomicity and improve performance
+    await this.prisma.$transaction(async (tx) => {
+      // Verify account exists and belongs to user
+      const account = await tx.allegroAccount.findFirst({
+        where: {
+          id: accountId,
+          userId,
+        },
       });
-    } else {
-      await this.prisma.userSettings.create({
-        data: {
+
+      if (!account) {
+        throw new NotFoundException(`Allegro account with ID ${accountId} not found`);
+      }
+
+      // Set all accounts to inactive, then set selected account as active
+      // Using updateMany with conditional logic in a single operation
+      await Promise.all([
+        tx.allegroAccount.updateMany({
+          where: { userId, id: { not: accountId } },
+          data: { isActive: false },
+        }),
+        tx.allegroAccount.update({
+          where: { id: accountId },
+          data: { isActive: true },
+        }),
+      ]);
+
+      // Update preferences using upsert for better performance
+      await tx.userSettings.upsert({
+        where: { userId },
+        update: {
+          preferences: {
+            ...((await tx.userSettings.findUnique({ where: { userId } }))?.preferences as any || {}),
+            activeAllegroAccountId: accountId,
+          },
+        },
+        create: {
           userId,
           preferences: { activeAllegroAccountId: accountId },
           supplierConfigs: [],
         },
       });
-    }
+    });
 
     this.logger.log('Active Allegro account set', { userId, accountId });
   }
