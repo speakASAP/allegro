@@ -822,21 +822,27 @@ export class SettingsService {
         }),
       ]);
 
-      // Update preferences using upsert for better performance
-      await tx.userSettings.upsert({
+      // Update preferences - get existing first, then upsert
+      const existingSettings = await tx.userSettings.findUnique({
         where: { userId },
-        update: {
-          preferences: {
-            ...((await tx.userSettings.findUnique({ where: { userId } }))?.preferences as any || {}),
-            activeAllegroAccountId: accountId,
-          },
-        },
-        create: {
-          userId,
-          preferences: { activeAllegroAccountId: accountId },
-          supplierConfigs: [],
-        },
       });
+
+      if (existingSettings) {
+        const preferences = (existingSettings.preferences || {}) as any;
+        preferences.activeAllegroAccountId = accountId;
+        await tx.userSettings.update({
+          where: { userId },
+          data: { preferences },
+        });
+      } else {
+        await tx.userSettings.create({
+          data: {
+            userId,
+            preferences: { activeAllegroAccountId: accountId },
+            supplierConfigs: [],
+          },
+        });
+      }
     });
 
     this.logger.log('Active Allegro account set', { userId, accountId });
