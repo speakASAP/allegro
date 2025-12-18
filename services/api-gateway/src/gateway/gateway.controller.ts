@@ -232,7 +232,7 @@ export class GatewayController {
     const startTime = Date.now();
     const timestamp = new Date().toISOString();
 
-    // Log incoming request
+    // Log incoming request with detailed body information
     this.sharedLogger.info(`[${timestamp}] [TIMING] GatewayController.routeRequest START`, {
       requestId,
       serviceName,
@@ -249,6 +249,9 @@ export class GatewayController {
       userAgent: req.get('user-agent'),
       hasAuth: !!req.headers.authorization,
       hasBody: !!body,
+      bodyType: typeof body,
+      bodyValue: body ? (typeof body === 'object' ? JSON.stringify(body).substring(0, 200) : String(body).substring(0, 200)) : 'undefined',
+      contentType: req.headers['content-type'],
     });
     this.logger.log(`[${requestId}] ${method} ${req.originalUrl} -> ${serviceName}${path}`);
 
