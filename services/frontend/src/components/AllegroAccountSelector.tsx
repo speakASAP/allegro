@@ -33,8 +33,17 @@ export const AllegroAccountSelector: React.FC<AllegroAccountSelectorProps> = ({ 
     setError(null);
     try {
       const response = await allegroAccountApi.getAccounts();
-      if (response.data.success) {
+      console.log('[AllegroAccountSelector] API response:', {
+        success: response.data?.success,
+        hasData: !!response.data?.data,
+        dataType: Array.isArray(response.data?.data) ? 'array' : typeof response.data?.data,
+        dataLength: Array.isArray(response.data?.data) ? response.data.data.length : 'N/A',
+        fullResponse: response.data,
+      });
+      
+      if (response.data?.success) {
         const accountsData = response.data.data || [];
+        console.log('[AllegroAccountSelector] Setting accounts:', accountsData);
         setAccounts(accountsData);
         
         // Find active account
@@ -45,8 +54,12 @@ export const AllegroAccountSelector: React.FC<AllegroAccountSelectorProps> = ({ 
         if (onAccountChange) {
           onAccountChange(activeId);
         }
+      } else {
+        console.warn('[AllegroAccountSelector] Response success is false:', response.data);
+        setError('Failed to load accounts: Invalid response format');
       }
     } catch (err) {
+      console.error('[AllegroAccountSelector] Error loading accounts:', err);
       // Truncate long error messages (like API Gateway connection errors)
       let errorMessage = 'Failed to load accounts';
       if (err instanceof AxiosError) {
