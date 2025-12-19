@@ -427,6 +427,21 @@ export class GatewayService implements OnModuleInit {
       // GET requests can reuse connections for better performance
       const useKeepAlive = method.toUpperCase() !== 'POST';
       
+      // For POST requests, create a new agent without keep-alive to force new connections
+      // This prevents connection reuse issues that cause timeouts
+      let postHttpAgent: HttpAgent | undefined;
+      let postHttpsAgent: HttpsAgent | undefined;
+      if (!useKeepAlive) {
+        postHttpAgent = new HttpAgent({
+          keepAlive: false,
+          maxSockets: 50,
+        });
+        postHttpsAgent = new HttpsAgent({
+          keepAlive: false,
+          maxSockets: 50,
+        });
+      }
+      
       const config: AxiosRequestConfig = {
         headers: {
           'Content-Type': 'application/json',
@@ -435,10 +450,10 @@ export class GatewayService implements OnModuleInit {
         timeout,
         maxRedirects: followRedirects ? 5 : 0,
         validateStatus: (status) => status >= 200 && status < 600, // Accept all HTTP status codes (including errors)
-        // For POST requests, don't use keep-alive agent to avoid connection reuse issues
+        // For POST requests, use new agent without keep-alive to avoid connection reuse issues
         // For GET requests, use keep-alive for better performance
-        httpAgent: useKeepAlive ? this.httpAgent : undefined,
-        httpsAgent: useKeepAlive ? this.httpsAgent : undefined,
+        httpAgent: useKeepAlive ? this.httpAgent : postHttpAgent,
+        httpsAgent: useKeepAlive ? this.httpsAgent : postHttpsAgent,
         // Pass metadata to interceptors
         metadata: {
           requestId,
