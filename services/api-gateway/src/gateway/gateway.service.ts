@@ -59,16 +59,20 @@ export class GatewayService implements OnModuleInit {
     
     // Create shared fresh agents without keep-alive for all requests
     // This prevents stale connection reuse while avoiding overhead of creating new agents per request
+    // Increased maxSockets to prevent connection pool exhaustion
+    // Increased timeout to allow for connection establishment delays
     this.freshHttpAgent = new HttpAgent({
       keepAlive: false, // No keep-alive to prevent stale connections
-      maxSockets: 50,
-      timeout: 5000, // 5 second socket timeout
+      maxSockets: 200, // Increased from 50 to prevent connection pool exhaustion
+      maxFreeSockets: 0, // No free sockets since keep-alive is disabled
+      timeout: 30000, // 30 second socket timeout (matches Axios timeout)
     });
     
     this.freshHttpsAgent = new HttpsAgent({
       keepAlive: false, // No keep-alive to prevent stale connections
-      maxSockets: 50,
-      timeout: 5000, // 5 second socket timeout
+      maxSockets: 200, // Increased from 50 to prevent connection pool exhaustion
+      maxFreeSockets: 0, // No free sockets since keep-alive is disabled
+      timeout: 30000, // 30 second socket timeout (matches Axios timeout)
     });
     
     // Ensure agents are set on the HttpService's Axios instance defaults
