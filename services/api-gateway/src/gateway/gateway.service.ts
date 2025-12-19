@@ -451,20 +451,42 @@ export class GatewayService implements OnModuleInit {
     // Generate request ID for tracking (must be before config to use in metadata)
     const requestId = `req-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
       
+    // For POST/PUT/PATCH requests, create fresh agents without keep-alive to avoid connection reuse issues
+    // GET requests can use keep-alive for better performance
+    const isWriteRequest = method === 'POST' || method === 'PUT' || method === 'PATCH';
+    let requestHttpAgent: HttpAgent | undefined;
+    let requestHttpsAgent: HttpsAgent | undefined;
+    
+    if (isWriteRequest) {
+      // For write requests, use fresh agents without keep-alive to prevent stale connection issues
+      requestHttpAgent = new HttpAgent({
+        keepAlive: false,
+        maxSockets: 50,
+        timeout: 10000,
+      });
+      requestHttpsAgent = new HttpsAgent({
+        keepAlive: false,
+        maxSockets: 50,
+        timeout: 10000,
+      });
+    } else {
+      // For read requests (GET), use optimized agents with keep-alive for better performance
+      requestHttpAgent = isHttps ? undefined : this.optimizedHttpAgent;
+      requestHttpsAgent = isHttps ? this.optimizedHttpsAgent : undefined;
+    }
+    
     const config: AxiosRequestConfig = {
       headers: {
         'Content-Type': 'application/json',
-        'Connection': 'keep-alive', // Explicitly set keep-alive header
+        'Connection': isWriteRequest ? 'close' : 'keep-alive', // Close connection for write requests
         ...headers,
       },
       timeout,
       maxRedirects: followRedirects ? 5 : 0,
       validateStatus: (status) => status >= 200 && status < 600, // Accept all HTTP status codes (including errors)
-      // Use optimized agents with keep-alive for better performance
-      // Short freeSocketTimeout (4s) ensures stale connections are cleaned up quickly
-      // This prevents the 16-98 second delays while maintaining connection reuse benefits
-      httpAgent: isHttps ? undefined : this.optimizedHttpAgent,
-      httpsAgent: isHttps ? this.optimizedHttpsAgent : undefined,
+      // Use fresh agents for write requests, optimized agents for read requests
+      httpAgent: requestHttpAgent,
+      httpsAgent: requestHttpsAgent,
         // Pass metadata to interceptors
         metadata: {
           requestId,
