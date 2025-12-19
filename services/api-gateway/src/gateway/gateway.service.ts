@@ -57,31 +57,19 @@ export class GatewayService implements OnModuleInit {
       scheduling: 'fifo', // Reuse oldest connections first
     });
     
-    // Create optimized agents with shorter idle timeout to prevent stale connections
-    // These will be reused across requests for better performance
-    // Key optimization: timeout is socket timeout (how long to wait for response), not connection establishment
-    // Increased timeout to 10s to allow for slower connections while still failing reasonably fast
-    // freeSocketTimeout (4s) closes idle sockets quickly to prevent stale connections
-    // Note: freeSocketTimeout is a valid Node.js property but not in TypeScript types, using type assertion
-    this.optimizedHttpAgent = new HttpAgent({
-      keepAlive: true,
-      keepAliveMsecs: 1000, // Send keep-alive packets every 1 second
+    // Create shared fresh agents without keep-alive for all requests
+    // This prevents stale connection reuse while avoiding overhead of creating new agents per request
+    this.freshHttpAgent = new HttpAgent({
+      keepAlive: false, // No keep-alive to prevent stale connections
       maxSockets: 50,
-      maxFreeSockets: 20, // Increased to keep more connections ready for reuse
-      timeout: 10000, // Socket timeout: 10 seconds (allow time for connection establishment and response)
-      scheduling: 'fifo',
-      freeSocketTimeout: 4000, // Close idle sockets after 4 seconds to prevent stale connections
-    } as any); // Type assertion needed as freeSocketTimeout is not in TypeScript types but exists in Node.js
+      timeout: 5000, // 5 second socket timeout
+    });
     
-    this.optimizedHttpsAgent = new HttpsAgent({
-      keepAlive: true,
-      keepAliveMsecs: 1000,
+    this.freshHttpsAgent = new HttpsAgent({
+      keepAlive: false, // No keep-alive to prevent stale connections
       maxSockets: 50,
-      maxFreeSockets: 20, // Increased to keep more connections ready
-      timeout: 10000, // Socket timeout: 10 seconds
-      scheduling: 'fifo',
-      freeSocketTimeout: 4000, // Close idle sockets after 4 seconds
-    } as any); // Type assertion needed as freeSocketTimeout is not in TypeScript types but exists in Node.js
+      timeout: 5000, // 5 second socket timeout
+    });
     
     // Ensure agents are set on the HttpService's Axios instance defaults
     // Set default agents, but individual requests can override them
