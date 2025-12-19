@@ -19,9 +19,10 @@ export class GatewayService implements OnModuleInit {
   private readonly serviceUrls: Record<string, string>;
   private readonly httpAgent: HttpAgent;
   private readonly httpsAgent: HttpsAgent;
-  // Optimized agents for requests - reused across requests for better performance
-  private readonly optimizedHttpAgent: HttpAgent;
-  private readonly optimizedHttpsAgent: HttpsAgent;
+  // Fresh agents without keep-alive - shared across all requests to avoid connection reuse issues
+  // Creating new agents per request was causing delays, so we use shared agents without keep-alive
+  private readonly freshHttpAgent: HttpAgent;
+  private readonly freshHttpsAgent: HttpsAgent;
 
   constructor(
     private readonly httpService: HttpService,
@@ -451,20 +452,8 @@ export class GatewayService implements OnModuleInit {
     // Generate request ID for tracking (must be before config to use in metadata)
     const requestId = `req-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
       
-    // Use fresh agents without keep-alive for ALL requests to prevent stale connection issues
-    // This ensures each request gets a clean connection, preventing 15-30 second delays
-    // Performance impact is minimal as connections are still fast (< 1ms network latency)
-    const requestHttpAgent = new HttpAgent({
-      keepAlive: false,
-      maxSockets: 50,
-      timeout: 5000, // 5 second socket timeout
-    });
-    const requestHttpsAgent = new HttpsAgent({
-      keepAlive: false,
-      maxSockets: 50,
-      timeout: 5000, // 5 second socket timeout
-    });
-    
+    // Use shared fresh agents without keep-alive for ALL requests
+    // This prevents stale connection reuse while avoiding overhead of creating new agents per request
     const config: AxiosRequestConfig = {
       headers: {
         'Content-Type': 'application/json',
@@ -474,9 +463,9 @@ export class GatewayService implements OnModuleInit {
       timeout,
       maxRedirects: followRedirects ? 5 : 0,
       validateStatus: (status) => status >= 200 && status < 600, // Accept all HTTP status codes (including errors)
-      // Use fresh agents without keep-alive for all requests
-      httpAgent: isHttps ? undefined : requestHttpAgent,
-      httpsAgent: isHttps ? requestHttpsAgent : undefined,
+      // Use shared fresh agents without keep-alive for all requests
+      httpAgent: isHttps ? undefined : this.freshHttpAgent,
+      httpsAgent: isHttps ? this.freshHttpsAgent : undefined,
         // Pass metadata to interceptors
         metadata: {
           requestId,
