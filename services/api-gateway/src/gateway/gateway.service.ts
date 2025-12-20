@@ -451,8 +451,8 @@ export class GatewayService implements OnModuleInit {
     const url = `${baseUrl}${path}`;
     
     // Special timeout for bulk operations that may take longer
-    const isBulkOperation = path.includes('/publish-all') || path.includes('/import') || path.includes('/bulk');
-    const isPublishAll = path.includes('/publish-all');
+    const isBulkOperation = path.includes('/publish-all') || path.includes('/import') || path.includes('/bulk') || path.includes('/clone');
+    const isPublishAll = path.includes('/publish-all') || path.includes('/clone');
     // Validation operations that call external APIs need longer timeouts
     const isValidationOperation = path.includes('/validate/allegro') || path.includes('/validate/');
     const defaultTimeout = (() => {
