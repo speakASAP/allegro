@@ -209,8 +209,6 @@ const OffersPage: React.FC = () => {
   } | null>(null);
   const [showCloneResultsModal, setShowCloneResultsModal] = useState(false);
 
-  // Account filter state
-  const [accountFilter, setAccountFilter] = useState<string>('');
   
   // Load saved filters from localStorage
   const loadSavedFilters = (): { statusFilter: string; searchQuery: string; categoryFilter: string; page: number } => {
@@ -270,10 +268,6 @@ const OffersPage: React.FC = () => {
       if (searchQuery && searchQuery.trim()) {
         params.search = searchQuery.trim();
       }
-      if (accountFilter && accountFilter.trim()) {
-        params.accountId = accountFilter;
-      }
-
       // Use reasonable timeout for database queries (30 seconds to handle slow connections)
       // Database queries should complete in <100ms, but network delays can add time
       const response = await api.get('/allegro/offers', { 
@@ -302,7 +296,7 @@ const OffersPage: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, [limit, page, statusFilter, categoryFilter, searchQuery, accountFilter]);
+  }, [limit, page, statusFilter, categoryFilter, searchQuery]);
 
   // Load offers when filters or page change
   useEffect(() => {
@@ -1073,10 +1067,6 @@ const OffersPage: React.FC = () => {
         if (searchQuery && searchQuery.trim()) {
           params.search = searchQuery.trim();
         }
-        if (accountFilter && accountFilter.trim()) {
-          params.accountId = accountFilter;
-        }
-
         const response = await api.get('/allegro/offers', { params });
         if (response.data.success) {
           const items = response.data.data.items || [];
@@ -1276,25 +1266,6 @@ const OffersPage: React.FC = () => {
                 setPage(1);
               }}
             />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Account
-            </label>
-            <select
-              className="w-full px-3 py-2 border border-gray-300 rounded-md"
-              value={accountFilter}
-              onChange={(e) => {
-                setAccountFilter(e.target.value);
-                setPage(1);
-              }}
-              onClick={() => { if (accounts.length === 0) loadAccounts(); }}
-            >
-              <option value="">All Accounts</option>
-              {accounts.map((acc) => (
-                <option key={acc.id} value={acc.id}>{acc.name}</option>
-              ))}
-            </select>
           </div>
         </div>
       </Card>
