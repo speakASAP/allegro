@@ -5454,8 +5454,24 @@ export class OffersService {
           // Handle productSet separately - need to strip read-only fields and handle responsibleProducer
           if (rawData.productSet && Array.isArray(rawData.productSet)) {
             // Get source account token for fetching producer details
-            const sourceAccountId = sourceOffer.accountId;
+            // If offer has no accountId, try to find another account to use
+            let sourceAccountId = sourceOffer.accountId;
             let sourceOAuthToken: string | null = null;
+
+            if (!sourceAccountId) {
+              // Find any account other than the target to use as source
+              const otherAccount = await this.prisma.allegroAccount.findFirst({
+                where: {
+                  userId: parseInt(userId),
+                  id: { not: targetAccountId },
+                },
+              });
+              if (otherAccount) {
+                sourceAccountId = otherAccount.id;
+                this.logger.log(`[${finalRequestId}] Using fallback source account: ${otherAccount.name}`);
+              }
+            }
+
             if (sourceAccountId) {
               try {
                 sourceOAuthToken = await this.getUserOAuthToken(userId, sourceAccountId);
