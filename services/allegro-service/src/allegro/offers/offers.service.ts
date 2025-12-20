@@ -5379,6 +5379,9 @@ export class OffersService {
     let successful = 0;
     let failed = 0;
 
+    // Cache for producer ID mapping: sourceProducerId -> targetProducerId
+    const producerIdMap: Map<string, string> = new Map();
+
     // Process each offer
     for (let i = 0; i < offerIds.length; i++) {
       const sourceOfferId = offerIds[i];
@@ -5499,34 +5502,45 @@ export class OffersService {
               // Handle responsibleProducer - try to copy if not exists on target
               if (cleanItem.responsibleProducer?.id) {
                 const producerId = cleanItem.responsibleProducer.id;
-                const existsOnTarget = targetProducers.some((p: any) => p.id === producerId);
 
-                if (!existsOnTarget && sourceOAuthToken) {
-                  // Try to get producer details and create on target account
-                  try {
-                    this.logger.log(`[${finalRequestId}] Producer ${producerId} not on target, attempting to copy`);
-                    const producerDetails = await this.allegroApi.getResponsibleProducerByIdWithOAuthToken(
-                      sourceOAuthToken,
-                      producerId,
-                    );
+                // Check if we've already mapped this producer in this batch
+                if (producerIdMap.has(producerId)) {
+                  cleanItem.responsibleProducer = { id: producerIdMap.get(producerId) };
+                  this.logger.log(`[${finalRequestId}] Using cached producer mapping: ${producerId} -> ${producerIdMap.get(producerId)}`);
+                } else {
+                  const existsOnTarget = targetProducers.some((p: any) => p.id === producerId);
 
-                    if (producerDetails) {
-                      // Create producer on target account (remove ID to create new)
-                      const { id, ...producerData } = producerDetails;
-                      const newProducer = await this.allegroApi.createResponsibleProducerWithOAuthToken(
-                        oauthToken,
-                        producerData,
+                  if (!existsOnTarget && sourceOAuthToken) {
+                    // Try to get producer details and create on target account
+                    try {
+                      this.logger.log(`[${finalRequestId}] Producer ${producerId} not on target, attempting to copy`);
+                      const producerDetails = await this.allegroApi.getResponsibleProducerByIdWithOAuthToken(
+                        sourceOAuthToken,
+                        producerId,
                       );
-                      this.logger.log(`[${finalRequestId}] Created producer on target account`, {
-                        oldId: producerId,
-                        newId: newProducer.id,
-                      });
-                      // Update the cleanItem to use the new producer ID
-                      cleanItem.responsibleProducer = { id: newProducer.id };
+
+                      if (producerDetails) {
+                        // Create producer on target account (remove ID to create new)
+                        const { id, ...producerData } = producerDetails;
+                        const newProducer = await this.allegroApi.createResponsibleProducerWithOAuthToken(
+                          oauthToken,
+                          producerData,
+                        );
+                        this.logger.log(`[${finalRequestId}] Created producer on target account`, {
+                          oldId: producerId,
+                          newId: newProducer.id,
+                        });
+                        // Cache the mapping and update the cleanItem
+                        producerIdMap.set(producerId, newProducer.id);
+                        cleanItem.responsibleProducer = { id: newProducer.id };
+                      }
+                    } catch (copyError: any) {
+                      this.logger.warn(`[${finalRequestId}] Could not copy producer: ${copyError.message}`);
+                      // Keep original producer ID - will fail if not exists
                     }
-                  } catch (copyError: any) {
-                    this.logger.warn(`[${finalRequestId}] Could not copy producer: ${copyError.message}`);
-                    // Keep original producer ID - will fail if not exists
+                  } else if (existsOnTarget) {
+                    // Producer already exists on target with same ID
+                    producerIdMap.set(producerId, producerId);
                   }
                 }
               }
