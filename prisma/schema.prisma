@@ -175,6 +175,10 @@ model AllegroOffer {
   validationErrors Json? // Array of validation error/warning objects
   lastValidatedAt  DateTime? @db.Timestamp(6)
 
+  // Multi-account support
+  accountId    String? @db.Uuid // Links to AllegroAccount that owns this offer
+  clonedFromId String? @db.Uuid // Reference to source offer if cloned
+
   // Timestamps
   createdAt DateTime @default(now()) @db.Timestamp(6)
   updatedAt DateTime @updatedAt @db.Timestamp(6)
@@ -185,6 +189,7 @@ model AllegroOffer {
   syncJobs SyncJob[]
 
   allegroProduct AllegroProduct? @relation(fields: [allegroProductId], references: [id], onDelete: SetNull)
+  account        AllegroAccount? @relation(fields: [accountId], references: [id], onDelete: SetNull)
 
   @@index([allegroOfferId])
   @@index([productId])
@@ -194,6 +199,7 @@ model AllegroOffer {
   @@index([createdAt])
   @@index([title]) // Index for fast text search
   @@index([categoryId]) // Index for fast category filtering
+  @@index([accountId]) // Index for fast account filtering
   @@map("allegro_offers")
 }
 
@@ -409,6 +415,9 @@ model AllegroAccount {
   // Timestamps
   createdAt DateTime @default(now()) @db.Timestamp(6)
   updatedAt DateTime @updatedAt @db.Timestamp(6)
+
+  // Relations
+  offers AllegroOffer[]
 
   @@index([userId])
   @@index([isActive])

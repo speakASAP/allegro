@@ -27,5 +27,9 @@ export class OfferQueryDto {
   @IsOptional()
   @IsString()
   categoryId?: string;
+
+  @IsOptional()
+  @IsString()
+  accountId?: string;
 }
 

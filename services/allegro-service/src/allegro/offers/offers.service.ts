@@ -74,12 +74,17 @@ export class OffersService {
         mode: 'insensitive',
       };
     }
+    // Multi-account filtering
+    if (query.accountId) {
+      where.accountId = query.accountId;
+    }
 
     console.log(`[${timestamp}] [TIMING] OffersService.getOffers START`, {
       filters: {
         status: query.status,
         categoryId: query.categoryId,
         search: query.search,
+        accountId: query.accountId,
       },
       pagination: { page, limit, skip },
     });
@@ -111,6 +116,14 @@ export class OffersService {
           lastValidatedAt: true,
           createdAt: true,
           updatedAt: true,
+          // Multi-account support
+          accountId: true,
+          account: {
+            select: {
+              id: true,
+              name: true,
+            },
+          },
           // Relations removed for faster list loading - can be loaded on-demand when viewing details
           // product: {
           //   select: {
@@ -1835,6 +1848,19 @@ export class OffersService {
     }
     const oauthToken = await this.getUserOAuthToken(userId);
 
+    // Get active account ID for multi-account support
+    const activeAccount = await this.prisma.allegroAccount.findFirst({
+      where: { userId, isActive: true },
+      select: { id: true, name: true },
+    });
+
+    const activeAccountId = activeAccount?.id || null;
+    this.logger.log('Using active account for import', {
+      userId,
+      accountId: activeAccountId,
+      accountName: activeAccount?.name,
+    });
+
     while (hasMore) {
       try {
         const response = await this.allegroApi.getOffersWithOAuthToken(oauthToken, {
@@ -1958,6 +1984,8 @@ export class OffersService {
               paymentOptions: offerData.paymentOptions || null,
               rawData: offerData.rawData || null,
               ...(allegroProductId ? { allegroProductId } : {}),
+              // Multi-account support: track which account owns this offer
+              ...(activeAccountId ? { accountId: activeAccountId } : {}),
               syncStatus: 'SYNCED',
               syncSource: 'ALLEGRO_API',
               lastSyncedAt: new Date(),
@@ -2463,6 +2491,19 @@ export class OffersService {
     let hasMore = true;
     let totalImported = 0;
 
+    // Get active account ID for multi-account support
+    const activeAccount = await this.prisma.allegroAccount.findFirst({
+      where: { userId, isActive: true },
+      select: { id: true, name: true },
+    });
+
+    const activeAccountId = activeAccount?.id || null;
+    this.logger.log('Using active account for Sales Center import', {
+      userId,
+      accountId: activeAccountId,
+      accountName: activeAccount?.name,
+    });
+
     // Use the same API endpoint but with different parameters for Sales Center
     // The Sales Center uses the same offers endpoint but with publication.status=ACTIVE filter
     while (hasMore) {
@@ -2523,6 +2564,8 @@ export class OffersService {
             update: {
               ...offerData,
               ...(allegroProductId ? { allegroProductId } : {}),
+              // Multi-account support: track which account owns this offer
+              ...(activeAccountId ? { accountId: activeAccountId } : {}),
               syncStatus: 'SYNCED',
               syncSource: 'SALES_CENTER',
               lastSyncedAt: new Date(),
@@ -2530,6 +2573,8 @@ export class OffersService {
             create: {
               ...offerData,
               ...(allegroProductId ? { allegroProductId } : {}),
+              // Multi-account support: track which account owns this offer
+              ...(activeAccountId ? { accountId: activeAccountId } : {}),
               syncStatus: 'SYNCED',
               syncSource: 'SALES_CENTER',
               lastSyncedAt: new Date(),
@@ -5185,6 +5230,283 @@ export class OffersService {
       updated,
       failed,
       publishResult,
+    };
+  }
+
+  /**
+   * Clone offers to a different Allegro account
+   * Creates NEW offers on the target account using data from source offers
+   * @param userId User ID for authentication
+   * @param offerIds Source offer IDs to clone
+   * @param targetAccountId Target account ID to create offers on
+   */
+  async cloneOffersToAccount(
+    userId: string,
+    offerIds: string[],
+    targetAccountId: string,
+    requestId?: string,
+  ): Promise<{
+    total: number;
+    successful: number;
+    failed: number;
+    results: Array<{
+      sourceOfferId: string;
+      newOfferId?: string;
+      newAllegroOfferId?: string;
+      status: 'success' | 'failed';
+      error?: string;
+    }>;
+  }> {
+    const startTime = Date.now();
+    const finalRequestId = requestId || `clone-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+
+    this.logger.log(`[${finalRequestId}] [cloneOffersToAccount] ========== STARTING CLONE OPERATION ==========`, {
+      userId,
+      targetAccountId,
+      offerCount: offerIds.length,
+      timestamp: new Date().toISOString(),
+    });
+
+    // Verify target account exists and get its details
+    const targetAccount = await this.prisma.allegroAccount.findUnique({
+      where: { id: targetAccountId },
+    });
+
+    if (!targetAccount) {
+      throw new HttpException(
+        {
+          success: false,
+          error: {
+            code: 'ACCOUNT_NOT_FOUND',
+            message: `Target account with ID ${targetAccountId} not found`,
+          },
+        },
+        HttpStatus.NOT_FOUND,
+      );
+    }
+
+    this.logger.log(`[${finalRequestId}] [cloneOffersToAccount] Target account verified`, {
+      accountId: targetAccountId,
+      accountName: targetAccount.name,
+    });
+
+    // Get OAuth token for target account
+    let oauthToken: string;
+    try {
+      oauthToken = await this.getUserOAuthToken(userId, targetAccountId);
+      this.logger.log(`[${finalRequestId}] [cloneOffersToAccount] OAuth token obtained for target account`, {
+        accountName: targetAccount.name,
+        tokenLength: oauthToken?.length || 0,
+      });
+    } catch (error: any) {
+      this.logger.error(`[${finalRequestId}] [cloneOffersToAccount] Failed to get OAuth token for target account`, {
+        accountId: targetAccountId,
+        accountName: targetAccount.name,
+        error: error.message,
+      });
+      throw error;
+    }
+
+    const results: Array<{
+      sourceOfferId: string;
+      newOfferId?: string;
+      newAllegroOfferId?: string;
+      status: 'success' | 'failed';
+      error?: string;
+    }> = [];
+    let successful = 0;
+    let failed = 0;
+
+    // Process each offer
+    for (let i = 0; i < offerIds.length; i++) {
+      const sourceOfferId = offerIds[i];
+      const offerStartTime = Date.now();
+
+      this.logger.log(`[${finalRequestId}] [cloneOffersToAccount] Processing offer ${i + 1}/${offerIds.length}`, {
+        sourceOfferId,
+        progress: `${Math.round(((i + 1) / offerIds.length) * 100)}%`,
+      });
+
+      try {
+        // Load source offer with all data
+        const sourceOffer = await this.prisma.allegroOffer.findUnique({
+          where: { id: sourceOfferId },
+          include: {
+            product: true,
+            allegroProduct: true,
+          },
+        });
+
+        if (!sourceOffer) {
+          results.push({
+            sourceOfferId,
+            status: 'failed',
+            error: 'Source offer not found',
+          });
+          failed++;
+          continue;
+        }
+
+        // Build offer payload for Allegro API (create new offer)
+        // Use rawData if available for complete fidelity, otherwise build from fields
+        let offerPayload: any;
+
+        if (sourceOffer.rawData) {
+          // Use rawData as base but remove ID fields (since this is a NEW offer)
+          const rawData = sourceOffer.rawData as any;
+          offerPayload = { ...rawData };
+          delete offerPayload.id; // Remove Allegro offer ID
+          delete offerPayload.publication; // Let Allegro set publication status
+          delete offerPayload.validation; // Let Allegro validate fresh
+        } else {
+          // Build minimal payload from stored fields
+          offerPayload = {
+            name: sourceOffer.title,
+            category: { id: sourceOffer.categoryId },
+            sellingMode: {
+              format: 'BUY_NOW',
+              price: {
+                amount: String(sourceOffer.price),
+                currency: sourceOffer.currency || 'PLN',
+              },
+            },
+            stock: {
+              available: sourceOffer.stockQuantity || 0,
+            },
+          };
+
+          if (sourceOffer.description) {
+            offerPayload.description = {
+              sections: [
+                {
+                  items: [
+                    {
+                      type: 'TEXT',
+                      content: sourceOffer.description,
+                    },
+                  ],
+                },
+              ],
+            };
+          }
+
+          if (sourceOffer.images) {
+            offerPayload.images = sourceOffer.images;
+          }
+
+          if (sourceOffer.deliveryOptions) {
+            offerPayload.delivery = sourceOffer.deliveryOptions;
+          }
+
+          if (sourceOffer.paymentOptions) {
+            offerPayload.payments = sourceOffer.paymentOptions;
+          }
+        }
+
+        // Create new offer on Allegro using target account
+        this.logger.log(`[${finalRequestId}] [cloneOffersToAccount] Creating offer on Allegro`, {
+          sourceOfferId,
+          targetAccount: targetAccount.name,
+          title: offerPayload.name || sourceOffer.title,
+        });
+
+        const allegroResponse = await this.allegroApi.createOfferWithOAuthToken(
+          oauthToken,
+          offerPayload,
+        );
+
+        const newAllegroOfferId = allegroResponse.id;
+
+        this.logger.log(`[${finalRequestId}] [cloneOffersToAccount] Offer created on Allegro`, {
+          sourceOfferId,
+          newAllegroOfferId,
+          duration: `${Date.now() - offerStartTime}ms`,
+        });
+
+        // Save new offer to database with target accountId
+        const newOffer = await this.prisma.allegroOffer.create({
+          data: {
+            allegroOfferId: newAllegroOfferId,
+            allegroListingId: allegroResponse.external?.id || null,
+            title: sourceOffer.title,
+            description: sourceOffer.description,
+            categoryId: sourceOffer.categoryId,
+            price: sourceOffer.price,
+            currency: sourceOffer.currency,
+            quantity: sourceOffer.quantity,
+            stockQuantity: sourceOffer.stockQuantity,
+            status: allegroResponse.publication?.status || 'INACTIVE',
+            publicationStatus: allegroResponse.publication?.status || 'INACTIVE',
+            deliveryOptions: sourceOffer.deliveryOptions,
+            paymentOptions: sourceOffer.paymentOptions,
+            images: sourceOffer.images,
+            rawData: allegroResponse,
+            syncStatus: 'SYNCED',
+            syncSource: 'CLONED',
+            lastSyncedAt: new Date(),
+            productId: sourceOffer.productId,
+            allegroProductId: sourceOffer.allegroProductId,
+            accountId: targetAccountId,
+            clonedFromId: sourceOfferId,
+          },
+        });
+
+        results.push({
+          sourceOfferId,
+          newOfferId: newOffer.id,
+          newAllegroOfferId,
+          status: 'success',
+        });
+        successful++;
+
+        this.logger.log(`[${finalRequestId}] [cloneOffersToAccount] Offer cloned successfully`, {
+          sourceOfferId,
+          newOfferId: newOffer.id,
+          newAllegroOfferId,
+          duration: `${Date.now() - offerStartTime}ms`,
+        });
+      } catch (error: any) {
+        const errorMessage = this.extractErrorMessage(error);
+
+        this.logger.error(`[${finalRequestId}] [cloneOffersToAccount] Failed to clone offer`, {
+          sourceOfferId,
+          error: errorMessage,
+          errorCode: error.code,
+          errorStatus: error.response?.status,
+          duration: `${Date.now() - offerStartTime}ms`,
+        });
+
+        results.push({
+          sourceOfferId,
+          status: 'failed',
+          error: errorMessage,
+        });
+        failed++;
+      }
+
+      // Add small delay between API calls to avoid rate limiting
+      if (i < offerIds.length - 1) {
+        await new Promise((resolve) => setTimeout(resolve, 200));
+      }
+    }
+
+    const totalDuration = Date.now() - startTime;
+
+    this.logger.log(`[${finalRequestId}] [cloneOffersToAccount] ========== CLONE OPERATION COMPLETE ==========`, {
+      userId,
+      targetAccountId,
+      targetAccountName: targetAccount.name,
+      total: offerIds.length,
+      successful,
+      failed,
+      duration: `${totalDuration}ms`,
+    });
+
+    return {
+      total: offerIds.length,
+      successful,
+      failed,
+      results,
     };
   }
 

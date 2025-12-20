@@ -947,5 +947,115 @@ export class OffersController {
       );
     }
   }
+
+  /**
+   * Clone offers to a different Allegro account
+   * Creates NEW offers on the target account using data from source offers
+   */
+  @Post('clone-to-account')
+  @UseGuards(JwtAuthGuard)
+  async cloneOffersToAccount(
+    @Request() req: any,
+    @Body() body: { offerIds: string[]; targetAccountId: string },
+  ): Promise<{ success: boolean; data: any }> {
+    const userId = String(req.user?.id || req.user?.sub || 'unknown');
+    const requestId = `clone-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    const startTime = Date.now();
+
+    console.log(`[${requestId}] [cloneOffersToAccount] ========== CLONE REQUEST RECEIVED ==========`, {
+      userId,
+      targetAccountId: body.targetAccountId,
+      offerCount: body.offerIds?.length || 0,
+      timestamp: new Date().toISOString(),
+    });
+
+    this.logger.log(`[${requestId}] [cloneOffersToAccount] Clone request received`, {
+      userId,
+      targetAccountId: body.targetAccountId,
+      offerCount: body.offerIds?.length || 0,
+    });
+
+    // Validate input
+    if (!body.offerIds || !Array.isArray(body.offerIds) || body.offerIds.length === 0) {
+      throw new HttpException(
+        {
+          success: false,
+          error: {
+            code: 'INVALID_INPUT',
+            message: 'offerIds must be a non-empty array of offer IDs',
+          },
+        },
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+
+    if (!body.targetAccountId) {
+      throw new HttpException(
+        {
+          success: false,
+          error: {
+            code: 'INVALID_INPUT',
+            message: 'targetAccountId is required',
+          },
+        },
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+
+    try {
+      const result = await this.offersService.cloneOffersToAccount(
+        userId,
+        body.offerIds,
+        body.targetAccountId,
+        requestId,
+      );
+
+      const totalDuration = Date.now() - startTime;
+
+      this.logger.log(`[${requestId}] [cloneOffersToAccount] Clone completed`, {
+        userId,
+        total: result.total,
+        successful: result.successful,
+        failed: result.failed,
+        duration: `${totalDuration}ms`,
+      });
+
+      return {
+        success: true,
+        data: {
+          ...result,
+          requestId,
+          duration: `${totalDuration}ms`,
+        },
+      };
+    } catch (error: any) {
+      const requestDuration = Date.now() - startTime;
+      const errorStatus = error.response?.status || error.status || HttpStatus.INTERNAL_SERVER_ERROR;
+      const errorData = error.response?.data || {};
+      const errorMessage = errorData.error_description || errorData.error || errorData.message || error.message || 'Failed to clone offers';
+
+      this.logger.error(`[${requestId}] [cloneOffersToAccount] Clone failed`, {
+        error: errorMessage,
+        status: errorStatus,
+        userId,
+        requestId,
+        requestDuration: `${requestDuration}ms`,
+      });
+
+      throw new HttpException(
+        {
+          success: false,
+          error: {
+            code: 'CLONE_ERROR',
+            message: errorMessage,
+            status: errorStatus,
+            details: errorData,
+            requestId,
+          },
+        },
+        errorStatus,
+      );
+    }
+  }
 }
 

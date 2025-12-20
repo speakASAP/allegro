@@ -110,6 +110,11 @@ interface AllegroProduct {
   parameters?: AllegroProductParameter[];
 }
 
+interface AllegroAccount {
+  id: string;
+  name: string;
+}
+
 interface Offer {
   id: string;
   allegroOfferId: string;
@@ -142,6 +147,9 @@ interface Offer {
   attributes?: Array<{ id: string; values: string[] }>;
   // Allegro public URL (if available from API)
   publicUrl?: string;
+  // Multi-account support
+  accountId?: string;
+  account?: AllegroAccount;
 }
 
 
@@ -186,6 +194,23 @@ const OffersPage: React.FC = () => {
     allegroProductId: '',
     syncToAllegro: false,
   });
+
+  // Clone to account states
+  const [showCloneModal, setShowCloneModal] = useState(false);
+  const [cloning, setCloning] = useState(false);
+  const [accounts, setAccounts] = useState<AllegroAccount[]>([]);
+  const [loadingAccounts, setLoadingAccounts] = useState(false);
+  const [targetAccountId, setTargetAccountId] = useState<string>('');
+  const [cloneResults, setCloneResults] = useState<{
+    total: number;
+    successful: number;
+    failed: number;
+    results: Array<{ sourceOfferId: string; newOfferId?: string; newAllegroOfferId?: string; status: 'success' | 'failed'; error?: string }>;
+  } | null>(null);
+  const [showCloneResultsModal, setShowCloneResultsModal] = useState(false);
+
+  // Account filter state
+  const [accountFilter, setAccountFilter] = useState<string>('');
   
   // Load saved filters from localStorage
   const loadSavedFilters = (): { statusFilter: string; searchQuery: string; categoryFilter: string; page: number } => {
@@ -245,6 +270,9 @@ const OffersPage: React.FC = () => {
       if (searchQuery && searchQuery.trim()) {
         params.search = searchQuery.trim();
       }
+      if (accountFilter && accountFilter.trim()) {
+        params.accountId = accountFilter;
+      }
 
       // Use reasonable timeout for database queries (30 seconds to handle slow connections)
       // Database queries should complete in <100ms, but network delays can add time
@@ -274,7 +302,7 @@ const OffersPage: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, [limit, page, statusFilter, categoryFilter, searchQuery]);
+  }, [limit, page, statusFilter, categoryFilter, searchQuery, accountFilter]);
 
   // Load offers when filters or page change
   useEffect(() => {
@@ -989,6 +1017,105 @@ const OffersPage: React.FC = () => {
     }
   };
 
+  // Load accounts for clone modal
+  const loadAccounts = async () => {
+    setLoadingAccounts(true);
+    try {
+      const response = await api.get('/settings/allegro-accounts');
+      if (response.data.success && Array.isArray(response.data.data)) {
+        setAccounts(response.data.data);
+      }
+    } catch (err) {
+      console.error('Failed to load accounts', err);
+    } finally {
+      setLoadingAccounts(false);
+    }
+  };
+
+  // Open clone modal
+  const handleOpenCloneModal = () => {
+    loadAccounts();
+    setShowCloneModal(true);
+  };
+
+  // Clone offers to another account
+  const handleCloneToAccount = async () => {
+    if (!targetAccountId) {
+      setError('Please select a target account');
+      return;
+    }
+
+    if (total === 0) {
+      setError('No offers to clone');
+      return;
+    }
+
+    setCloning(true);
+    setError(null);
+    try {
+      // Get IDs of all filtered offers
+      const allOfferIds: string[] = [];
+      let currentPage = 1;
+      let hasMore = true;
+
+      while (hasMore) {
+        const params: Record<string, string | number> = {
+          limit: 100,
+          page: currentPage,
+        };
+
+        if (statusFilter && statusFilter.trim()) {
+          params.status = statusFilter;
+        }
+        if (categoryFilter && categoryFilter.trim()) {
+          params.categoryId = categoryFilter;
+        }
+        if (searchQuery && searchQuery.trim()) {
+          params.search = searchQuery.trim();
+        }
+        if (accountFilter && accountFilter.trim()) {
+          params.accountId = accountFilter;
+        }
+
+        const response = await api.get('/allegro/offers', { params });
+        if (response.data.success) {
+          const items = response.data.data.items || [];
+          allOfferIds.push(...items.map((offer: Offer) => offer.id));
+
+          const totalPages = response.data.data.pagination?.totalPages || 1;
+          hasMore = currentPage < totalPages;
+          currentPage++;
+        } else {
+          hasMore = false;
+        }
+      }
+
+      // Clone offers to target account
+      const response = await api.post('/allegro/offers/clone-to-account', {
+        offerIds: allOfferIds,
+        targetAccountId,
+      }, {
+        timeout: 600000, // 10 minutes for cloning (can take long for many offers)
+      });
+
+      if (response.data.success) {
+        setCloneResults(response.data.data);
+        setShowCloneModal(false);
+        setShowCloneResultsModal(true);
+        // Refresh offers list
+        await loadOffers();
+      } else {
+        setError(response.data.error?.message || 'Failed to clone offers');
+      }
+    } catch (err) {
+      console.error('Failed to clone offers', err);
+      const axiosErr = err as AxiosError & { serviceErrorMessage?: string };
+      setError(axiosErr.serviceErrorMessage || axiosErr.message || 'Failed to clone offers');
+    } finally {
+      setCloning(false);
+    }
+  };
+
   // Publish all offers
   const handlePublishAll = async () => {
     if (total === 0) {
@@ -1085,6 +1212,13 @@ const OffersPage: React.FC = () => {
           >
             {publishing ? 'Publishing...' : `🚀 Publish All (${total})`}
           </Button>
+          <Button
+            onClick={handleOpenCloneModal}
+            disabled={cloning || total === 0}
+            variant="secondary"
+          >
+            {cloning ? 'Cloning...' : `📋 Clone to Account (${total})`}
+          </Button>
           <Button onClick={openCreateOffer}>Add Offer</Button>
         </div>
       </div>
@@ -1143,6 +1277,25 @@ const OffersPage: React.FC = () => {
               }}
             />
           </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Account
+            </label>
+            <select
+              className="w-full px-3 py-2 border border-gray-300 rounded-md"
+              value={accountFilter}
+              onChange={(e) => {
+                setAccountFilter(e.target.value);
+                setPage(1);
+              }}
+              onClick={() => { if (accounts.length === 0) loadAccounts(); }}
+            >
+              <option value="">All Accounts</option>
+              {accounts.map((acc) => (
+                <option key={acc.id} value={acc.id}>{acc.name}</option>
+              ))}
+            </select>
+          </div>
         </div>
       </Card>
 
@@ -1163,6 +1316,7 @@ const OffersPage: React.FC = () => {
                 <thead className="bg-gray-50">
                   <tr>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Title</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Account</th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Price</th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Stock</th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
@@ -1179,6 +1333,9 @@ const OffersPage: React.FC = () => {
                     <tr key={offer.id}>
                       <td className="px-6 py-4 text-sm text-gray-900 max-w-xs truncate" title={offer.title}>
                         {offer.title}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        {offer.account?.name || <span className="text-gray-400">-</span>}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                         {offer.price} {offer.currency}
@@ -1977,6 +2134,147 @@ const OffersPage: React.FC = () => {
                 onClick={() => {
                   setShowPublishResultsModal(false);
                   setPublishResults(null);
+                }}
+              >
+                Close
+              </Button>
+            </div>
+          </div>
+        )}
+      </Modal>
+
+      {/* Clone to Account Modal */}
+      <Modal
+        isOpen={showCloneModal}
+        onClose={() => {
+          setShowCloneModal(false);
+          setTargetAccountId('');
+        }}
+        title="Clone Offers to Another Account"
+      >
+        <div className="space-y-4">
+          <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+            <div className="text-sm text-blue-800">
+              <strong>What this does:</strong> Creates <strong>new offers</strong> on the selected Allegro account using the data from your current offers ({total} offers).
+              This is useful for selling the same products on multiple Allegro accounts.
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Target Account *
+            </label>
+            {loadingAccounts ? (
+              <div className="text-gray-500 text-sm">Loading accounts...</div>
+            ) : (
+              <select
+                className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                value={targetAccountId}
+                onChange={(e) => setTargetAccountId(e.target.value)}
+              >
+                <option value="">-- Select Target Account --</option>
+                {accounts.map((acc) => (
+                  <option key={acc.id} value={acc.id}>{acc.name}</option>
+                ))}
+              </select>
+            )}
+          </div>
+
+          <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+            <div className="text-sm text-yellow-800">
+              <strong>Note:</strong> Make sure the target account is authorized with Allegro OAuth.
+              Go to Settings to authorize if needed.
+            </div>
+          </div>
+
+          <div className="flex justify-end gap-2 pt-4 border-t">
+            <Button
+              variant="secondary"
+              onClick={() => {
+                setShowCloneModal(false);
+                setTargetAccountId('');
+              }}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleCloneToAccount}
+              disabled={cloning || !targetAccountId}
+            >
+              {cloning ? 'Cloning...' : `Clone ${total} Offers`}
+            </Button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Clone Results Modal */}
+      <Modal
+        isOpen={showCloneResultsModal}
+        onClose={() => {
+          setShowCloneResultsModal(false);
+          setCloneResults(null);
+        }}
+        title="Clone Results"
+      >
+        {cloneResults && (
+          <div className="space-y-4">
+            <div className="p-4 bg-gray-50 rounded-lg">
+              <div className="text-lg font-semibold mb-2">Summary</div>
+              <div className="space-y-1">
+                <div>
+                  <span className="font-medium">Total:</span> {cloneResults.total} offers
+                </div>
+                <div className="text-green-600">
+                  <span className="font-medium">Successful:</span> {cloneResults.successful} offers
+                </div>
+                {cloneResults.failed > 0 && (
+                  <div className="text-red-600">
+                    <span className="font-medium">Failed:</span> {cloneResults.failed} offers
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {cloneResults.failed > 0 && (
+              <div>
+                <div className="text-sm font-semibold mb-2 text-red-600">Failed Offers:</div>
+                <div className="max-h-64 overflow-y-auto space-y-2">
+                  {cloneResults.results
+                    .filter((r) => r.status === 'failed')
+                    .map((result) => (
+                      <div key={result.sourceOfferId} className="p-2 bg-red-50 border border-red-200 rounded text-sm">
+                        <div className="font-medium">Source Offer ID: {result.sourceOfferId}</div>
+                        <div className="text-red-700 mt-1">{result.error || 'An error occurred'}</div>
+                      </div>
+                    ))}
+                </div>
+              </div>
+            )}
+
+            {cloneResults.successful > 0 && (
+              <div>
+                <div className="text-sm font-semibold mb-2 text-green-600">Successfully Cloned:</div>
+                <div className="max-h-64 overflow-y-auto space-y-1">
+                  {cloneResults.results
+                    .filter((r) => r.status === 'success')
+                    .map((result) => (
+                      <div key={result.sourceOfferId} className="p-2 bg-green-50 border border-green-200 rounded text-sm">
+                        <div className="font-medium">Source: {result.sourceOfferId}</div>
+                        {result.newAllegroOfferId && (
+                          <div className="text-xs text-gray-600">New Allegro ID: {result.newAllegroOfferId}</div>
+                        )}
+                      </div>
+                    ))}
+                </div>
+              </div>
+            )}
+
+            <div className="flex justify-end gap-2 pt-4 border-t">
+              <Button
+                variant="secondary"
+                onClick={() => {
+                  setShowCloneResultsModal(false);
+                  setCloneResults(null);
                 }}
               >
                 Close
