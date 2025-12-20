@@ -5462,7 +5462,7 @@ export class OffersService {
               // Find any account other than the target to use as source
               const otherAccount = await this.prisma.allegroAccount.findFirst({
                 where: {
-                  userId: parseInt(userId),
+                  userId: userId,
                   id: { not: targetAccountId },
                 },
               });
