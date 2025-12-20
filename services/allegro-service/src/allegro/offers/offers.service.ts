@@ -5451,13 +5451,15 @@ export class OffersService {
             });
           }
 
-          // Handle productSet separately - need to strip read-only and account-specific fields
+          // Handle productSet separately - need to strip read-only fields
+          // NOTE: responsibleProducer is REQUIRED by Allegro for GPSR compliance
+          // The target account must have the same producer configured for clone to work
           if (rawData.productSet && Array.isArray(rawData.productSet)) {
             offerPayload.productSet = rawData.productSet.map((item: any) => {
               const cleanItem: any = { ...item };
-              // Remove account-specific IDs
-              delete cleanItem.responsiblePerson; // Account-specific ID
-              delete cleanItem.responsibleProducer; // Account-specific ID
+              // Remove responsiblePerson (account-specific, optional)
+              delete cleanItem.responsiblePerson;
+              // KEEP responsibleProducer - required by Allegro, must exist on target account
               if (cleanItem.product) {
                 // Remove read-only publication status from product
                 const { publication, isAiCoCreated, ...cleanProduct } = cleanItem.product;
