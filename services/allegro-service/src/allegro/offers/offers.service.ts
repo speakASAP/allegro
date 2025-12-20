@@ -5416,16 +5416,17 @@ export class OffersService {
         if (sourceOffer.rawData) {
           // Extract only allowed properties from rawData (whitelist approach)
           // Allegro /sale/product-offers endpoint rejects read-only and unknown properties
+          // ALSO: Account-specific IDs (shippingRates, afterSalesServices, discounts) cause "Access denied"
           const rawData = sourceOffer.rawData as any;
           offerPayload = {};
 
           // Strictly allowed properties for creating new offers
           // EXCLUDED: id, warnings, createdAt, updatedAt, validation, publication, additionalMarketplaces, taxSettings
+          // EXCLUDED: afterSalesServices, discounts (account-specific IDs)
           const allowedProps = [
             'name', 'category', 'parameters', 'description', 'images',
-            'sellingMode', 'stock', 'delivery', 'payments', 'location',
+            'sellingMode', 'stock', 'payments', 'location',
             'external', 'sizeTable', 'language', 'compatibilityList',
-            'afterSalesServices', 'discounts', 'fundraisingCampaign', 'additionalServices',
             'b2b', 'messageToSellerSettings', 'contact', 'attachments',
           ];
 
@@ -5433,6 +5434,21 @@ export class OffersService {
             if (rawData[prop] !== undefined && rawData[prop] !== null) {
               offerPayload[prop] = rawData[prop];
             }
+          }
+
+          // Handle delivery separately - copy handlingTime but NOT shippingRates (account-specific)
+          if (rawData.delivery) {
+            offerPayload.delivery = {
+              handlingTime: rawData.delivery.handlingTime,
+              additionalInfo: rawData.delivery.additionalInfo,
+              shipmentDate: rawData.delivery.shipmentDate,
+            };
+            // Remove undefined/null values
+            Object.keys(offerPayload.delivery).forEach(key => {
+              if (offerPayload.delivery[key] === undefined || offerPayload.delivery[key] === null) {
+                delete offerPayload.delivery[key];
+              }
+            });
           }
 
           // Handle productSet separately - need to strip read-only fields from products
