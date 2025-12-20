@@ -5486,11 +5486,12 @@ export class OffersService {
             // Get target account's existing producers
             let targetProducers: any[] = [];
             try {
+              console.log(`[${finalRequestId}] Fetching target account producers...`);
               const producersResponse = await this.allegroApi.getResponsibleProducersWithOAuthToken(oauthToken);
               targetProducers = producersResponse?.responsibleProducers || [];
-              this.logger.log(`[${finalRequestId}] Target account has ${targetProducers.length} producers`);
-            } catch (e) {
-              this.logger.warn(`[${finalRequestId}] Could not fetch target account producers`);
+              console.log(`[${finalRequestId}] Target account has ${targetProducers.length} producers:`, targetProducers.map((p: any) => p.id));
+            } catch (e: any) {
+              console.log(`[${finalRequestId}] Could not fetch target account producers:`, e.message);
             }
 
             offerPayload.productSet = [];
@@ -5502,18 +5503,21 @@ export class OffersService {
               // Handle responsibleProducer - try to copy if not exists on target
               if (cleanItem.responsibleProducer?.id) {
                 const producerId = cleanItem.responsibleProducer.id;
+                console.log(`[${finalRequestId}] Processing producer ${producerId}`);
 
                 // Check if we've already mapped this producer in this batch
                 if (producerIdMap.has(producerId)) {
                   cleanItem.responsibleProducer = { id: producerIdMap.get(producerId) };
-                  this.logger.log(`[${finalRequestId}] Using cached producer mapping: ${producerId} -> ${producerIdMap.get(producerId)}`);
+                  console.log(`[${finalRequestId}] Using cached producer mapping: ${producerId} -> ${producerIdMap.get(producerId)}`);
                 } else {
                   const existsOnTarget = targetProducers.some((p: any) => p.id === producerId);
+
+                  console.log(`[${finalRequestId}] Producer ${producerId} existsOnTarget=${existsOnTarget}, hasSourceToken=${!!sourceOAuthToken}`);
 
                   if (!existsOnTarget && sourceOAuthToken) {
                     // Try to get producer details and create on target account
                     try {
-                      this.logger.log(`[${finalRequestId}] Producer ${producerId} not on target, attempting to copy`);
+                      console.log(`[${finalRequestId}] Producer ${producerId} not on target, attempting to copy`);
                       const producerDetails = await this.allegroApi.getResponsibleProducerByIdWithOAuthToken(
                         sourceOAuthToken,
                         producerId,
