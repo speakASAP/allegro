@@ -5410,16 +5410,29 @@ export class OffersService {
         }
 
         // Build offer payload for Allegro API (create new offer)
-        // Use rawData if available for complete fidelity, otherwise build from fields
+        // Only include properties that Allegro /sale/product-offers endpoint accepts
         let offerPayload: any;
 
         if (sourceOffer.rawData) {
-          // Use rawData as base but remove ID fields (since this is a NEW offer)
+          // Extract only allowed properties from rawData (whitelist approach)
+          // Allegro rejects unknown/read-only properties
           const rawData = sourceOffer.rawData as any;
-          offerPayload = { ...rawData };
-          delete offerPayload.id; // Remove Allegro offer ID
-          delete offerPayload.publication; // Let Allegro set publication status
-          delete offerPayload.validation; // Let Allegro validate fresh
+          offerPayload = {};
+
+          // Allowed properties for /sale/product-offers endpoint
+          const allowedProps = [
+            'name', 'category', 'parameters', 'description', 'images',
+            'sellingMode', 'stock', 'delivery', 'payments', 'location',
+            'external', 'sizeTable', 'productSet', 'language', 'compatibilityList',
+            'afterSalesServices', 'discounts', 'fundraisingCampaign', 'additionalServices',
+            'b2b', 'messageToSellerSettings', 'contact', 'attachments', 'tax',
+          ];
+
+          for (const prop of allowedProps) {
+            if (rawData[prop] !== undefined) {
+              offerPayload[prop] = rawData[prop];
+            }
+          }
         } else {
           // Build minimal payload from stored fields
           offerPayload = {
