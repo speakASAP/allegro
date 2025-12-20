@@ -60,7 +60,7 @@ export class AllegroApiService {
           'Content-Type': contentType,
           'Accept': 'application/vnd.allegro.public.v1+json',
         },
-        timeout: 60000, // 60 seconds for Allegro API requests
+        timeout: 120000, // 120 seconds for Allegro API requests (large payloads can be slow)
       };
 
       console.log('[AllegroApiService.request] About to send HTTP request', { method, endpoint, timeout: config.timeout });
@@ -428,7 +428,7 @@ export class AllegroApiService {
           'Content-Type': 'application/vnd.allegro.public.v1+json',
           'Accept': 'application/vnd.allegro.public.v1+json',
         },
-        timeout: 60000, // 60 seconds timeout for create offer (can be slow)
+        timeout: 120000, // 120 seconds timeout for create offer (large payloads can be slow)
       };
 
       this.logger.log(`[${requestId}] [createOfferWithOAuthToken] Sending HTTP POST request`, {
@@ -554,7 +554,7 @@ export class AllegroApiService {
           'Content-Type': 'application/vnd.allegro.public.v1+json',
           'Accept': 'application/vnd.allegro.public.v1+json',
         },
-        timeout: 60000, // 60 seconds timeout - Allegro API can be slow for complex offers
+        timeout: 120000, // 120 seconds timeout - Allegro API can be slow for large payloads
       };
 
       this.logger.log(`[${requestId}] [updateOfferWithOAuthToken] Sending HTTP PATCH request`, {
