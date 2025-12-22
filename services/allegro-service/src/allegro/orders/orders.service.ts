@@ -188,7 +188,7 @@ export class OrdersService {
               },
             });
 
-            // Forward order to order-microservice
+            // Forward order to orders-microservice
             if (savedOrder && offer) {
               try {
                 const orderData = {
@@ -217,13 +217,13 @@ export class OrdersService {
                 };
 
                 await this.orderClient.createOrder(orderData);
-                this.logger.log('Order forwarded to order-microservice', {
+                this.logger.log('Order forwarded to orders-microservice', {
                   allegroOrderId: allegroOrder.id,
                   localOrderId: savedOrder.id,
                 });
               } catch (error: any) {
                 // Log error but don't fail the sync
-                this.logger.error('Failed to forward order to order-microservice', {
+                this.logger.error('Failed to forward order to orders-microservice', {
                   allegroOrderId: allegroOrder.id,
                   error: error.message,
                 });

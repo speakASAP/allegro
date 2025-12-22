@@ -73,9 +73,8 @@ export class ImportService {
             let product;
             try {
               // Try to find existing product by SKU (code)
-              const existingProducts = await this.catalogClient.searchProducts({ sku: record.code });
-              if (existingProducts.items && existingProducts.items.length > 0) {
-                product = existingProducts.items[0];
+              product = await this.catalogClient.getProductBySku(record.code);
+              if (product) {
                 // Update product
                 product = await this.catalogClient.updateProduct(product.id, {
                   title: productName,

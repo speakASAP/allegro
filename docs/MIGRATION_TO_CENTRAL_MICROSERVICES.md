@@ -12,7 +12,7 @@ This document tracks the migration of allegro-service from local Product table t
 
 - `shared/clients/catalog-client.service.ts` - Fetches products from catalog-microservice
 - `shared/clients/warehouse-client.service.ts` - Fetches stock from warehouse-microservice
-- `shared/clients/order-client.service.ts` - Forwards orders to order-microservice
+- `shared/clients/order-client.service.ts` - Forwards orders to orders-microservice
 - `shared/clients/clients.module.ts` - NestJS module for clients
 
 ### 2. RabbitMQ Subscriber Created ✅
@@ -59,7 +59,7 @@ This document tracks the migration of allegro-service from local Product table t
 - Orders stored locally in `AllegroOrder` table
 
 **Target:**
-- Forward orders to order-microservice
+- Forward orders to orders-microservice
 - Keep `AllegroOrder` for Allegro-specific metadata only
 
 **Action:**
@@ -72,7 +72,7 @@ Add to `.env`:
 ```
 CATALOG_SERVICE_URL=http://catalog-microservice:3200
 WAREHOUSE_SERVICE_URL=http://warehouse-microservice:3201
-ORDER_SERVICE_URL=http://order-microservice:3203
+ORDER_SERVICE_URL=http://orders-microservice:3203
 RABBITMQ_URL=amqp://guest:guest@statex_rabbitmq:5672
 ```
 
@@ -107,7 +107,7 @@ imports: [
 - [ ] Stock fetched from warehouse-microservice
 - [ ] Stock events received via RabbitMQ
 - [ ] Offers updated when stock changes
-- [ ] Orders forwarded to order-microservice
+- [ ] Orders forwarded to orders-microservice
 - [ ] Import creates products in catalog-microservice
 - [ ] Import updates stock in warehouse-microservice
 

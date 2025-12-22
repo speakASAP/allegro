@@ -154,3 +154,5 @@ Found 0 products in allegro-service
 - `migrate-products-to-catalog.ts` - Migrates products from allegro-service to catalog-microservice
 - `verify-migration-prerequisites.ts` - Verifies prerequisites before running migration
 
+
+

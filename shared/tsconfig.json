@@ -17,6 +17,9 @@
     "strictBindCallApply": false,
     "forceConsistentCasingInFileNames": false,
     "noFallthroughCasesInSwitch": false,
+    "esModuleInterop": true,
+    "types": ["node"],
+    "moduleResolution": "node",
     "paths": {
       "@allegro/shared/*": ["./*"]
     }
