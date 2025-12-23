@@ -9,7 +9,7 @@
 ssh statex
 
 # Navigate to project directory
-cd /home/statex/allegro
+cd /home/statex/allegro-service 
 
 # Check recent logs from a specific container (last 500 lines)
 docker logs allegro-settings-green --tail 500

@@ -9,7 +9,7 @@ Start commands: cat .env && ssh statex "cd nginx-microservice ls -la scripts"
 
 ```bash
 # 1. Pull latest code
-ssh statex "cd /home/statex/allegro && git pull origin master"
+ssh statex "cd /home/statex/allegro-service && git pull origin master"
 
 # 2. Deploy service
 ssh statex "cd /home/statex/nginx-microservice && ./scripts/blue-green/deploy-smart allegro"

@@ -15,10 +15,10 @@
 
    ```bash
    # Allegro Service logs
-   ssh statex "cd /home/statex/allegro && docker logs allegro-service-green --tail 100 | grep -E 'OAuth|error|Error'"
+   ssh statex "cd /home/statex/allegro-service && docker logs allegro-service-green --tail 100 | grep -E 'OAuth|error|Error'"
    
    # Settings Service logs
-   ssh statex "cd /home/statex/allegro && docker logs settings-green --tail 100 | grep -E 'error|Error'"
+   ssh statex "cd /home/statex/allegro-service && docker logs settings-green --tail 100 | grep -E 'error|Error'"
    ```
 
 3. **Verify OAuth State**
@@ -128,7 +128,7 @@ ssh statex "docker exec -i db-server-postgres psql -U dbadmin -d allegro -c 'SEL
 
 ```bash
 # On production server
-ssh statex "cd /home/statex/allegro && git pull && docker compose -f docker-compose.green.yml build allegro-service && docker compose -f docker-compose.green.yml up -d allegro-service"
+ssh statex "cd /home/statex/allegro-service && git pull && docker compose -f docker-compose.green.yml build allegro-service && docker compose -f docker-compose.green.yml up -d allegro-service"
 ```
 
 ## Testing Checklist
