@@ -8,6 +8,7 @@
     "migrate:products": "ts-node scripts/migrate-products-to-catalog.ts",
     "migrate:products:dry-run": "ts-node scripts/migrate-products-to-catalog.ts --dry-run",
     "export:products": "ts-node scripts/migrate-products-to-catalog.ts --export-only",
+    "clean:database": "ts-node scripts/clean-database.ts",
     "verify:migration": "ts-node scripts/verify-migration-prerequisites.ts",
     "verify:migration:complete": "ts-node scripts/verify-migration-complete.ts",
     "start:dev": "concurrently -n \"API-GW,ALLEGRO,IMPORT,SETTINGS,FRONTEND\" -c \"blue,yellow,cyan,green,white\" \"cd services/api-gateway && npm run start:dev\" \"cd services/allegro-service && npm run start:dev\" \"cd services/imports && npm run start:dev\" \"cd services/settings && npm run start:dev\" \"cd services/frontend && npm run dev\"",

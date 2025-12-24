@@ -169,7 +169,7 @@ export class OrdersService {
               create: {
                 allegroOrderId: allegroOrder.id,
                 allegroOfferId: offer?.id || '',
-                productId: offer?.productId || null,
+                catalogProductId: offer?.catalogProductId || null,
                 quantity: allegroOrder.lineItems?.[0]?.quantity || 1,
                 price: parseFloat(allegroOrder.lineItems?.[0]?.price?.amount || '0'),
                 totalPrice: parseFloat(allegroOrder.totalPrice?.amount || '0'),
@@ -195,7 +195,7 @@ export class OrdersService {
                     login: allegroOrder.buyer?.login,
                   },
                   items: allegroOrder.lineItems?.map((item: any) => ({
-                    productId: offer?.productId || null,
+                    productId: offer?.catalogProductId || null,
                     sku: null, // SKU not available on AllegroOffer - would need catalog client
                     title: item.offer?.name || offer?.title || 'Product',
                     quantity: item.quantity || 1,

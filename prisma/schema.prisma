@@ -105,6 +105,9 @@ model AllegroOffer {
   accountId    String? @db.Uuid // Links to AllegroAccount that owns this offer
   clonedFromId String? @db.Uuid // Reference to source offer if cloned
 
+  // Responsible producer (required for GPSR compliance)
+  responsibleProducerId String? @db.Uuid // Links to ResponsibleProducer
+
   // Timestamps
   createdAt DateTime @default(now()) @db.Timestamp(6)
   updatedAt DateTime @updatedAt @db.Timestamp(6)
@@ -114,8 +117,9 @@ model AllegroOffer {
   orders   AllegroOrder[]
   syncJobs SyncJob[]
 
-  allegroProduct AllegroProduct? @relation(fields: [allegroProductId], references: [id], onDelete: SetNull)
-  account        AllegroAccount? @relation(fields: [accountId], references: [id], onDelete: SetNull)
+  allegroProduct       AllegroProduct?        @relation(fields: [allegroProductId], references: [id], onDelete: SetNull)
+  account              AllegroAccount?        @relation(fields: [accountId], references: [id], onDelete: SetNull)
+  responsibleProducer  ResponsibleProducer?  @relation(fields: [responsibleProducerId], references: [id], onDelete: SetNull)
 
   @@index([allegroOfferId])
   @@index([catalogProductId])
@@ -126,6 +130,7 @@ model AllegroOffer {
   @@index([title]) // Index for fast text search
   @@index([categoryId]) // Index for fast category filtering
   @@index([accountId]) // Index for fast account filtering
+  @@index([responsibleProducerId]) // Index for producer filtering
   @@map("allegro_offers")
 }
 
@@ -312,6 +317,38 @@ model SupplierProduct {
   @@map("supplier_products")
 }
 
+// Responsible producers - account-specific producers from Allegro
+model ResponsibleProducer {
+  id        String  @id @default(uuid()) @db.Uuid
+  accountId String  @db.Uuid // Links to AllegroAccount
+  producerId String @db.VarChar(100) // Allegro's producer ID
+
+  // Producer data from Allegro API
+  name        String? @db.VarChar(500)
+  email       String? @db.VarChar(255)
+  phone       String? @db.VarChar(50)
+  address     Json? // Address object
+  rawData     Json // Full producer data from Allegro API
+
+  // Sync metadata
+  lastSyncedAt DateTime? @db.Timestamp(6)
+  syncStatus   String    @default("SYNCED") @db.VarChar(50) // SYNCED, ERROR
+  syncError    String?   @db.Text
+
+  // Timestamps
+  createdAt DateTime @default(now()) @db.Timestamp(6)
+  updatedAt DateTime @updatedAt @db.Timestamp(6)
+
+  // Relations
+  account AllegroAccount @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  offers  AllegroOffer[]
+
+  @@unique([accountId, producerId])
+  @@index([accountId])
+  @@index([producerId])
+  @@map("responsible_producers")
+}
+
 // Allegro accounts - multiple accounts per user
 model AllegroAccount {
   id     String @id @default(uuid()) @db.Uuid
@@ -340,7 +377,8 @@ model AllegroAccount {
   updatedAt DateTime @updatedAt @db.Timestamp(6)
 
   // Relations
-  offers AllegroOffer[]
+  offers     AllegroOffer[]
+  producers  ResponsibleProducer[]
 
   @@index([userId])
   @@index([isActive])

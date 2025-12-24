@@ -21,6 +21,7 @@ import { EventsService } from './events/events.service';
 import { OAuthController } from './oauth/oauth.controller';
 import { ProductsController } from './products/products.controller';
 import { ProductsService } from './products/products.service';
+import { ProducersService } from './producers/producers.service';
 
 @Module({
   imports: [
@@ -55,6 +56,7 @@ import { ProductsService } from './products/products.service';
     InventoryService,
     EventsService,
     ProductsService,
+    ProducersService,
   ],
   exports: [AllegroApiService, OffersService, OrdersService, CategoriesService, InventoryService, EventsService],
 })

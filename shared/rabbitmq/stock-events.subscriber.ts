@@ -126,20 +126,14 @@ export class StockEventsSubscriber implements OnModuleInit, OnModuleDestroy {
   /**
    * Update offer stock quantities for a product
    * Note: productId is the catalog-microservice product ID
-   * We need to find offers by matching SKU/EAN or by stored catalogProductId
+   * We find offers by catalogProductId field
    */
   private async updateOfferStock(productId: string, available: number) {
     try {
-      // Find offers linked to this product
-      // For now, we'll update offers that have productId matching (legacy) or catalogProductId
-      // In the future, we should add catalogProductId field to AllegroOffer
+      // Find offers linked to this product by catalogProductId
       const offers = await this.prisma.allegroOffer.findMany({
         where: {
-          OR: [
-            { productId: productId }, // Legacy productId (if it matches catalog ID)
-            // TODO: Add catalogProductId field to AllegroOffer schema
-            // { catalogProductId: productId },
-          ],
+          catalogProductId: productId,
         },
         select: {
           id: true,

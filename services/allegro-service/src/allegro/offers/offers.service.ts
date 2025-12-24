@@ -7,6 +7,7 @@ import { PrismaService, LoggerService, CatalogClientService, WarehouseClientServ
 import { ConfigService } from '@nestjs/config';
 import { AllegroApiService } from '../allegro-api.service';
 import { AllegroAuthService } from '../allegro-auth.service';
+import { ProducersService } from '../producers/producers.service';
 import * as crypto from 'crypto';
 
 @Injectable()
@@ -22,6 +23,7 @@ export class OffersService {
     private readonly allegroAuth: AllegroAuthService,
     private readonly catalogClient: CatalogClientService,
     private readonly warehouseClient: WarehouseClientService,
+    private readonly producersService: ProducersService,
   ) {
     this.encryptionKey = this.configService.get<string>('ENCRYPTION_KEY');
     if (!this.encryptionKey) {
@@ -201,12 +203,12 @@ export class OffersService {
       throw new Error(`Offer with ID ${id} not found`);
     }
 
-    // Fetch product from catalog-microservice if productId exists
-    if (offer.productId) {
+    // Fetch product from catalog-microservice if catalogProductId exists
+    if (offer.catalogProductId) {
       try {
-        offer.product = await this.catalogClient.getProductById(offer.productId);
+        offer.product = await this.catalogClient.getProductById(offer.catalogProductId);
         // Fetch stock from warehouse-microservice
-        const totalAvailable = await this.warehouseClient.getTotalAvailable(offer.productId);
+        const totalAvailable = await this.warehouseClient.getTotalAvailable(offer.catalogProductId);
         offer.stockQuantity = totalAvailable;
         this.logger.log('[getOffer] Fetched product from catalog-microservice', {
           offerId: id,
@@ -243,7 +245,7 @@ export class OffersService {
    */
   async createOffer(dto: any, userId?: string): Promise<any> {
     this.logger.log('Creating Allegro offer', { 
-      productId: dto.productId, 
+      catalogProductId: dto.catalogProductId, 
       allegroProductId: dto.allegroProductId,
       syncToAllegro: dto.syncToAllegro !== false,
     });
@@ -265,7 +267,7 @@ export class OffersService {
       const offer = await this.prisma.allegroOffer.create({
         data: {
           allegroOfferId: dto.allegroOfferId || `local-${crypto.randomUUID()}`,
-          productId: dto.productId || null,
+          catalogProductId: dto.catalogProductId || null,
           allegroProductId: allegroProductId || null,
           title: dto.title,
           description: dto.description || null,
@@ -311,7 +313,7 @@ export class OffersService {
     const offer = await this.prisma.allegroOffer.create({
       data: {
         allegroOfferId: allegroOffer.id,
-        productId: dto.productId || null,
+        catalogProductId: dto.catalogProductId || null,
         allegroProductId: allegroProductId || null,
         title: dto.title,
         description: dto.description || null,
@@ -1654,7 +1656,91 @@ export class OffersService {
             }
 
             const allegroProductId = await this.upsertAllegroProductFromOffer(fullOfferData, oauthToken);
+            
+            // Create or link catalog product if AllegroProduct was created
+            let catalogProductId: string | null = null;
+            if (allegroProductId) {
+              try {
+                const allegroProduct = await this.prisma.allegroProduct.findUnique({
+                  where: { id: allegroProductId },
+                });
+                
+                if (allegroProduct && (allegroProduct.ean || allegroProduct.allegroProductId)) {
+                  const sku = allegroProduct.ean || `ALLEGRO-${allegroProduct.allegroProductId}`;
+                  
+                  // Try to find existing catalog product
+                  let catalogProduct;
+                  try {
+                    catalogProduct = await this.catalogClient.getProductBySku(sku);
+                  } catch {
+                    // Not found by SKU, try by EAN if available
+                    if (allegroProduct.ean) {
+                      const searchResults = await this.catalogClient.searchProducts({ search: allegroProduct.ean });
+                      catalogProduct = searchResults.items?.find((p: any) => p.ean === allegroProduct.ean);
+                    }
+                  }
+                  
+                  if (catalogProduct) {
+                    catalogProductId = catalogProduct.id;
+                    this.logger.log('[importApprovedOffers] Found existing catalog product', {
+                      catalogProductId,
+                      sku,
+                    });
+                  } else {
+                    // Create new catalog product
+                    catalogProduct = await this.catalogClient.createProduct({
+                      sku,
+                      title: allegroProduct.name || 'Product',
+                      brand: allegroProduct.brand || undefined,
+                      manufacturer: allegroProduct.manufacturerCode || undefined,
+                      ean: allegroProduct.ean || undefined,
+                    });
+                    catalogProductId = catalogProduct.id;
+                    this.logger.log('[importApprovedOffers] Created new catalog product', {
+                      catalogProductId,
+                      sku,
+                    });
+                  }
+                }
+              } catch (error: any) {
+                this.logger.warn('[importApprovedOffers] Failed to create/link catalog product', {
+                  error: error.message,
+                  allegroProductId,
+                });
+                // Continue without catalog product link
+              }
+            }
+            
             const offerData = this.sanitizeOfferDataForPrisma(this.extractOfferData(fullOfferData));
+            
+            // Extract and ensure responsible producer exists
+            let responsibleProducerId: string | null = null;
+            const productSet = Array.isArray(fullOfferData?.productSet) && fullOfferData.productSet.length > 0
+              ? fullOfferData.productSet[0]
+              : null;
+            const allegroProducerId = productSet?.responsibleProducer?.id;
+            
+            if (allegroProducerId && accountId) {
+              try {
+                responsibleProducerId = await this.producersService.ensureProducerExists(
+                  accountId,
+                  userId,
+                  String(allegroProducerId),
+                );
+                this.logger.log('[importApprovedOffers] Producer ensured in database', {
+                  accountId,
+                  allegroProducerId,
+                  responsibleProducerId,
+                });
+              } catch (error: any) {
+                this.logger.warn('[importApprovedOffers] Failed to ensure producer exists', {
+                  accountId,
+                  allegroProducerId,
+                  error: error.message,
+                });
+                // Continue without producer link - will be handled during export
+              }
+            }
             
             // Log before saving to database
             this.logger.log('[importApprovedOffers] Saving offer to database', {
@@ -1671,6 +1757,7 @@ export class OffersService {
                 length: offerData.description ? (typeof offerData.description === 'string' ? offerData.description.length : 'non-string') : 0,
                 preview: offerData.description && typeof offerData.description === 'string' ? offerData.description.substring(0, 200) : 'N/A',
               },
+              hasProducer: !!responsibleProducerId,
             });
 
             if (existingOffer) {
@@ -1680,6 +1767,8 @@ export class OffersService {
                 data: {
                   ...offerData,
                   ...(allegroProductId ? { allegroProductId } : {}),
+                  ...(catalogProductId ? { catalogProductId } : {}),
+                  ...(responsibleProducerId ? { responsibleProducerId } : {}),
                   syncStatus: 'SYNCED',
                   syncSource: 'ALLEGRO_API',
                   lastSyncedAt: new Date(),
@@ -1724,6 +1813,8 @@ export class OffersService {
                 data: {
                   ...offerData,
                   ...(allegroProductId ? { allegroProductId } : {}),
+                  ...(catalogProductId ? { catalogProductId } : {}),
+                  ...(responsibleProducerId ? { responsibleProducerId } : {}),
                   syncStatus: 'SYNCED',
                   syncSource: 'ALLEGRO_API',
                   lastSyncedAt: new Date(),
@@ -2130,7 +2221,7 @@ export class OffersService {
       offer.status || '',
       offer.publicationStatus || '',
       offer.categoryId || '',
-      offer.productId || '',
+      offer.catalogProductId || '',
       '', // Product name - not available from Prisma, would need catalog client
       offer.createdAt.toISOString(),
       offer.lastSyncedAt ? offer.lastSyncedAt.toISOString() : '',
@@ -3758,6 +3849,23 @@ export class OffersService {
     const activeAccountName = activeAccount.name;
     console.log('[publishOffersToAllegro] Active account found', { activeAccountId, activeAccountName });
 
+    // Sync producers from Allegro API to database before exporting offers
+    // This ensures all producers exist in database before we try to export offers
+    console.log(`[${finalRequestId}] [publishOffersToAllegro] STEP 0: Syncing producers from Allegro API`);
+    try {
+      const syncResult = await this.producersService.syncProducersForAccount(activeAccountId, userId);
+      console.log(`[${finalRequestId}] [publishOffersToAllegro] STEP 0 COMPLETE: Producers synced`, {
+        total: syncResult.total,
+        synced: syncResult.synced,
+        errors: syncResult.errors,
+      });
+    } catch (error: any) {
+      console.warn(`[${finalRequestId}] [publishOffersToAllegro] STEP 0 WARNING: Failed to sync producers`, {
+        error: error.message,
+      });
+      // Continue anyway - producers will be synced on-demand during offer processing
+    }
+
     // Get OAuth token once for all operations
     console.log('[publishOffersToAllegro] About to get OAuth token');
     let oauthToken: string;
@@ -3862,6 +3970,7 @@ export class OffersService {
                 parameters: true,
               },
             },
+            responsibleProducer: true,
           } as any,
         });
         const dbLoadDuration = Date.now() - dbLoadStartTime;
@@ -4336,16 +4445,75 @@ export class OffersService {
                               null;
             
             if (productId) {
-              updatePayload.productSet = [
-                {
-                  product: {
-                    id: String(productId),
-                  },
+              const productSetItem: any = {
+                product: {
+                  id: String(productId),
                 },
-              ];
+              };
+
+              // Add responsibleProducer - REQUIRED for GPSR compliance
+              let producerId: string | null = null;
+              
+              if (offer.responsibleProducer) {
+                // Use producer from database
+                producerId = offer.responsibleProducer.producerId;
+                productSetItem.responsibleProducer = {
+                  id: producerId,
+                };
+                console.log(`[${finalRequestId}] [publishOffersToAllegro] OFFER ${processedCount}: Added responsibleProducer from database`, {
+                  offerId,
+                  producerId,
+                });
+              } else {
+                // Try to get producer from rawData or sourceOffer
+                const producerFromRaw = (sourceOffer as any)?.productSet?.[0]?.responsibleProducer?.id ||
+                                       (offer.rawData as any)?.productSet?.[0]?.responsibleProducer?.id;
+                if (producerFromRaw) {
+                  // Ensure producer exists in database before using it
+                  try {
+                    await this.producersService.ensureProducerExists(
+                      activeAccountId,
+                      userId,
+                      String(producerFromRaw),
+                    );
+                    producerId = String(producerFromRaw);
+                    productSetItem.responsibleProducer = {
+                      id: producerId,
+                    };
+                    console.log(`[${finalRequestId}] [publishOffersToAllegro] OFFER ${processedCount}: Added responsibleProducer from rawData`, {
+                      offerId,
+                      producerId,
+                    });
+                  } catch (error: any) {
+                    // CRITICAL: Fail the offer if producer can't be ensured
+                    // responsibleProducer is required for GPSR compliance
+                    throw new Error(`Failed to ensure responsible producer ${producerFromRaw} exists on account: ${error.message}. Producer is required for offer compliance.`);
+                  }
+                } else {
+                  // CRITICAL: Fail if no producer found at all
+                  // responsibleProducer is required for GPSR compliance
+                  throw new Error(`No responsible producer found for offer. Producer is required for GPSR compliance. Please ensure the offer has a responsibleProducer in productSet.`);
+                }
+              }
+              
+              // Validate that producer exists on Allegro account
+              if (producerId) {
+                try {
+                  const producerExists = await this.producersService.getProducerByAllegroId(activeAccountId, producerId);
+                  if (!producerExists) {
+                    // Producer not in database - try to fetch and store it
+                    await this.producersService.ensureProducerExists(activeAccountId, userId, producerId);
+                  }
+                } catch (error: any) {
+                  throw new Error(`Responsible producer ${producerId} does not exist on account and could not be created: ${error.message}. Producer is required for offer compliance.`);
+                }
+              }
+
+              updatePayload.productSet = [productSetItem];
               console.log(`[${finalRequestId}] [publishOffersToAllegro] OFFER ${processedCount}: Added productSet to update payload`, {
                 offerId,
                 productId: String(productId),
+                hasProducer: !!productSetItem.responsibleProducer,
                 timestamp: new Date().toISOString(),
               });
             } else {
@@ -4729,13 +4897,68 @@ export class OffersService {
 
             // Add product reference - REQUIRED for product-offers endpoint
             if (allegroProductId) {
-              offerPayload.productSet = [
-                {
-                  product: {
-                    id: allegroProductId,
-                  },
+              const productSetItem: any = {
+                product: {
+                  id: allegroProductId,
                 },
-              ];
+              };
+
+              // Add responsibleProducer - REQUIRED for GPSR compliance
+              let producerId: string | null = null;
+              
+              if (offer.responsibleProducer) {
+                // Use producer from database
+                producerId = offer.responsibleProducer.producerId;
+                productSetItem.responsibleProducer = {
+                  id: producerId,
+                };
+                console.log(`[${offerRequestId}] [publishOffersToAllegro] STEP 2.${processedCount}.4.3: Added responsibleProducer from database`, {
+                  offerId,
+                  producerId,
+                });
+              } else {
+                // Try to get producer from rawData
+                const producerFromRaw = (offer.rawData as any)?.productSet?.[0]?.responsibleProducer?.id;
+                if (producerFromRaw) {
+                  // Ensure producer exists in database before using it
+                  try {
+                    await this.producersService.ensureProducerExists(
+                      activeAccountId,
+                      userId,
+                      String(producerFromRaw),
+                    );
+                    producerId = String(producerFromRaw);
+                    productSetItem.responsibleProducer = {
+                      id: producerId,
+                    };
+                    console.log(`[${offerRequestId}] [publishOffersToAllegro] STEP 2.${processedCount}.4.3: Added responsibleProducer from rawData`, {
+                      offerId,
+                      producerId,
+                    });
+                  } catch (error: any) {
+                    // CRITICAL: Fail the offer if producer can't be ensured
+                    throw new Error(`Failed to ensure responsible producer ${producerFromRaw} exists on account: ${error.message}. Producer is required for offer compliance.`);
+                  }
+                } else {
+                  // CRITICAL: Fail if no producer found at all
+                  throw new Error(`No responsible producer found for offer. Producer is required for GPSR compliance. Please ensure the offer has a responsibleProducer in productSet.`);
+                }
+              }
+              
+              // Validate that producer exists on Allegro account
+              if (producerId) {
+                try {
+                  const producerExists = await this.producersService.getProducerByAllegroId(activeAccountId, producerId);
+                  if (!producerExists) {
+                    // Producer not in database - try to fetch and store it
+                    await this.producersService.ensureProducerExists(activeAccountId, userId, producerId);
+                  }
+                } catch (error: any) {
+                  throw new Error(`Responsible producer ${producerId} does not exist on account and could not be created: ${error.message}. Producer is required for offer compliance.`);
+                }
+              }
+
+              offerPayload.productSet = [productSetItem];
             } else {
               throw new Error('Product is required to create an offer. Product not found and could not be created.');
             }
@@ -5597,13 +5820,15 @@ export class OffersService {
                         cleanItem.responsibleProducer = { id: newProducer.id };
                       } catch (createError: any) {
                         this.logger.error(`[${finalRequestId}] Failed to create producer ${producerId} on target account: ${createError.message}`);
-                        // Remove producer field if we can't create it
-                        delete cleanItem.responsibleProducer;
+                        // CRITICAL: Don't remove producer - fail the offer instead
+                        // responsibleProducer is required for GPSR compliance
+                        throw new Error(`Failed to create responsible producer ${producerId} on target account: ${createError.message}. Producer is required for offer compliance.`);
                       }
                     } else {
-                      // Producer not found in any account - remove it
-                      this.logger.warn(`[${finalRequestId}] Producer ${producerId} not found in any user account, removing from productSet item`);
-                      delete cleanItem.responsibleProducer;
+                      // Producer not found in any account - fail the offer
+                      // responsibleProducer is required for GPSR compliance
+                      this.logger.error(`[${finalRequestId}] Producer ${producerId} not found in any user account - cannot clone offer without producer`);
+                      throw new Error(`Responsible producer ${producerId} not found in any user account. Producer is required for offer compliance.`);
                     }
                   }
                 }
