@@ -1,8 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { PrismaService } from '../../../../shared';
+import { PrismaService, LoggerService } from '@allegro/shared';
 import { AllegroApiService } from '../allegro-api.service';
-import { LoggerService } from '../../../../shared/logger/logger.service';
 import * as crypto from 'crypto';
 
 /**

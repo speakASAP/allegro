@@ -1564,6 +1564,15 @@ export class OffersService {
       approvedOfferIds: approvedOfferIds.slice(0, 5), // Log first 5 for debugging
     });
 
+    // Get active account for producer linking
+    const activeAccount = await this.prisma.allegroAccount.findFirst({
+      where: {
+        userId,
+        isActive: true,
+      },
+    });
+    const activeAccountId = activeAccount?.id || null;
+
     let offset = 0;
     const limit = 100;
     let hasMore = true;
@@ -1720,21 +1729,21 @@ export class OffersService {
               : null;
             const allegroProducerId = productSet?.responsibleProducer?.id;
             
-            if (allegroProducerId && accountId) {
+            if (allegroProducerId && activeAccountId) {
               try {
                 responsibleProducerId = await this.producersService.ensureProducerExists(
-                  accountId,
+                  activeAccountId,
                   userId,
                   String(allegroProducerId),
                 );
                 this.logger.log('[importApprovedOffers] Producer ensured in database', {
-                  accountId,
+                  accountId: activeAccountId,
                   allegroProducerId,
                   responsibleProducerId,
                 });
               } catch (error: any) {
                 this.logger.warn('[importApprovedOffers] Failed to ensure producer exists', {
-                  accountId,
+                  accountId: activeAccountId,
                   allegroProducerId,
                   error: error.message,
                 });
@@ -4456,7 +4465,7 @@ export class OffersService {
               
               if (offer.responsibleProducer) {
                 // Use producer from database
-                producerId = offer.responsibleProducer.producerId;
+                producerId = (offer.responsibleProducer as any).producerId;
                 productSetItem.responsibleProducer = {
                   id: producerId,
                 };
@@ -4908,7 +4917,7 @@ export class OffersService {
               
               if (offer.responsibleProducer) {
                 // Use producer from database
-                producerId = offer.responsibleProducer.producerId;
+                producerId = (offer.responsibleProducer as any).producerId;
                 productSetItem.responsibleProducer = {
                   id: producerId,
                 };
@@ -5929,7 +5938,7 @@ export class OffersService {
             syncStatus: 'SYNCED',
             syncSource: 'CLONED',
             lastSyncedAt: new Date(),
-            productId: sourceOffer.productId,
+            catalogProductId: sourceOffer.catalogProductId,
             allegroProductId: sourceOffer.allegroProductId,
             accountId: targetAccountId,
             clonedFromId: sourceOfferId,

@@ -72,7 +72,7 @@ export class InventoryService {
     });
 
     // Update stock in warehouse-microservice if product is linked
-    if (offer.productId) {
+    if (offer.catalogProductId) {
       try {
         // Get warehouse ID (default to first warehouse or configure)
         // For now, we'll need to determine the warehouse ID - this should come from configuration
@@ -80,12 +80,12 @@ export class InventoryService {
         const warehouseId = process.env.DEFAULT_WAREHOUSE_ID;
         if (warehouseId) {
           await this.warehouseClient.setStock(
-            offer.productId,
+            offer.catalogProductId,
             warehouseId,
             quantity,
             `Stock updated from Allegro offer ${offer.allegroOfferId}`
           );
-          this.logger.log(`Updated stock in warehouse-microservice for product ${offer.productId}`, 'InventoryService');
+          this.logger.log(`Updated stock in warehouse-microservice for product ${offer.catalogProductId}`, 'InventoryService');
         }
       } catch (error: any) {
         this.logger.error(`Failed to update stock in warehouse-microservice: ${error.message}`, error.stack, 'InventoryService');
