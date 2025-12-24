@@ -1085,12 +1085,13 @@ const OffersPage: React.FC = () => {
       }
 
       // Calculate dynamic timeout based on number of offers
-      // Use average of 5 seconds per offer (conservative estimate) + 30 seconds buffer
+      // Use average of 10 seconds per offer (accounts for producer creation overhead)
+      // Producer creation adds 2-5 seconds per offer when producers need to be copied
       // Minimum 60 seconds, maximum 30 minutes
-      const estimatedTimePerOffer = 5000; // 5 seconds per offer (conservative)
-      const bufferTime = 30000; // 30 seconds buffer
+      const estimatedTimePerOffer = 10000; // 10 seconds per offer (accounts for producer creation)
+      const bufferTime = 60000; // 60 seconds buffer for account lookups and API delays
       const calculatedTimeout = Math.min(
-        Math.max(allOfferIds.length * estimatedTimePerOffer + bufferTime, 60000),
+        Math.max(allOfferIds.length * estimatedTimePerOffer + bufferTime, 120000), // Min 2 minutes
         1800000 // 30 minutes max
       );
 
