@@ -84,6 +84,7 @@ export class GatewayService implements OnModuleInit {
     
     // Ensure agents are set on the HttpService's Axios instance defaults
     // Set default agents, but individual requests can override them
+    // NOTE: For auth service, we use externalHttpAgent in the request config, not defaults
     this.httpService.axiosRef.defaults.httpAgent = this.httpAgent;
     this.httpService.axiosRef.defaults.httpsAgent = this.httpsAgent;
     
@@ -106,15 +107,23 @@ export class GatewayService implements OnModuleInit {
         
         const actualHttpAgent = config.httpAgent || this.httpService.axiosRef.defaults.httpAgent;
         const actualHttpsAgent = config.httpsAgent || this.httpService.axiosRef.defaults.httpsAgent;
+        const agentType = actualHttpAgent ? 
+          (actualHttpAgent === this.httpAgent ? 'keep-alive' : 
+           (actualHttpAgent === this.externalHttpAgent ? 'external' : 'other')) : 
+          'none';
+        const isAuthRequest = url.includes('/auth/');
         console.log(`[${timestamp}] [TIMING] Axios Request Interceptor: Request being sent`, {
           requestId,
           method,
           url: config.baseURL ? `${config.baseURL}${url}` : url,
           fullUrl: config.url,
           baseURL: config.baseURL,
+          isAuthRequest,
           hasHttpAgent: !!config.httpAgent,
           hasHttpsAgent: !!config.httpsAgent,
-          actualHttpAgent: actualHttpAgent ? (actualHttpAgent === this.httpAgent ? 'keep-alive' : (actualHttpAgent === this.externalHttpAgent ? 'external' : 'other')) : 'none',
+          actualHttpAgent: agentType,
+          configHttpAgent: config.httpAgent ? (config.httpAgent === this.httpAgent ? 'keep-alive' : (config.httpAgent === this.externalHttpAgent ? 'external' : 'other')) : 'none',
+          defaultHttpAgent: this.httpService.axiosRef.defaults.httpAgent ? 'keep-alive' : 'none',
           httpAgentSockets: actualHttpAgent?.sockets ? Object.keys(actualHttpAgent.sockets).length : 0,
           httpAgentFreeSockets: actualHttpAgent?.freeSockets ? Object.keys(actualHttpAgent.freeSockets).length : 0,
           httpAgentRequests: actualHttpAgent?.requests ? Object.keys(actualHttpAgent.requests).length : 0,
