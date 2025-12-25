@@ -188,5 +188,39 @@ export class ProductsController {
       throw error;
     }
   }
+
+  @Post('sync')
+  @UseGuards(JwtAuthGuard)
+  async syncProductsToCatalog(): Promise<{ success: boolean; data: any }> {
+    const startTime = Date.now();
+    const requestId = `sync-products-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    
+    this.logger.log(`[${requestId}] [syncProductsToCatalog] Request received`, {
+      timestamp: new Date().toISOString(),
+    });
+
+    try {
+      const data = await this.productsService.syncAllegroProductsToCatalog();
+      const duration = Date.now() - startTime;
+      
+      this.logger.log(`[${requestId}] [syncProductsToCatalog] Request completed`, {
+        total: data.total,
+        created: data.created,
+        updated: data.updated,
+        errors: data.errors,
+        duration: `${duration}ms`,
+      });
+      
+      return { success: true, data };
+    } catch (error: any) {
+      const duration = Date.now() - startTime;
+      this.logger.error(`[${requestId}] [syncProductsToCatalog] Request failed`, {
+        error: error.message,
+        errorStack: error.stack,
+        duration: `${duration}ms`,
+      });
+      throw error;
+    }
+  }
 }
 

@@ -616,6 +616,107 @@ export class ProductsService {
     }
   }
 
+  /**
+   * Sync all AllegroProducts to catalog-microservice
+   * Creates catalog products for AllegroProducts that don't have corresponding catalog products
+   */
+  async syncAllegroProductsToCatalog(): Promise<{ total: number; created: number; updated: number; errors: number }> {
+    const startTime = Date.now();
+    const requestId = `sync-products-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    
+    this.logger.log(`[${requestId}] [syncAllegroProductsToCatalog] Starting sync`, {
+      timestamp: new Date().toISOString(),
+    });
+
+    const prisma = this.prisma as any;
+    let created = 0;
+    let updated = 0;
+    let errors = 0;
+
+    try {
+      // Get all AllegroProducts
+      const allegroProducts = await prisma.allegroProduct.findMany({
+        where: {
+          OR: [
+            { ean: { not: null } },
+            { allegroProductId: { not: null } },
+          ],
+        },
+      });
+
+      this.logger.log(`[${requestId}] [syncAllegroProductsToCatalog] Found ${allegroProducts.length} AllegroProducts to sync`);
+
+      for (const allegroProduct of allegroProducts) {
+        try {
+          const sku = allegroProduct.ean || `ALLEGRO-${allegroProduct.allegroProductId}`;
+          
+          // Try to find existing catalog product
+          let catalogProduct;
+          try {
+            catalogProduct = await this.catalogClient.getProductBySku(sku);
+          } catch {
+            // Not found by SKU, try by EAN if available
+            if (allegroProduct.ean) {
+              const searchResults = await this.catalogClient.searchProducts({ search: allegroProduct.ean });
+              catalogProduct = searchResults.items?.find((p: any) => p.ean === allegroProduct.ean);
+            }
+          }
+          
+          if (catalogProduct) {
+            // Update existing product
+            await this.catalogClient.updateProduct(catalogProduct.id, {
+              title: allegroProduct.name || catalogProduct.title,
+              brand: allegroProduct.brand || catalogProduct.brand,
+              manufacturer: allegroProduct.manufacturerCode || catalogProduct.manufacturer,
+              ean: allegroProduct.ean || catalogProduct.ean,
+            });
+            updated++;
+            this.logger.log(`[${requestId}] [syncAllegroProductsToCatalog] Updated catalog product`, {
+              catalogProductId: catalogProduct.id,
+              sku,
+            });
+          } else {
+            // Create new catalog product
+            catalogProduct = await this.catalogClient.createProduct({
+              sku,
+              title: allegroProduct.name || 'Product',
+              brand: allegroProduct.brand,
+              manufacturer: allegroProduct.manufacturerCode,
+              ean: allegroProduct.ean,
+            });
+            created++;
+            this.logger.log(`[${requestId}] [syncAllegroProductsToCatalog] Created catalog product`, {
+              catalogProductId: catalogProduct.id,
+              sku,
+            });
+          }
+        } catch (error: any) {
+          errors++;
+          this.logger.error(`[${requestId}] [syncAllegroProductsToCatalog] Failed to sync AllegroProduct ${allegroProduct.id}: ${error.message}`, error.stack);
+        }
+      }
+
+      const duration = Date.now() - startTime;
+      this.logger.log(`[${requestId}] [syncAllegroProductsToCatalog] Sync completed`, {
+        total: allegroProducts.length,
+        created,
+        updated,
+        errors,
+        duration: `${duration}ms`,
+      });
+
+      return {
+        total: allegroProducts.length,
+        created,
+        updated,
+        errors,
+      };
+    } catch (error: any) {
+      this.logger.error(`[${requestId}] [syncAllegroProductsToCatalog] Sync failed: ${error.message}`, error.stack);
+      throw new HttpException(`Failed to sync products: ${error.message}`, HttpStatus.INTERNAL_SERVER_ERROR);
+    }
+  }
+
   private async replaceParameters(productId: string, parameters: any[]) {
     const startTime = Date.now();
     this.logger.log('[replaceParameters] Replacing product parameters', {
