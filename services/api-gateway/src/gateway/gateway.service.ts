@@ -501,11 +501,20 @@ export class GatewayService implements OnModuleInit {
 
     // Use keep-alive agents for internal services, external agents for external services
     // IMPORTANT: For auth service, always use external agent (no keep-alive) to prevent connection issues
+    // Determine which agent to use - force external for auth service
+    const useExternalAgent = serviceName === 'auth' || isExternalService;
+    const finalHttpAgent = isHttps
+      ? undefined
+      : (useExternalAgent ? this.externalHttpAgent : (isInternalService ? this.httpAgent : this.externalHttpAgent));
+    const finalHttpsAgent = isHttps
+      ? (useExternalAgent ? this.externalHttpsAgent : this.httpsAgent)
+      : undefined;
+    
     const config: AxiosRequestConfig = {
       headers: {
         'Content-Type': 'application/json',
         // Only use Connection: close for external services
-        ...(isExternalService ? { 'Connection': 'close' } : {}),
+        ...(useExternalAgent ? { 'Connection': 'close' } : {}),
         ...headers,
       },
       timeout,
@@ -513,17 +522,8 @@ export class GatewayService implements OnModuleInit {
       validateStatus: (status) => status >= 200 && status < 600, // Accept all HTTP status codes (including errors)
       // Use keep-alive agents for internal services, external agents for external services
       // Force external agent for auth service to prevent connection reuse issues
-      httpAgent: isHttps
-        ? undefined
-        : (isInternalService ? this.httpAgent : this.externalHttpAgent),
-      httpsAgent: isHttps
-        ? (isExternalService ? this.externalHttpsAgent : this.httpsAgent)
-        : undefined,
-      // Explicitly override defaults to ensure our agent is used
-      ...(serviceName === 'auth' && !isHttps ? { 
-        httpAgent: this.externalHttpAgent,
-        // Clear any default agent that might interfere
-      } : {}),
+      httpAgent: finalHttpAgent,
+      httpsAgent: finalHttpsAgent,
         // Pass metadata to interceptors
         metadata: {
           requestId,
