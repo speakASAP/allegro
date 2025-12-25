@@ -104,6 +104,8 @@ export class GatewayService implements OnModuleInit {
         configAny.metadata.requestStartTime = Date.now();
         configAny.metadata.requestStartTimestamp = timestamp;
         
+        const actualHttpAgent = config.httpAgent || this.httpService.axiosRef.defaults.httpAgent;
+        const actualHttpsAgent = config.httpsAgent || this.httpService.axiosRef.defaults.httpsAgent;
         console.log(`[${timestamp}] [TIMING] Axios Request Interceptor: Request being sent`, {
           requestId,
           method,
@@ -112,12 +114,13 @@ export class GatewayService implements OnModuleInit {
           baseURL: config.baseURL,
           hasHttpAgent: !!config.httpAgent,
           hasHttpsAgent: !!config.httpsAgent,
-          httpAgentSockets: this.httpAgent.sockets ? Object.keys(this.httpAgent.sockets).length : 0,
-          httpAgentFreeSockets: this.httpAgent.freeSockets ? Object.keys(this.httpAgent.freeSockets).length : 0,
-          httpAgentRequests: this.httpAgent.requests ? Object.keys(this.httpAgent.requests).length : 0,
-          httpsAgentSockets: this.httpsAgent.sockets ? Object.keys(this.httpsAgent.sockets).length : 0,
-          httpsAgentFreeSockets: this.httpsAgent.freeSockets ? Object.keys(this.httpsAgent.freeSockets).length : 0,
-          httpsAgentRequests: this.httpsAgent.requests ? Object.keys(this.httpsAgent.requests).length : 0,
+          actualHttpAgent: actualHttpAgent ? (actualHttpAgent === this.httpAgent ? 'keep-alive' : (actualHttpAgent === this.externalHttpAgent ? 'external' : 'other')) : 'none',
+          httpAgentSockets: actualHttpAgent?.sockets ? Object.keys(actualHttpAgent.sockets).length : 0,
+          httpAgentFreeSockets: actualHttpAgent?.freeSockets ? Object.keys(actualHttpAgent.freeSockets).length : 0,
+          httpAgentRequests: actualHttpAgent?.requests ? Object.keys(actualHttpAgent.requests).length : 0,
+          httpsAgentSockets: actualHttpsAgent?.sockets ? Object.keys(actualHttpsAgent.sockets).length : 0,
+          httpsAgentFreeSockets: actualHttpsAgent?.freeSockets ? Object.keys(actualHttpsAgent.freeSockets).length : 0,
+          httpsAgentRequests: actualHttpsAgent?.requests ? Object.keys(actualHttpsAgent.requests).length : 0,
         });
         this.sharedLogger.log(`[${timestamp}] [TIMING] Axios Request Interceptor: Request being sent`, {
           requestId,
