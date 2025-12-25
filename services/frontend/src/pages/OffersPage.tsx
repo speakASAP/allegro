@@ -275,11 +275,11 @@ const OffersPage: React.FC = () => {
       if (searchQuery && searchQuery.trim()) {
         params.search = searchQuery.trim();
       }
-      // Use reasonable timeout for database queries (30 seconds to handle slow connections)
-      // Database queries should complete in <100ms, but network delays can add time
+      // Use longer timeout for offers list (can be slow with many offers, database queries, pagination)
+      // Gateway timeout is 90s, so frontend should match or exceed it
       const response = await api.get('/allegro/offers', { 
         params,
-        timeout: 30000, // 30 seconds - enough for slow connections but not too long
+        timeout: 90000, // 90 seconds - matches gateway timeout for large offer lists
       });
       if (response.data.success) {
         const data = response.data.data;

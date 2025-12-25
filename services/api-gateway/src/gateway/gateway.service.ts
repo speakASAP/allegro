@@ -479,8 +479,9 @@ export class GatewayService implements OnModuleInit {
     const isAuthOperation = path.includes('/auth/');
     // GET /allegro/offers can be slow with many offers (database query, pagination, large result sets)
     // Set to 90 seconds to handle large offer lists
-    // Match path with or without query parameters and trailing slash
-    const isOffersList = (path === '/allegro/offers' || path.startsWith('/allegro/offers?') || path.startsWith('/allegro/offers/')) && method.toUpperCase() === 'GET';
+    // Match list endpoint exactly: /allegro/offers or /allegro/offers?query=params
+    // Do NOT match /allegro/offers/123 (specific offer) - those should be fast
+    const isOffersList = (path === '/allegro/offers' || path.startsWith('/allegro/offers?')) && method.toUpperCase() === 'GET';
     // Settings endpoints that query accounts or make external API calls can be slow
     const isSettingsSlowOperation = path.includes('/settings/allegro-accounts') || path.includes('/settings/validate');
     const defaultTimeout = (() => {
