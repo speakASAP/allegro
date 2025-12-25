@@ -123,7 +123,11 @@ const ImportJobsPage: React.FC = () => {
     setRequiresOAuth(false);
 
     try {
-      const response = await api.get('/allegro/offers/import');
+      // Use longer timeout for import operation (15 minutes = 900000ms) to match gateway timeout
+      // This operation can take a long time as it fetches all offers, processes each one with API calls, DB operations, catalog sync
+      const response = await api.get('/allegro/offers/import', {
+        timeout: 900000, // 15 minutes to match gateway and nginx timeout
+      });
       if (response.data.success) {
         const totalImported = response.data.data?.totalImported || 0;
         setSuccess(`Successfully imported ${totalImported} offers from Allegro`);
