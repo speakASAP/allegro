@@ -470,7 +470,8 @@ export class GatewayService implements OnModuleInit {
       return parseInt(timeout);
     })();
     
-    // Use shorter timeout for auth operations (local service, should be fast)
+    // Use shorter timeout for auth operations (local service, should be fast but allow for DB queries)
+    // Auth service can take 10-15 seconds due to password hashing and DB queries
     // Use longer timeout for bulk operations and validation operations
     // publish-all can take 5+ minutes for many offers (30 seconds per offer * 29 offers = ~14 minutes worst case)
     // Set to 10 minutes (600000ms) to be safe
@@ -480,7 +481,7 @@ export class GatewayService implements OnModuleInit {
     // Set to 90 seconds (90000ms) to be safe for validation
     // Regular operations (like account activation, settings updates) should be fast - use default timeout (typically 30s)
     // Only increase timeout for operations that are known to be slow
-    const timeout = isAuthOperation ? 5000 : (isImportAllOffers ? 300000 : (isPublishAll ? 600000 : (isBulkOperation ? 120000 : (isValidationOperation ? 90000 : defaultTimeout))));
+    const timeout = isAuthOperation ? 15000 : (isImportAllOffers ? 300000 : (isPublishAll ? 600000 : (isBulkOperation ? 120000 : (isValidationOperation ? 90000 : defaultTimeout))));
     
     // Determine if URL is HTTPS or HTTP to use correct agent
     const isHttps = url.startsWith('https://');
