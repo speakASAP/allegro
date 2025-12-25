@@ -99,6 +99,11 @@ Create a `.env` file in the root directory with the following variables:
 - `AUTH_SERVICE_URL` - Auth microservice URL (<https://auth.statex.cz> or Docker network URL)
 - `NOTIFICATION_SERVICE_URL` - Notifications microservice URL (<https://notifications.statex.cz> or Docker network URL)
 - `LOGGING_SERVICE_URL` - Logging microservice URL (<https://logging.statex.cz> or Docker network URL)
+- `CATALOG_SERVICE_URL` - Catalog microservice URL (default: `http://catalog:3200` for Docker, or `http://catalog-microservice:3200`)
+- `WAREHOUSE_SERVICE_URL` - Warehouse microservice URL (default: `http://warehouse-microservice:3201`)
+- `ORDER_SERVICE_URL` - Order microservice URL (default: `http://orders-microservice:3203`)
+- `HTTP_TIMEOUT` - HTTP request timeout in milliseconds for external APIs (default: 30000 = 30 seconds)
+- `CATALOG_SERVICE_TIMEOUT` - Catalog service specific timeout in milliseconds (default: 5000 = 5 seconds for local service)
 
 ### Database Configuration
 

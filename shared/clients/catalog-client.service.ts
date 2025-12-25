@@ -10,12 +10,32 @@ import { LoggerService } from '../logger/logger.service';
 @Injectable()
 export class CatalogClientService {
   private readonly baseUrl: string;
+  private readonly timeout: number;
 
   constructor(
     private readonly httpService: HttpService,
     private readonly logger: LoggerService,
   ) {
     this.baseUrl = process.env.CATALOG_SERVICE_URL || 'http://catalog-microservice:3200';
+    // Use CATALOG_SERVICE_TIMEOUT from env, or HTTP_TIMEOUT, or default to 5 seconds for local service
+    // Local services on same Docker network should respond quickly (typically <100ms)
+    // 5 seconds is enough to handle temporary slowdowns but fail fast if service is down
+    this.timeout = parseInt(process.env.CATALOG_SERVICE_TIMEOUT || process.env.HTTP_TIMEOUT || '5000');
+  }
+
+  /**
+   * Check if error is a connection/timeout error
+   */
+  private isServiceUnavailableError(error: any): boolean {
+    return (
+      error.code === 'ECONNREFUSED' ||
+      error.code === 'ENOTFOUND' ||
+      error.code === 'ETIMEDOUT' ||
+      error.code === 'ECONNABORTED' ||
+      error.message?.includes('timeout') ||
+      error.message?.includes('ECONNREFUSED') ||
+      error.message?.includes('ENOTFOUND')
+    );
   }
 
   /**
@@ -24,12 +44,23 @@ export class CatalogClientService {
   async getProductById(productId: string): Promise<any> {
     try {
       const response = await firstValueFrom(
-        this.httpService.get(`${this.baseUrl}/api/products/${productId}`)
+        this.httpService.get(`${this.baseUrl}/api/products/${productId}`, {
+          timeout: this.timeout,
+        })
       );
       return response.data.data;
-    } catch (error: unknown) {
+    } catch (error: any) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       const errorStack = error instanceof Error ? error.stack : undefined;
+      
+      if (this.isServiceUnavailableError(error)) {
+        this.logger.error(`Catalog service unavailable when getting product ${productId}: ${errorMessage}`, errorStack, 'CatalogClient');
+        throw new HttpException(
+          `Catalog service is unavailable: ${errorMessage}`,
+          HttpStatus.SERVICE_UNAVAILABLE,
+        );
+      }
+      
       this.logger.error(`Failed to get product ${productId}: ${errorMessage}`, errorStack, 'CatalogClient');
       throw new HttpException(`Product not found: ${productId}`, HttpStatus.NOT_FOUND);
     }
@@ -41,14 +72,25 @@ export class CatalogClientService {
   async getProductBySku(sku: string): Promise<any> {
     try {
       const response = await firstValueFrom(
-        this.httpService.get(`${this.baseUrl}/api/products/sku/${sku}`)
+        this.httpService.get(`${this.baseUrl}/api/products/sku/${sku}`, {
+          timeout: this.timeout,
+        })
       );
       if (!response.data.success || !response.data.data) {
         return null;
       }
       return response.data.data;
-    } catch (error: unknown) {
+    } catch (error: any) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      
+      if (this.isServiceUnavailableError(error)) {
+        this.logger.error(`Catalog service unavailable when getting product by SKU ${sku}: ${errorMessage}`, error instanceof Error ? error.stack : undefined, 'CatalogClient');
+        throw new HttpException(
+          `Catalog service is unavailable: ${errorMessage}`,
+          HttpStatus.SERVICE_UNAVAILABLE,
+        );
+      }
+      
       this.logger.warn(`Product not found by SKU ${sku}: ${errorMessage}`, 'CatalogClient');
       return null;
     }
@@ -73,7 +115,9 @@ export class CatalogClientService {
       if (query.limit) params.append('limit', String(query.limit));
 
       const response = await firstValueFrom(
-        this.httpService.get(`${this.baseUrl}/api/products?${params.toString()}`)
+        this.httpService.get(`${this.baseUrl}/api/products?${params.toString()}`, {
+          timeout: this.timeout,
+        })
       );
       return {
         items: response.data.data || [],
@@ -81,11 +125,23 @@ export class CatalogClientService {
         page: response.data.pagination?.page || 1,
         limit: response.data.pagination?.limit || 20,
       };
-    } catch (error: unknown) {
+    } catch (error: any) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       const errorStack = error instanceof Error ? error.stack : undefined;
+      
+      if (this.isServiceUnavailableError(error)) {
+        this.logger.error(`Catalog service unavailable when searching products: ${errorMessage}`, errorStack, 'CatalogClient');
+        throw new HttpException(
+          `Catalog service is unavailable: ${errorMessage}`,
+          HttpStatus.SERVICE_UNAVAILABLE,
+        );
+      }
+      
       this.logger.error(`Failed to search products: ${errorMessage}`, errorStack, 'CatalogClient');
-      return { items: [], total: 0, page: 1, limit: 20 };
+      throw new HttpException(
+        `Failed to search products: ${errorMessage}`,
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
     }
   }
 
@@ -95,12 +151,23 @@ export class CatalogClientService {
   async createProduct(productData: any): Promise<any> {
     try {
       const response = await firstValueFrom(
-        this.httpService.post(`${this.baseUrl}/api/products`, productData)
+        this.httpService.post(`${this.baseUrl}/api/products`, productData, {
+          timeout: this.timeout,
+        })
       );
       return response.data.data;
-    } catch (error: unknown) {
+    } catch (error: any) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       const errorStack = error instanceof Error ? error.stack : undefined;
+      
+      if (this.isServiceUnavailableError(error)) {
+        this.logger.error(`Catalog service unavailable when creating product: ${errorMessage}`, errorStack, 'CatalogClient');
+        throw new HttpException(
+          `Catalog service is unavailable: ${errorMessage}`,
+          HttpStatus.SERVICE_UNAVAILABLE,
+        );
+      }
+      
       this.logger.error(`Failed to create product: ${errorMessage}`, errorStack, 'CatalogClient');
       throw new HttpException(`Failed to create product: ${errorMessage}`, HttpStatus.BAD_REQUEST);
     }
@@ -112,12 +179,23 @@ export class CatalogClientService {
   async updateProduct(productId: string, productData: any): Promise<any> {
     try {
       const response = await firstValueFrom(
-        this.httpService.put(`${this.baseUrl}/api/products/${productId}`, productData)
+        this.httpService.put(`${this.baseUrl}/api/products/${productId}`, productData, {
+          timeout: this.timeout,
+        })
       );
       return response.data.data;
-    } catch (error: unknown) {
+    } catch (error: any) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       const errorStack = error instanceof Error ? error.stack : undefined;
+      
+      if (this.isServiceUnavailableError(error)) {
+        this.logger.error(`Catalog service unavailable when updating product ${productId}: ${errorMessage}`, errorStack, 'CatalogClient');
+        throw new HttpException(
+          `Catalog service is unavailable: ${errorMessage}`,
+          HttpStatus.SERVICE_UNAVAILABLE,
+        );
+      }
+      
       this.logger.error(`Failed to update product ${productId}: ${errorMessage}`, errorStack, 'CatalogClient');
       throw new HttpException(`Failed to update product: ${errorMessage}`, HttpStatus.BAD_REQUEST);
     }
@@ -129,10 +207,16 @@ export class CatalogClientService {
   async getProductPricing(productId: string): Promise<any> {
     try {
       const response = await firstValueFrom(
-        this.httpService.get(`${this.baseUrl}/api/pricing/product/${productId}/current`)
+        this.httpService.get(`${this.baseUrl}/api/pricing/product/${productId}/current`, {
+          timeout: this.timeout,
+        })
       );
       return response.data.data;
-    } catch (error) {
+    } catch (error: any) {
+      if (this.isServiceUnavailableError(error)) {
+        this.logger.error(`Catalog service unavailable when getting pricing for product ${productId}`, error instanceof Error ? error.stack : undefined, 'CatalogClient');
+        return null; // Pricing is optional, don't throw
+      }
       this.logger.warn(`Pricing not found for product ${productId}`, 'CatalogClient');
       return null;
     }
@@ -144,10 +228,16 @@ export class CatalogClientService {
   async getProductMedia(productId: string): Promise<any[]> {
     try {
       const response = await firstValueFrom(
-        this.httpService.get(`${this.baseUrl}/api/media/product/${productId}`)
+        this.httpService.get(`${this.baseUrl}/api/media/product/${productId}`, {
+          timeout: this.timeout,
+        })
       );
       return response.data.data || [];
-    } catch (error) {
+    } catch (error: any) {
+      if (this.isServiceUnavailableError(error)) {
+        this.logger.error(`Catalog service unavailable when getting media for product ${productId}`, error instanceof Error ? error.stack : undefined, 'CatalogClient');
+        return []; // Media is optional, don't throw
+      }
       this.logger.warn(`Media not found for product ${productId}`, 'CatalogClient');
       return [];
     }
