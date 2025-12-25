@@ -222,5 +222,36 @@ export class ProductsController {
       throw error;
     }
   }
+
+  @Delete('all')
+  @UseGuards(JwtAuthGuard)
+  async deleteAllProducts(): Promise<{ success: boolean; data: any }> {
+    const startTime = Date.now();
+    const requestId = `delete-all-products-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    
+    this.logger.log(`[${requestId}] [deleteAllProducts] Request received`, {
+      timestamp: new Date().toISOString(),
+    });
+
+    try {
+      const data = await this.productsService.deleteAllProducts();
+      const duration = Date.now() - startTime;
+      
+      this.logger.log(`[${requestId}] [deleteAllProducts] Request completed`, {
+        deleted: data.deleted,
+        duration: `${duration}ms`,
+      });
+      
+      return { success: true, data };
+    } catch (error: any) {
+      const duration = Date.now() - startTime;
+      this.logger.error(`[${requestId}] [deleteAllProducts] Request failed`, {
+        error: error.message,
+        errorStack: error.stack,
+        duration: `${duration}ms`,
+      });
+      throw error;
+    }
+  }
 }
 

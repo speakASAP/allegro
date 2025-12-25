@@ -3088,6 +3088,7 @@ export class OffersService {
       }
 
       let productDetails = product;
+      let updatedProductSet = productSet;
 
       // If name/parameters are missing, try to fetch product details from Allegro API
       if ((!product?.name || !product?.parameters || product.parameters.length === 0) && oauthToken) {
@@ -3099,6 +3100,16 @@ export class OffersService {
               ...detailed,
               parameters: detailed.parameters || product.parameters,
             };
+            // Update productSet with detailed product information to preserve all fields
+            updatedProductSet = {
+              ...productSet,
+              product: productDetails,
+            };
+            this.logger.log('[upsertAllegroProductFromOffer] Fetched and merged detailed product information', {
+              productId: product.id,
+              hasName: !!productDetails.name,
+              parametersCount: productDetails.parameters?.length || 0,
+            });
           }
         } catch (fetchError: any) {
           this.logger.warn('[upsertAllegroProductFromOffer] Failed to fetch product details', {
@@ -3124,8 +3135,15 @@ export class OffersService {
       const manufacturerCode = findParamValue((p) => String(p.id) === '224017' || p.name === 'Kód výrobce') || productDetails.manufacturerCode || null;
       const ean = findParamValue((p) => String(p.id) === '225693' || p.name === 'EAN (GTIN)') || productDetails.ean || null;
       const publicationStatus = productDetails.publication?.status || null;
-      const marketedBeforeGPSR = productSet?.marketedBeforeGPSRObligation ?? null;
+      const marketedBeforeGPSR = updatedProductSet?.marketedBeforeGPSRObligation ?? null;
       const isAiCoCreated = !!productDetails.isAiCoCreated;
+
+      // Ensure rawData contains complete product information
+      // Structure should match what extractSummaryFromRaw expects: { product: {...}, marketedBeforeGPSRObligation: ... }
+      const rawDataToSave = updatedProductSet || {
+        product: productDetails,
+        marketedBeforeGPSRObligation: marketedBeforeGPSR,
+      };
 
       const baseData = {
         allegroProductId: String(productDetails.id),
@@ -3136,7 +3154,7 @@ export class OffersService {
         publicationStatus,
         isAiCoCreated,
         marketedBeforeGPSR,
-        rawData: productSet,
+        rawData: rawDataToSave,
       };
 
       const prismaAny = this.prisma as any;
@@ -6225,6 +6243,34 @@ export class OffersService {
       results,
       timing,
     };
+  }
+
+  async deleteAllOffers(): Promise<{ deleted: number }> {
+    const startTime = Date.now();
+    const requestId = `delete-all-offers-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    
+    this.logger.log(`[${requestId}] [deleteAllOffers] Starting deletion of all offers`, {
+      timestamp: new Date().toISOString(),
+    });
+
+    const prisma = this.prisma as any;
+
+    try {
+      // Delete all offers
+      const offersDeleted = await prisma.allegroOffer.deleteMany({});
+      this.logger.log(`[${requestId}] [deleteAllOffers] Deleted ${offersDeleted.count} offers`);
+
+      const duration = Date.now() - startTime;
+      this.logger.log(`[${requestId}] [deleteAllOffers] Deletion completed`, {
+        offersDeleted: offersDeleted.count,
+        duration: `${duration}ms`,
+      });
+
+      return { deleted: offersDeleted.count };
+    } catch (error: any) {
+      this.logger.error(`[${requestId}] [deleteAllOffers] Failed to delete all offers: ${error.message}`, error.stack);
+      throw new HttpException(`Failed to delete all offers: ${error.message}`, HttpStatus.INTERNAL_SERVER_ERROR);
+    }
   }
 
 }

@@ -64,6 +64,7 @@ const ProductsPage: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [detailLoading, setDetailLoading] = useState(false);
   const [syncing, setSyncing] = useState(false);
+  const [deletingAll, setDeletingAll] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [search, setSearch] = useState('');
@@ -304,6 +305,53 @@ const ProductsPage: React.FC = () => {
             {syncing ? 'Syncing...' : 'Sync Products'}
           </Button>
           <Button onClick={openCreate}>Add Product</Button>
+          <Button
+            onClick={async () => {
+              const total = pagination.total;
+              if (!window.confirm(`⚠️ WARNING: This will delete ALL ${total} products from the database. This action cannot be undone!\n\nAre you sure you want to continue?`)) {
+                return;
+              }
+              if (!window.confirm(`⚠️ FINAL CONFIRMATION: You are about to permanently delete ALL ${total} products.\n\nType "DELETE ALL" to confirm (case sensitive):`)) {
+                return;
+              }
+              const confirmation = window.prompt('Type "DELETE ALL" to confirm:');
+              if (confirmation !== 'DELETE ALL') {
+                setError('Deletion cancelled. Confirmation text did not match.');
+                return;
+              }
+              setDeletingAll(true);
+              setError(null);
+              setSuccess(null);
+              try {
+                const response = await api.delete('/allegro/products/all');
+                if (response.data.success) {
+                  const deleted = response.data.data?.deleted || 0;
+                  setSuccess(`Successfully deleted ${deleted} products`);
+                  await loadProducts(1);
+                }
+              } catch (err) {
+                console.error('Failed to delete all products', err);
+                const axiosErr = err as AxiosError & { serviceErrorMessage?: string };
+                setError(axiosErr.serviceErrorMessage || axiosErr.message || 'Failed to delete all products');
+              } finally {
+                setDeletingAll(false);
+              }
+            }}
+            disabled={deletingAll || loading || pagination.total === 0}
+            style={{ backgroundColor: '#dc2626', color: 'white', borderColor: '#dc2626' }}
+            onMouseEnter={(e) => {
+              if (!deletingAll && !loading && pagination.total > 0) {
+                e.currentTarget.style.backgroundColor = '#b91c1c';
+              }
+            }}
+            onMouseLeave={(e) => {
+              if (!deletingAll && !loading && pagination.total > 0) {
+                e.currentTarget.style.backgroundColor = '#dc2626';
+              }
+            }}
+          >
+            {deletingAll ? 'Deleting...' : `🗑️ Delete All (${pagination.total})`}
+          </Button>
         </div>
       </div>
 

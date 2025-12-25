@@ -214,6 +214,7 @@ const OffersPage: React.FC = () => {
     };
   } | null>(null);
   const [showCloneResultsModal, setShowCloneResultsModal] = useState(false);
+  const [deletingAll, setDeletingAll] = useState(false);
 
   
   // Load saved filters from localStorage
@@ -1227,6 +1228,52 @@ const OffersPage: React.FC = () => {
             {cloning ? 'Cloning...' : `📋 Clone to Account (${total})`}
           </Button>
           <Button onClick={openCreateOffer}>Add Offer</Button>
+          <Button
+            onClick={async () => {
+              if (!window.confirm(`⚠️ WARNING: This will delete ALL ${total} offers from the database. This action cannot be undone!\n\nAre you sure you want to continue?`)) {
+                return;
+              }
+              if (!window.confirm(`⚠️ FINAL CONFIRMATION: You are about to permanently delete ALL ${total} offers.\n\nType "DELETE ALL" to confirm (case sensitive):`)) {
+                return;
+              }
+              const confirmation = window.prompt('Type "DELETE ALL" to confirm:');
+              if (confirmation !== 'DELETE ALL') {
+                setError('Deletion cancelled. Confirmation text did not match.');
+                return;
+              }
+              setDeletingAll(true);
+              setError(null);
+              setSuccess(null);
+              try {
+                const response = await api.delete('/allegro/offers/all');
+                if (response.data.success) {
+                  const deleted = response.data.data?.deleted || 0;
+                  setSuccess(`Successfully deleted ${deleted} offers`);
+                  await loadOffers();
+                }
+              } catch (err) {
+                console.error('Failed to delete all offers', err);
+                const axiosErr = err as AxiosError & { serviceErrorMessage?: string };
+                setError(axiosErr.serviceErrorMessage || axiosErr.message || 'Failed to delete all offers');
+              } finally {
+                setDeletingAll(false);
+              }
+            }}
+            disabled={deletingAll || loading || total === 0}
+            style={{ backgroundColor: '#dc2626', color: 'white', borderColor: '#dc2626' }}
+            onMouseEnter={(e) => {
+              if (!deletingAll && !loading && total > 0) {
+                e.currentTarget.style.backgroundColor = '#b91c1c';
+              }
+            }}
+            onMouseLeave={(e) => {
+              if (!deletingAll && !loading && total > 0) {
+                e.currentTarget.style.backgroundColor = '#dc2626';
+              }
+            }}
+          >
+            {deletingAll ? 'Deleting...' : `🗑️ Delete All (${total})`}
+          </Button>
         </div>
       </div>
 

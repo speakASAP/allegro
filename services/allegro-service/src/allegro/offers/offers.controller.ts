@@ -546,6 +546,37 @@ export class OffersController {
     }
   }
 
+  @Delete('all')
+  @UseGuards(JwtAuthGuard)
+  async deleteAllOffers(): Promise<{ success: boolean; data: any }> {
+    const startTime = Date.now();
+    const requestId = `delete-all-offers-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    
+    this.logger.log(`[${requestId}] [deleteAllOffers] Request received`, {
+      timestamp: new Date().toISOString(),
+    });
+
+    try {
+      const data = await this.offersService.deleteAllOffers();
+      const duration = Date.now() - startTime;
+      
+      this.logger.log(`[${requestId}] [deleteAllOffers] Request completed`, {
+        deleted: data.deleted,
+        duration: `${duration}ms`,
+      });
+      
+      return { success: true, data };
+    } catch (error: any) {
+      const duration = Date.now() - startTime;
+      this.logger.error(`[${requestId}] [deleteAllOffers] Request failed`, {
+        error: error.message,
+        errorStack: error.stack,
+        duration: `${duration}ms`,
+      });
+      throw error;
+    }
+  }
+
   @Delete(':id')
   @UseGuards(JwtAuthGuard)
   async deleteOffer(@Param('id') id: string): Promise<{ success: boolean; data: any }> {

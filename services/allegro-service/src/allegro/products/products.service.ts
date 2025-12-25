@@ -165,9 +165,36 @@ export class ProductsService {
               },
             });
 
+            // Map catalog product to frontend-expected format
+            // Frontend expects: allegroProductId, name, brand, manufacturerCode, ean
             return {
-              ...catalogProduct,
-              // Add Allegro-specific data
+              id: catalogProduct.id,
+              // Use allegroProductId from AllegroProduct if available, otherwise use SKU
+              allegroProductId: allegroProduct?.allegroProductId || catalogProduct.sku || catalogProduct.id,
+              // Map catalog title to name
+              name: catalogProduct.title || null,
+              // Brand from catalog
+              brand: catalogProduct.brand || null,
+              // Manufacturer code from catalog (catalog uses 'manufacturer' field)
+              manufacturerCode: catalogProduct.manufacturer || allegroProduct?.manufacturerCode || null,
+              // EAN from catalog or AllegroProduct
+              ean: catalogProduct.ean || allegroProduct?.ean || null,
+              // Publication status from AllegroProduct
+              publicationStatus: allegroProduct?.publicationStatus || null,
+              // AI co-created flag
+              isAiCoCreated: allegroProduct?.isAiCoCreated || false,
+              // GPSR flag
+              marketedBeforeGPSR: allegroProduct?.marketedBeforeGPSR || null,
+              // Parameters
+              parameters: allegroProduct?.parameters || [],
+              // Timestamps
+              createdAt: catalogProduct.createdAt || null,
+              updatedAt: catalogProduct.updatedAt || allegroProduct?.updatedAt || null,
+              // Keep raw data if requested
+              rawData: includeRaw && allegroProduct ? allegroProduct.rawData : undefined,
+              // Keep full catalog product data for reference
+              catalogProduct: catalogProduct,
+              // Keep full allegro product data for reference
               allegroProduct: allegroProduct ? {
                 id: allegroProduct.id,
                 allegroProductId: allegroProduct.allegroProductId,
@@ -180,8 +207,21 @@ export class ProductsService {
             };
           } catch (error: any) {
             this.logger.warn(`[${requestId}] Failed to enrich product ${catalogProduct.id} with Allegro data: ${error.message}`);
+            // Return mapped format even when AllegroProduct enrichment fails
             return {
-              ...catalogProduct,
+              id: catalogProduct.id,
+              allegroProductId: catalogProduct.sku || catalogProduct.id,
+              name: catalogProduct.title || null,
+              brand: catalogProduct.brand || null,
+              manufacturerCode: catalogProduct.manufacturer || null,
+              ean: catalogProduct.ean || null,
+              publicationStatus: null,
+              isAiCoCreated: false,
+              marketedBeforeGPSR: null,
+              parameters: [],
+              createdAt: catalogProduct.createdAt || null,
+              updatedAt: catalogProduct.updatedAt || null,
+              catalogProduct: catalogProduct,
               allegroProduct: null,
             };
           }
@@ -255,9 +295,36 @@ export class ProductsService {
         duration: `${duration}ms`,
       });
 
+      // Map catalog product to frontend-expected format
+      // Frontend expects: allegroProductId, name, brand, manufacturerCode, ean
       return {
-        ...catalogProduct,
-        // Add Allegro-specific data
+        id: catalogProduct.id,
+        // Use allegroProductId from AllegroProduct if available, otherwise use SKU
+        allegroProductId: allegroProduct?.allegroProductId || catalogProduct.sku || catalogProduct.id,
+        // Map catalog title to name
+        name: catalogProduct.title || null,
+        // Brand from catalog
+        brand: catalogProduct.brand || null,
+        // Manufacturer code from catalog (catalog uses 'manufacturer' field)
+        manufacturerCode: catalogProduct.manufacturer || allegroProduct?.manufacturerCode || null,
+        // EAN from catalog or AllegroProduct
+        ean: catalogProduct.ean || allegroProduct?.ean || null,
+        // Publication status from AllegroProduct
+        publicationStatus: allegroProduct?.publicationStatus || null,
+        // AI co-created flag
+        isAiCoCreated: allegroProduct?.isAiCoCreated || false,
+        // GPSR flag
+        marketedBeforeGPSR: allegroProduct?.marketedBeforeGPSR || null,
+        // Parameters
+        parameters: allegroProduct?.parameters || [],
+        // Timestamps
+        createdAt: catalogProduct.createdAt || null,
+        updatedAt: catalogProduct.updatedAt || allegroProduct?.updatedAt || null,
+        // Keep raw data
+        rawData: allegroProduct?.rawData || null,
+        // Keep full catalog product data for reference
+        catalogProduct: catalogProduct,
+        // Keep full allegro product data for reference
         allegroProduct: allegroProduct ? {
           id: allegroProduct.id,
           allegroProductId: allegroProduct.allegroProductId,
@@ -711,6 +778,40 @@ export class ProductsService {
     } catch (error: any) {
       this.logger.error(`[${requestId}] [syncAllegroProductsToCatalog] Sync failed: ${error.message}`, error.stack);
       throw new HttpException(`Failed to sync products: ${error.message}`, HttpStatus.INTERNAL_SERVER_ERROR);
+    }
+  }
+
+  async deleteAllProducts(): Promise<{ deleted: number }> {
+    const startTime = Date.now();
+    const requestId = `delete-all-products-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    
+    this.logger.log(`[${requestId}] [deleteAllProducts] Starting deletion of all products`, {
+      timestamp: new Date().toISOString(),
+    });
+
+    const prisma = this.prisma as any;
+
+    try {
+      // Delete in order to respect foreign key constraints
+      // First delete parameters
+      const paramsDeleted = await prisma.allegroProductParameter.deleteMany({});
+      this.logger.log(`[${requestId}] [deleteAllProducts] Deleted ${paramsDeleted.count} product parameters`);
+
+      // Then delete products
+      const productsDeleted = await prisma.allegroProduct.deleteMany({});
+      this.logger.log(`[${requestId}] [deleteAllProducts] Deleted ${productsDeleted.count} products`);
+
+      const duration = Date.now() - startTime;
+      this.logger.log(`[${requestId}] [deleteAllProducts] Deletion completed`, {
+        productsDeleted: productsDeleted.count,
+        parametersDeleted: paramsDeleted.count,
+        duration: `${duration}ms`,
+      });
+
+      return { deleted: productsDeleted.count };
+    } catch (error: any) {
+      this.logger.error(`[${requestId}] [deleteAllProducts] Failed to delete all products: ${error.message}`, error.stack);
+      throw new HttpException(`Failed to delete all products: ${error.message}`, HttpStatus.INTERNAL_SERVER_ERROR);
     }
   }
 
