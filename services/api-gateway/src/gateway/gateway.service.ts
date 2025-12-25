@@ -68,18 +68,19 @@ export class GatewayService implements OnModuleInit {
 
     // Create external agents without keep-alive for external HTTPS services only
     // Internal Docker services will use the keep-alive agents above for connection pooling
+    // NOTE: Don't set timeout on agent - let Axios handle timeouts to avoid conflicts
     this.externalHttpAgent = new HttpAgent({
       keepAlive: false, // No keep-alive for external services
       maxSockets: 50,
       maxFreeSockets: 0, // No free sockets since keep-alive is disabled
-      timeout: 30000, // 30 second socket timeout (matches Axios timeout)
+      // Don't set timeout - let Axios timeout handle it
     });
 
     this.externalHttpsAgent = new HttpsAgent({
       keepAlive: false, // No keep-alive for external services
       maxSockets: 50,
       maxFreeSockets: 0, // No free sockets since keep-alive is disabled
-      timeout: 30000, // 30 second socket timeout (matches Axios timeout)
+      // Don't set timeout - let Axios timeout handle it
     });
     
     // Ensure agents are set on the HttpService's Axios instance defaults
