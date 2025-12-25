@@ -499,40 +499,33 @@ export class GatewayService implements OnModuleInit {
     const isHttps = url.startsWith('https://');
 
     // Determine if this is an internal Docker service or external service
-    // Auth service is internal when using Docker network URL (http://auth-microservice:3370)
-    // Auth service is external when using HTTPS URL (https://auth.statex.cz)
-    // NOTE: Auth service has connection issues with keep-alive, so use external agent (no keep-alive)
+    // Auth service is NOT in isInternalService list, so it will use externalHttpAgent (no keep-alive)
+    // This prevents connection issues with auth service
     const isInternalService = ['allegro', 'import', 'settings'].includes(serviceName);
-    const isExternalService = serviceName === 'auth' || (serviceName === 'auth' && isHttps);
+    const isExternalService = serviceName === 'auth' && isHttps;
 
     // Generate request ID for tracking (must be before config to use in metadata)
     const requestId = `req-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 
     // Use keep-alive agents for internal services, external agents for external services
-    // IMPORTANT: For auth service, always use external agent (no keep-alive) to prevent connection issues
-    // Determine which agent to use - force external for auth service
-    const useExternalAgent = serviceName === 'auth' || isExternalService;
-    const finalHttpAgent = isHttps
-      ? undefined
-      : (useExternalAgent ? this.externalHttpAgent : (isInternalService ? this.httpAgent : this.externalHttpAgent));
-    const finalHttpsAgent = isHttps
-      ? (useExternalAgent ? this.externalHttpsAgent : this.httpsAgent)
-      : undefined;
-    
+    // Auth service (HTTP) will use externalHttpAgent because it's not in isInternalService list
     const config: AxiosRequestConfig = {
       headers: {
         'Content-Type': 'application/json',
         // Only use Connection: close for external services
-        ...(useExternalAgent ? { 'Connection': 'close' } : {}),
+        ...(isExternalService ? { 'Connection': 'close' } : {}),
         ...headers,
       },
       timeout,
       maxRedirects: 0, // Disable follow-redirects to prevent 30s connection delays
       validateStatus: (status) => status >= 200 && status < 600, // Accept all HTTP status codes (including errors)
       // Use keep-alive agents for internal services, external agents for external services
-      // Force external agent for auth service to prevent connection reuse issues
-      httpAgent: finalHttpAgent,
-      httpsAgent: finalHttpsAgent,
+      httpAgent: isHttps
+        ? undefined
+        : (isInternalService ? this.httpAgent : this.externalHttpAgent),
+      httpsAgent: isHttps
+        ? (isExternalService ? this.externalHttpsAgent : this.httpsAgent)
+        : undefined,
         // Pass metadata to interceptors
         metadata: {
           requestId,
