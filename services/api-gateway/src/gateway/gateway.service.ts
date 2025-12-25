@@ -500,6 +500,7 @@ export class GatewayService implements OnModuleInit {
     const requestId = `req-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 
     // Use keep-alive agents for internal services, external agents for external services
+    // IMPORTANT: For auth service, always use external agent (no keep-alive) to prevent connection issues
     const config: AxiosRequestConfig = {
       headers: {
         'Content-Type': 'application/json',
@@ -511,12 +512,18 @@ export class GatewayService implements OnModuleInit {
       maxRedirects: 0, // Disable follow-redirects to prevent 30s connection delays
       validateStatus: (status) => status >= 200 && status < 600, // Accept all HTTP status codes (including errors)
       // Use keep-alive agents for internal services, external agents for external services
+      // Force external agent for auth service to prevent connection reuse issues
       httpAgent: isHttps
         ? undefined
         : (isInternalService ? this.httpAgent : this.externalHttpAgent),
       httpsAgent: isHttps
         ? (isExternalService ? this.externalHttpsAgent : this.httpsAgent)
         : undefined,
+      // Explicitly override defaults to ensure our agent is used
+      ...(serviceName === 'auth' && !isHttps ? { 
+        httpAgent: this.externalHttpAgent,
+        // Clear any default agent that might interfere
+      } : {}),
         // Pass metadata to interceptors
         metadata: {
           requestId,
