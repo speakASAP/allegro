@@ -134,6 +134,18 @@ export class GatewayController {
   }
 
   /**
+   * Health check endpoint at /api/health
+   */
+  @Get('health')
+  async health(@Req() req: ExpressRequest, @Res() res: ExpressResponse) {
+    return res.json({
+      status: 'ok',
+      service: 'api-gateway',
+      timestamp: new Date().toISOString(),
+    });
+  }
+
+  /**
    * Route auth requests (no auth required for register/login)
    * Must be before catch-all to match correctly
    * Use explicit routes for common endpoints and catch-all for others
