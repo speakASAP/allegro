@@ -2,7 +2,7 @@
  * Orders Page
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import { AxiosError } from 'axios';
 import api from '../services/api';
 import { Card } from '../components/Card';
@@ -101,18 +101,12 @@ const OrdersPage: React.FC = () => {
   const [statisticsLoading, setStatisticsLoading] = useState(false);
   const [loading, setLoading] = useState(false); // Start as false to render immediately
   const [error, setError] = useState<string | null>(null);
+  const ordersRefreshInFlight = useRef(false);
 
-  useEffect(() => {
-    // Load orders in background (non-blocking)
-    loadOrders(page);
-  }, [page]);
-
-  useEffect(() => {
-    loadOrderStatistics();
-  }, []);
-
-  const loadOrderStatistics = async () => {
-    setStatisticsLoading(true);
+  const loadOrderStatistics = useCallback(async (options: { background?: boolean } = {}) => {
+    if (!options.background) {
+      setStatisticsLoading(true);
+    }
     try {
       const response = await api.get("/allegro/orders/statistics", { timeout: 5000 });
       if (response.data.success) {
@@ -121,15 +115,23 @@ const OrdersPage: React.FC = () => {
     } catch (err) {
       console.error("Failed to load order statistics", err);
     } finally {
-      setStatisticsLoading(false);
+      if (!options.background) {
+        setStatisticsLoading(false);
+      }
     }
-  };
+  }, []);
 
-  const loadOrders = async (requestedPage = 1) => {
-    setLoading(true); // Set loading only during the API call
+  const loadOrders = useCallback(async (requestedPage = 1, options: { background?: boolean } = {}) => {
+    if (ordersRefreshInFlight.current) {
+      return;
+    }
+    ordersRefreshInFlight.current = true;
+    if (!options.background) {
+      setLoading(true);
+    }
     try {
       // Use reasonable timeout for database queries (5 seconds maximum)
-      const response = await api.get('/allegro/orders', {
+      const response = await api.get("/allegro/orders", {
         params: {
           page: requestedPage,
           limit: pagination.limit,
@@ -148,21 +150,52 @@ const OrdersPage: React.FC = () => {
         setError(null); // Clear any previous errors
       }
     } catch (err) {
-      console.error('Failed to load orders', err);
-      if (err instanceof AxiosError) {
-        const axiosError = err as AxiosError & { isConnectionError?: boolean; serviceErrorMessage?: string };
-        if (axiosError.isConnectionError && axiosError.serviceErrorMessage) {
-          setError(axiosError.serviceErrorMessage);
+      console.error("Failed to load orders", err);
+      if (!options.background) {
+        if (err instanceof AxiosError) {
+          const axiosError = err as AxiosError & { isConnectionError?: boolean; serviceErrorMessage?: string };
+          if (axiosError.isConnectionError && axiosError.serviceErrorMessage) {
+            setError(axiosError.serviceErrorMessage);
+          } else {
+            setError("Failed to load orders. Please try again later.");
+          }
         } else {
-          setError('Failed to load orders. Please try again later.');
+          setError("Failed to load orders. Please try again later.");
         }
-      } else {
-        setError('Failed to load orders. Please try again later.');
       }
     } finally {
-      setLoading(false);
+      ordersRefreshInFlight.current = false;
+      if (!options.background) {
+        setLoading(false);
+      }
     }
-  };
+  }, [pagination.limit]);
+
+  useEffect(() => {
+    // Load orders in background (non-blocking)
+    void loadOrders(page);
+  }, [loadOrders, page]);
+
+  useEffect(() => {
+    void loadOrderStatistics();
+  }, [loadOrderStatistics]);
+
+  useEffect(() => {
+    const refreshVisibleOrders = () => {
+      if (document.visibilityState !== "visible") {
+        return;
+      }
+      void loadOrders(page, { background: true });
+      void loadOrderStatistics({ background: true });
+    };
+
+    const interval = window.setInterval(refreshVisibleOrders, 30000);
+    document.addEventListener("visibilitychange", refreshVisibleOrders);
+    return () => {
+      window.clearInterval(interval);
+      document.removeEventListener("visibilitychange", refreshVisibleOrders);
+    };
+  }, [loadOrderStatistics, loadOrders, page]);
 
   const getStatusColor = (status: string) => {
     switch (status) {
