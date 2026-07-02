@@ -187,3 +187,31 @@ Implement only the workstream assigned to this repository. Preserve service owne
 - Marketing: `npx tsx --test --test-concurrency=1 test/order-lifecycle-events.test.ts && npm run build -- --pretty false && git diff --check`.
 - Catalog: focused product-relations tests, `npm run build`, `git diff --check`.
 - FlipFlop: reconcile GOAL-12 dirty files, then product-service and frontend builds.
+
+
+## 2026-07-03 - Operational Backfill Evidence
+
+Current focus: Provide real Allegro purchase-affinity evidence to Marketing/Catalog while preserving service ownership.
+
+Intent Preservation Chain:
+
+- Vision: Real Allegro purchases can improve related-product and future bundle surfaces.
+- Goal Impact: Existing paid Allegro multi-product orders produced Catalog `order_affinity` relations through Marketing.
+- System: Allegro remains the marketplace order owner; Marketing aggregates and publishes relation candidates; Catalog owns persistence.
+- Feature: Bounded Allegro historical affinity export for one operational run.
+- Task: Identify paid `READY_FOR_PROCESSING` orders with at least two `allegro_order_line_items.catalogProductId` values and provide only product/currency/channel item snapshots to Marketing.
+- Execution Plan: Temporary SQL export on `alfares` host `/tmp`; no buyer email/login, delivery address, raw payload, OAuth token, or secret values; remove temporary artifacts after run.
+- Coding Prompt: Use only `catalogProductId`, quantity, price, totalPrice, currency, synthetic historical order ref, and `channel=allegro`.
+- Code: No Allegro source changes in this step.
+- Validation: 8 eligible Allegro orders found, each with 2 distinct Catalog products; Marketing dry-run produced 16 directed candidates; Catalog batch upsert succeeded with 16 upserted and 0 failed.
+
+Evidence:
+
+- Catalog source/readback: `source=marketing_order_affinity`, `relation_type=order_affinity`, `evidence.channel=allegro`.
+- Published rows: 16 directed relations.
+- Run id: `allegro-history-20260703`.
+- Catalog idempotency key: `marketing_order_affinity:backfill:allegro-history-20260703:1`.
+
+Next implementation requirement:
+
+- Add an Allegro-owned protected replay endpoint or CLI export that emits the same bounded event envelope without direct SQL extraction.
