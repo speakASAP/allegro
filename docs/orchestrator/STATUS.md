@@ -1,3 +1,24 @@
+## 2026-07-03 - Buyer Auth Ownership Contract Audit
+
+Result: documentation-only audit completed after the buyer-cabinet gap plan. Auth provides canonical user identity (`sub`, `email`, profile, checkout wallet), but current Allegro source does not define an approved ownership rule from Auth identity to `AllegroOrder.buyerId`, `buyerEmail`, or `buyerLogin`.
+
+Decision: do not implement buyer runtime routes yet, and do not use `Auth.email == AllegroOrder.buyerEmail` as an authorization rule without product/Auth/security approval. Keep `/dashboard/orders` as a seller/workspace surface with central Orders lifecycle polling.
+
+Evidence:
+
+- Auth contract: `docs/UNIFIED_AUTH_CONTRACT.md` owns JWT `sub`, primary `email`, profile, checkout-data, delivery-address, and invoice-profile endpoints scoped to the bearer subject.
+- Allegro source: `AllegroAccount.userId` and `UserSettings.userId` are workspace/seller identity links; `AllegroOrder.buyerId`, `buyerEmail`, and `buyerLogin` are marketplace buyer snapshots without Auth ownership relation.
+- Current Orders API controller/service path for Allegro order reads does not pass `req.user` into a buyer ownership filter.
+
+Blockers remain:
+
+- `[MISSING: buyer-facing Allegro personal cabinet product requirement.]`
+- `[MISSING: approved Auth-to-Allegro-buyer ownership rule.]`
+- `[MISSING: stable persisted ownership field or verified buyer-link mapping.]`
+- `[MISSING: buyer-safe API response contract and isolation tests.]`
+
+Next action: product/Auth/security owner must approve one ownership model before buyer-cabinet API/UI implementation.
+
 # Allegro Service Orchestrator Status
 
 Updated: 2026-07-02

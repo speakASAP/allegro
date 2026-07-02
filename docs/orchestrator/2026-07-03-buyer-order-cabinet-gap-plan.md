@@ -60,6 +60,13 @@ Ownership gap evidence:
 - `OrdersController.getOrders(...)` does not pass `req.user` to the service.
 - `OrdersPage.tsx` renders buyer email in the table, which is acceptable for an operator/seller view but unsafe as a buyer self-service route unless row ownership is guaranteed first.
 
+
+## Follow-Up Auth Ownership Audit
+
+A focused current-state audit was added in `docs/orchestrator/2026-07-03-buyer-auth-ownership-contract-audit.md`.
+
+Conclusion: Auth can identify an authenticated user through `sub` and `email`, but current Allegro source still does not prove that Auth identity owns any `AllegroOrder.buyerId`, `buyerEmail`, or `buyerLogin` row. Runtime buyer-cabinet implementation remains blocked until an approved ownership rule is defined.
+
 ## Required Product And Contract Inputs
 
 Implementation is blocked until these are defined and approved:
