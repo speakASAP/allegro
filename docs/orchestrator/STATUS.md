@@ -1,5 +1,18 @@
 # Allegro Service Orchestrator Status
 
+## 2026-07-03 - Warehouse Shipment Correlation Producer Client
+
+Result: source-only Allegro producer client landed for Warehouse shipment correlation registration. The client maps sanitized `allegro.shipment_status_snapshot.v1` snapshots to `POST /api/fulfillment-orders/order/:orderId/provider-shipment-correlations`, computes the same `sourceReferenceHash` as Warehouse, posts only hashed identity fields, and is disabled unless `ALLEGRO_WAREHOUSE_SHIPMENT_CORRELATION_ENABLED=true`. No live Warehouse call, deploy, migration, provider call, DB write, or fulfillment status mutation was performed.
+
+IPS chain: Vision -> Allegro shipment observations can drive fulfillment visibility without raw provider payloads; Goal Impact -> Warehouse can correlate sanitized snapshots to central Orders fulfillment rows; System -> Allegro owns provider reads and hash producer, Warehouse owns correlation/ledger/fulfillment transitions, Orders owns lifecycle; Feature -> disabled-by-default Warehouse correlation producer; Task -> implement safe source-only client and verifier; Execution Plan -> mapper/client/spec/docs only; Coding Prompt -> no raw ids, no buyer/address/tracking URL fields, no live mutation; Code -> `warehouse-shipment-correlation.client.ts`, verifier, package script, module provider; Validation -> producer verifier, snapshot verifier, build, diff check.
+
+Remaining gates:
+
+- `[MISSING: owner approval to deploy Allegro source with ALLEGRO_WAREHOUSE_SHIPMENT_CORRELATION_ENABLED=true]`
+- `[MISSING: Warehouse migration/deploy approval for fulfillment_provider_shipment_correlations]`
+- `[MISSING: approved Allegro shipment projection/replay runtime caller]`
+- `[MISSING: retention/retry/DLQ policy for failed correlation posts]`
+
 ## 2026-07-03 - Goal 24 Allegro Affinity Replay Producer Hardening
 
 Result: source-only hardening completed for the protected Allegro order-affinity replay producer. The endpoint now returns deterministic window metadata, a bounded effective `windowEnd`, opaque cursor pagination, explicit `completeSnapshot` semantics, and repeatability rules for consumers. Focused tests cover paid/processable filtering, mapped two-product minimum, forbidden-field exclusion, protected access, cursor pagination, and repeatable window metadata. No deploy, Catalog edit, Marketing edit, Orders edit, Kubernetes change, secret read, or live data mutation was performed in this worker.
