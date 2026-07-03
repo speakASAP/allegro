@@ -85,5 +85,5 @@ Eligibility rules:
 ## Integration Handoff
 
 - Marketing ledger/parser/publisher gates are owned outside this worker.
-- Catalog `main` was read-only here; integration is reported clean at `d406fa7`, and any Catalog doc/status changes remain owned by the integration thread.
+- Catalog `main` was read-only here; integration is currently clean at `39a4867`, and any Catalog doc/status changes remain owned by the integration thread.
 - No deployments, migrations, queue writes, provider calls, real marketplace publication, or raw order/customer/payment/address output were performed.
