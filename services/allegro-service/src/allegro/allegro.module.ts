@@ -36,6 +36,7 @@ import { QuantityCommandsService } from './quantity-commands/quantity-commands.s
 import { CatalogProductEventsSubscriber } from './catalog-events/catalog-product-events.subscriber';
 import { AvailabilityReconciliationService } from './availability-reconciliation/availability-reconciliation.service';
 import { WarehouseShipmentCorrelationClient } from './shipments/warehouse-shipment-correlation.client';
+import { ShipmentStatusHandoffService } from './shipments/shipment-status-handoff.service';
 
 @Module({
   imports: [
@@ -88,7 +89,8 @@ import { WarehouseShipmentCorrelationClient } from './shipments/warehouse-shipme
     CatalogProductEventsSubscriber,
     AvailabilityReconciliationService,
     WarehouseShipmentCorrelationClient,
+    ShipmentStatusHandoffService,
   ],
-  exports: [AllegroApiService, OffersService, OrdersService, CategoriesService, InventoryService, EventsService, PublishLifecycleService, MarketplacePolicyEngineService, CatalogSellActionService, AdminUsersService, OperationsService, QuantityCommandsService, CatalogProductEventsSubscriber, AvailabilityReconciliationService, WarehouseShipmentCorrelationClient],
+  exports: [AllegroApiService, OffersService, OrdersService, CategoriesService, InventoryService, EventsService, PublishLifecycleService, MarketplacePolicyEngineService, CatalogSellActionService, AdminUsersService, OperationsService, QuantityCommandsService, CatalogProductEventsSubscriber, AvailabilityReconciliationService, WarehouseShipmentCorrelationClient, ShipmentStatusHandoffService],
 })
 export class AllegroModule {}

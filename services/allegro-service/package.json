@@ -16,7 +16,8 @@
     "export:catalog-products:allegro": "node dist/scripts/export-catalog-products-to-allegro.js",
     "reconcile:availability": "node dist/scripts/reconcile-catalog-availability.js",
     "verify:shipment-status-snapshot": "ts-node src/allegro/shipments/shipment-status-snapshot.mapper.spec.ts",
-    "verify:warehouse-shipment-correlation": "ts-node src/allegro/shipments/warehouse-shipment-correlation.client.spec.ts"
+    "verify:warehouse-shipment-correlation": "ts-node src/allegro/shipments/warehouse-shipment-correlation.client.spec.ts",
+    "verify:shipment-status-handoff": "ts-node src/allegro/shipments/shipment-status-handoff.service.spec.ts"
   },
   "dependencies": {
     "@allegro/shared": "file:../../shared",

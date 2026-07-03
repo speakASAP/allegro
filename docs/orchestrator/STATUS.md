@@ -1,5 +1,18 @@
 # Allegro Service Orchestrator Status
 
+## 2026-07-03 - Shipment Status Handoff Hook
+
+Result: source-only Allegro handoff hook landed for future shipment projection/replay jobs. `ShipmentStatusHandoffService.publishWarehouseCorrelations()` accepts sanitized `allegro.shipment_status_snapshot.v1` snapshots, invokes the disabled-by-default Warehouse correlation producer for each snapshot, aggregates posted/disabled/skipped/blocked/failed counts, and returns bounded per-snapshot idempotency-key summaries. No live Allegro read, Warehouse call, Orders call, DB write, deploy, migration, raw provider payload, tracking value, customer field, or fulfillment status mutation was performed.
+
+IPS chain: Vision -> Allegro shipment observations can be handed to Warehouse without raw provider payloads; Goal Impact -> future projection/replay code now has a narrow source-ready runtime hook instead of duplicating Warehouse call logic; System -> Allegro owns sanitized snapshots and handoff invocation, Warehouse owns correlation/ledger/fulfillment transitions, Orders owns lifecycle callbacks; Feature -> source-only shipment status handoff hook; Task -> orchestrate batch snapshot correlation publication with bounded summary; Execution Plan -> service/spec/docs only; Coding Prompt -> no provider reads, no DB, no live Warehouse calls, no status mutation; Code -> `shipment-status-handoff.service.ts`, verifier, package script, module provider; Validation -> handoff verifier, correlation verifier, snapshot verifier, build, diff check.
+
+Remaining gates:
+
+- `[MISSING: approved durable Allegro shipment projection/replay runtime caller that feeds sanitized snapshots into ShipmentStatusHandoffService]`
+- `[MISSING: Warehouse migration/deploy approval for fulfillment_provider_shipment_correlations]`
+- `[MISSING: owner approval to enable ALLEGRO_WAREHOUSE_SHIPMENT_CORRELATION_ENABLED=true]`
+- `[MISSING: retention/retry/DLQ policy for failed correlation posts]`
+
 ## 2026-07-03 - Warehouse Shipment Correlation Producer Client
 
 Result: source-only Allegro producer client landed for Warehouse shipment correlation registration. The client maps sanitized `allegro.shipment_status_snapshot.v1` snapshots to `POST /api/fulfillment-orders/order/:orderId/provider-shipment-correlations`, computes the same `sourceReferenceHash` as Warehouse, posts only hashed identity fields, and is disabled unless `ALLEGRO_WAREHOUSE_SHIPMENT_CORRELATION_ENABLED=true`. No live Warehouse call, deploy, migration, provider call, DB write, or fulfillment status mutation was performed.
