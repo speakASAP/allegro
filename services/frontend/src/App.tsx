@@ -17,6 +17,7 @@ import AllegroOAuthCallbackPage from './pages/AllegroOAuthCallbackPage';
 import ProductsPage from './pages/ProductsPage';
 import AdminUsersPage from './pages/AdminUsersPage';
 import OperationsPage from './pages/OperationsPage';
+import BuyerOrdersPage from './pages/BuyerOrdersPage';
 
 function App() {
   return (
@@ -32,6 +33,14 @@ function App() {
           <Route path="/login" element={<LoginPage />} />
           <Route path="/register" element={<RegisterPage />} />
           <Route path="/auth/callback" element={<AllegroOAuthCallbackPage />} />
+          <Route
+            path="/cabinet/orders"
+            element={
+              <ProtectedRoute>
+                <BuyerOrdersPage />
+              </ProtectedRoute>
+            }
+          />
           <Route
             path="/dashboard"
             element={

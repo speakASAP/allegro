@@ -21,7 +21,7 @@ Execution Plan: use existing hosted Auth and Auth profile contracts; do not back
 
 Coding Prompt: keep this documentation-only. Do not implement buyer endpoints, UI, DB migrations, deploys, or shared Orders/Warehouse changes in this workstream.
 
-Code: no runtime code changes.
+Code: contract proposal started as documentation-only; approved follow-up source now adds `buyerAuthSubject`, buyer list/detail APIs, buyer-safe DTOs, and `/cabinet/orders`.
 
 Validation: source documents and service code inspected remotely; validation commands are recorded below.
 
@@ -148,9 +148,9 @@ You are the Allegro Buyer Cabinet API/UI worker. Preserve Orders as canonical li
 
 ## Remaining Blockers
 
-- `[MISSING: implementation source change that persists or derives Auth subject binding for eligible Allegro buyer orders]`.
+- Source implementation present for `buyerAuthSubject`; runtime remains `[MISSING: approved DB migration/deploy]`.
 - `[MISSING: migration/backfill decision for historical Allegro rows; default is no backfill and no buyer visibility without Auth subject binding]`.
-- `[MISSING: buyer-safe lifecycle label implementation and isolation tests]`.
+- Buyer-safe DTO and source isolation tests are present; `[MISSING: live authenticated buyer smoke after deploy]`.
 
 ## Validation Commands
 
