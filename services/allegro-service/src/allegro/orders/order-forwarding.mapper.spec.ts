@@ -26,6 +26,16 @@ function syntheticOrder(lineItems: any[]) {
     payment: {
       finishedAt: "2026-06-26T10:01:00Z",
     },
+    delivery: {
+      method: { name: "Allegro Kurier" },
+      address: {
+        name: "Synthetic Buyer",
+        street: "Main 1",
+        city: "Warsaw",
+        postalCode: "00-001",
+        countryCode: "PL",
+      },
+    },
   };
 }
 
@@ -50,6 +60,8 @@ async function testMultiLineOrderUsesEachLineOfferCatalogProductId() {
   assert.equal(result.orderData?.total, 42);
   assert.equal(result.orderData?.items[0].warehouseId, "warehouse-main");
   assert.equal(result.orderData?.paymentStatus, "PAID");
+  assert.equal(result.orderData?.shippingMethod, "Allegro Kurier");
+  assert.equal(result.orderData?.shippingAddress.city, "Warsaw");
 }
 
 async function testMissingLineOfferMappingBlocksForwarding() {
@@ -99,11 +111,49 @@ async function testMissingWarehouseIdBlocksForwarding() {
   assert.ok(result.blockedReasons.includes("[MISSING: warehouseId]:line_0_missing_warehouse_id"));
 }
 
+async function testMissingShippingMethodBlocksForwarding() {
+  const order = syntheticOrder([
+    { offer: { id: "allegro-offer-1", name: "First product" }, quantity: 1, price: { amount: "10.00" } },
+  ]);
+  delete order.delivery.method;
+
+  const result = buildOrderForwardingPayload(
+    order,
+    offerMap([
+      { allegroOfferId: "allegro-offer-1", catalogProductId: "11111111-1111-1111-1111-111111111111", accountId: "account-1" },
+    ]),
+    { warehouseId: "warehouse-main" },
+  );
+
+  assert.equal(result.orderData, null);
+  assert.deepEqual(result.blockedReasons, ["missing_shipping_method"]);
+}
+
+async function testMissingDeliveryAddressBlocksForwarding() {
+  const order = syntheticOrder([
+    { offer: { id: "allegro-offer-1", name: "First product" }, quantity: 1, price: { amount: "10.00" } },
+  ]);
+  delete order.delivery.address.street;
+
+  const result = buildOrderForwardingPayload(
+    order,
+    offerMap([
+      { allegroOfferId: "allegro-offer-1", catalogProductId: "11111111-1111-1111-1111-111111111111", accountId: "account-1" },
+    ]),
+    { warehouseId: "warehouse-main" },
+  );
+
+  assert.equal(result.orderData, null);
+  assert.deepEqual(result.blockedReasons, ["missing_delivery_address"]);
+}
+
 export async function runOrderForwardingMapperSpec(): Promise<void> {
   await testMultiLineOrderUsesEachLineOfferCatalogProductId();
   await testMissingLineOfferMappingBlocksForwarding();
   await testMissingCatalogProductIdBlocksForwarding();
   await testMissingWarehouseIdBlocksForwarding();
+  await testMissingShippingMethodBlocksForwarding();
+  await testMissingDeliveryAddressBlocksForwarding();
 }
 
 if (require.main === module) {

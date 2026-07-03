@@ -103,8 +103,7 @@ export class WarehouseShipmentCorrelationClient {
       timeout: 5000,
       headers: {
         "content-type": "application/json",
-        "x-service-name": "allegro-service",
-        "x-internal-service-token": token,
+        Authorization: token.startsWith("Bearer ") ? token : `Bearer ${token}`,
       },
     });
 

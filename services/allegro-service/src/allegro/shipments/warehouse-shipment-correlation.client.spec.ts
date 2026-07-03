@@ -102,8 +102,7 @@ async function testClientPostsOnlyWhenEnabledAndConfigured() {
 
     assert.equal(result.status, "posted");
     assert.equal(calls.length, 1);
-    assert.equal(calls[0].options.headers["x-service-name"], "allegro-service");
-    assert.equal(calls[0].options.headers["x-internal-service-token"], "synthetic-token");
+    assert.equal(calls[0].options.headers.Authorization, "Bearer synthetic-token");
     assert.equal(calls[0].payload.provider, "allegro");
     assert.equal(calls[0].payload.sourceChannel, "shipment-status-snapshot");
   });

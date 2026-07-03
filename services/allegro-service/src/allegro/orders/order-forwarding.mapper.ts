@@ -24,6 +24,14 @@ export interface ForwardedOrderPayload {
     email?: string;
     login?: string;
   };
+  shippingAddress: {
+    name?: string;
+    street: string;
+    city: string;
+    postalCode: string;
+    country: string;
+  };
+  shippingMethod: string;
   items: ForwardedOrderItem[];
   subtotal: number;
   shippingCost: number;
@@ -71,6 +79,48 @@ export function getAllegroLineOfferIds(lineItems: any[] = []): string[] {
 function normalizeWarehouseId(warehouseId?: string | null): string | null {
   const normalized = warehouseId?.trim();
   return normalized || null;
+}
+
+function normalizeOptionalString(value: unknown): string | null {
+  if (value === undefined || value === null) return null;
+  const normalized = String(value).trim();
+  return normalized || null;
+}
+
+function resolveShippingMethod(allegroOrder: any): string | null {
+  const method = allegroOrder?.delivery?.method || {};
+  return (
+    normalizeOptionalString(method.name) ||
+    normalizeOptionalString(method.id) ||
+    normalizeOptionalString(method.carrierId) ||
+    normalizeOptionalString(allegroOrder?.deliveryMethod)
+  );
+}
+
+function resolveDeliveryAddress(allegroOrder: any): ForwardedOrderPayload["shippingAddress"] | null {
+  const address = allegroOrder?.delivery?.address || allegroOrder?.buyer?.address || allegroOrder?.deliveryAddress || {};
+  const street = (
+    normalizeOptionalString(address.street) ||
+    normalizeOptionalString(address.addressLine1) ||
+    normalizeOptionalString(address.line1) ||
+    [normalizeOptionalString(address.streetName), normalizeOptionalString(address.streetNumber)].filter(Boolean).join(" ") ||
+    null
+  );
+  const city = normalizeOptionalString(address.city);
+  const postalCode = normalizeOptionalString(address.postalCode) || normalizeOptionalString(address.zipCode) || normalizeOptionalString(address.postCode);
+  const country = normalizeOptionalString(address.countryCode) || normalizeOptionalString(address.country);
+
+  if (!street || !city || !postalCode || !country) {
+    return null;
+  }
+
+  return {
+    name: normalizeOptionalString(address.name) || normalizeOptionalString(allegroOrder?.buyer?.login) || undefined,
+    street,
+    city,
+    postalCode,
+    country,
+  };
 }
 
 export function buildOrderForwardingPayload(
@@ -141,6 +191,28 @@ export function buildOrderForwardingPayload(
     };
   }
 
+  const shippingMethod = resolveShippingMethod(allegroOrder);
+  if (!shippingMethod) {
+    return {
+      orderData: null,
+      blockedReasons: ["missing_shipping_method"],
+      missingOfferIds: [],
+      missingCatalogOfferIds: [],
+      lineOfferIds,
+    };
+  }
+
+  const shippingAddress = resolveDeliveryAddress(allegroOrder);
+  if (!shippingAddress) {
+    return {
+      orderData: null,
+      blockedReasons: ["missing_delivery_address"],
+      missingOfferIds: [],
+      missingCatalogOfferIds: [],
+      lineOfferIds,
+    };
+  }
+
   const firstMappedOffer = lineItems
     .map((item: any) => offersByAllegroOfferId.get(String(item?.offer?.id || "").trim()))
     .find((offer: AllegroForwardingOffer | undefined) => !!offer);
@@ -155,6 +227,8 @@ export function buildOrderForwardingPayload(
         email: allegroOrder?.buyer?.email,
         login: allegroOrder?.buyer?.login,
       },
+      shippingAddress,
+      shippingMethod,
       items,
       subtotal: orderTotal.amount,
       shippingCost: 0,
