@@ -20,6 +20,22 @@ interface CentralOrderReadModel {
   reason?: string | null;
 }
 
+const CENTRAL_LIFECYCLE_LABELS: Record<string, string> = {
+  ordered_unpaid: "Ordered / awaiting payment",
+  payment_failed: "Payment failed",
+  paid_not_delivered: "Paid / awaiting delivery",
+  warehouse_fulfillment_requested: "Sent to warehouse",
+  warehouse_collecting: "Warehouse collecting",
+  warehouse_forming: "Warehouse forming shipment",
+  warehouse_formed: "Warehouse shipment ready",
+  handed_to_delivery: "Handed to delivery",
+  in_delivery: "In delivery",
+  received: "Received",
+  not_received: "Not received",
+  returned: "Returned",
+  cancelled: "Cancelled",
+};
+
 interface BuyerOrderItem {
   catalogProductId?: string | null;
   quantity: number;
@@ -62,9 +78,11 @@ const formatMoney = (amount: number | string, currency?: string) => {
   }
 };
 
-const lifecycleLabel = (model?: CentralOrderReadModel) => (
-  model?.displayStatus || model?.lifecycleStage || model?.status || 'Ordered'
-);
+const lifecycleLabel = (model?: CentralOrderReadModel) => {
+  const stage = model?.lifecycleStage || model?.status || "";
+  const normalizedStage = stage.toLowerCase();
+  return CENTRAL_LIFECYCLE_LABELS[normalizedStage] || model?.displayStatus || stage || "Ordered";
+};
 
 const statusClass = (state?: CentralOrderReadModel['state']) => {
   if (state === 'available') return 'bg-green-100 text-green-800';
@@ -78,13 +96,16 @@ const BuyerOrdersPage: React.FC = () => {
   const [pagination, setPagination] = useState<Pagination>({ page: 1, limit: 25, total: 0, totalPages: 0 });
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(false);
+  const [backgroundRefreshing, setBackgroundRefreshing] = useState(false);
+  const [lastRefreshedAt, setLastRefreshedAt] = useState<Date | null>(null);
   const [error, setError] = useState<string | null>(null);
   const refreshInFlight = useRef(false);
 
   const loadOrders = useCallback(async (requestedPage = 1, options: { background?: boolean } = {}) => {
     if (refreshInFlight.current) return;
     refreshInFlight.current = true;
-    if (!options.background) setLoading(true);
+    if (options.background) setBackgroundRefreshing(true);
+    else setLoading(true);
     try {
       const response = await api.get('/allegro/buyer/orders', {
         params: { page: requestedPage, limit: pagination.limit },
@@ -95,6 +116,7 @@ const BuyerOrdersPage: React.FC = () => {
         setOrders(data.items || []);
         setPagination(data.pagination || { page: requestedPage, limit: pagination.limit, total: 0, totalPages: 0 });
         setError(null);
+        setLastRefreshedAt(new Date());
       }
     } catch (err) {
       if (!options.background) {
@@ -106,7 +128,8 @@ const BuyerOrdersPage: React.FC = () => {
       }
     } finally {
       refreshInFlight.current = false;
-      if (!options.background) setLoading(false);
+      if (options.background) setBackgroundRefreshing(false);
+      else setLoading(false);
     }
   }, [pagination.limit]);
 
@@ -142,7 +165,10 @@ const BuyerOrdersPage: React.FC = () => {
             <h1 className="text-2xl font-semibold text-gray-900">My orders</h1>
             {user && <p className="text-sm text-gray-600">Signed in as {user.firstName || user.email}</p>}
           </div>
-          <Button variant="secondary" onClick={logout}>Sign out</Button>
+          <div className="flex flex-wrap items-center gap-2">
+            <Button variant="secondary" onClick={() => { void loadOrders(page); }} disabled={loading || backgroundRefreshing}>Refresh</Button>
+            <Button variant="secondary" onClick={logout}>Sign out</Button>
+          </div>
         </div>
       </header>
 
@@ -156,6 +182,8 @@ const BuyerOrdersPage: React.FC = () => {
             <div className="text-sm text-gray-600">
               Page {pagination.page || page} of {Math.max(pagination.totalPages || 1, 1)} ({pagination.total} orders)
               {loading && <span className="ml-2">Loading...</span>}
+              {backgroundRefreshing && <span className="ml-2">Refreshing central lifecycle...</span>}
+              {!loading && !backgroundRefreshing && lastRefreshedAt && <span className="ml-2">Last refreshed {lastRefreshedAt.toLocaleTimeString()}</span>}
             </div>
             <div className="flex gap-2">
               <button type="button" onClick={() => goToPage(page - 1)} disabled={loading || page <= 1} className="rounded border border-gray-300 px-3 py-1 text-sm text-gray-700 disabled:opacity-50">Previous</button>

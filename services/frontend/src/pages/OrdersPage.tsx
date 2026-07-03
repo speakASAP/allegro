@@ -26,6 +26,28 @@ interface CentralOrderReadModel {
   source?: string | null;
 }
 
+const CENTRAL_LIFECYCLE_LABELS: Record<string, string> = {
+  ordered_unpaid: "Ordered / awaiting payment",
+  payment_failed: "Payment failed",
+  paid_not_delivered: "Paid / awaiting delivery",
+  warehouse_fulfillment_requested: "Sent to warehouse",
+  warehouse_collecting: "Warehouse collecting",
+  warehouse_forming: "Warehouse forming shipment",
+  warehouse_formed: "Warehouse shipment ready",
+  handed_to_delivery: "Handed to delivery",
+  in_delivery: "In delivery",
+  received: "Received",
+  not_received: "Not received",
+  returned: "Returned",
+  cancelled: "Cancelled",
+};
+
+const centralLifecycleLabel = (model?: CentralOrderReadModel) => {
+  const stage = model?.lifecycleStage || model?.status || "";
+  const normalizedStage = stage.toLowerCase();
+  return CENTRAL_LIFECYCLE_LABELS[normalizedStage] || model?.displayStatus || stage || "Unavailable";
+};
+
 interface Order {
   id: string;
   allegroOrderId: string;
@@ -100,6 +122,8 @@ const OrdersPage: React.FC = () => {
   const [statistics, setStatistics] = useState<OrderStatistics | null>(null);
   const [statisticsLoading, setStatisticsLoading] = useState(false);
   const [loading, setLoading] = useState(false); // Start as false to render immediately
+  const [backgroundRefreshing, setBackgroundRefreshing] = useState(false);
+  const [lastRefreshedAt, setLastRefreshedAt] = useState<Date | null>(null);
   const [error, setError] = useState<string | null>(null);
   const ordersRefreshInFlight = useRef(false);
 
@@ -126,7 +150,9 @@ const OrdersPage: React.FC = () => {
       return;
     }
     ordersRefreshInFlight.current = true;
-    if (!options.background) {
+    if (options.background) {
+      setBackgroundRefreshing(true);
+    } else {
       setLoading(true);
     }
     try {
@@ -148,6 +174,7 @@ const OrdersPage: React.FC = () => {
           totalPages: 1,
         });
         setError(null); // Clear any previous errors
+        setLastRefreshedAt(new Date());
       }
     } catch (err) {
       console.error("Failed to load orders", err);
@@ -165,7 +192,9 @@ const OrdersPage: React.FC = () => {
       }
     } finally {
       ordersRefreshInFlight.current = false;
-      if (!options.background) {
+      if (options.background) {
+        setBackgroundRefreshing(false);
+      } else {
         setLoading(false);
       }
     }
@@ -246,11 +275,6 @@ const OrdersPage: React.FC = () => {
     return value.length > 12 ? `${value.slice(0, 8)}...${value.slice(-4)}` : value;
   };
 
-  const centralLifecycleLabel = (model?: CentralOrderReadModel) => {
-    const label = model?.displayStatus || model?.lifecycleStage || model?.status;
-    return label || "Unavailable";
-  };
-
   const formatStatisticList = (items?: StatisticCount[], limit = 3) => {
     if (!items || items.length === 0) {
       return "-";
@@ -270,7 +294,22 @@ const OrdersPage: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      <h2 className="text-2xl font-bold">Orders{loading && <span className="ml-2 text-sm text-gray-500">(Loading...)</span>}</h2>
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h2 className="text-2xl font-bold">Orders{loading && <span className="ml-2 text-sm text-gray-500">(Loading...)</span>}</h2>
+          <p className="text-sm text-gray-600">
+            {backgroundRefreshing ? "Refreshing central lifecycle..." : lastRefreshedAt ? `Last refreshed ${lastRefreshedAt.toLocaleTimeString()}` : "Central lifecycle not refreshed yet"}
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={() => { void loadOrders(page); void loadOrderStatistics(); }}
+          disabled={loading || backgroundRefreshing}
+          className="w-fit rounded border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          Refresh
+        </button>
+      </div>
 
       {error && (
         <div className="p-4 bg-red-100 border border-red-400 text-red-700 rounded whitespace-pre-line">
