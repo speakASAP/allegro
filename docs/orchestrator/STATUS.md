@@ -14,6 +14,20 @@ Superseded gate: Auth-issued Allegro service token is projected to runtime as `W
 
 # Allegro Service Orchestrator Status
 
+## 2026-07-03 - Dedicated Warehouse Shipment Token Cutover Proven
+
+Result: hardened Warehouse shipment RBAC cutover is live-proven. Auth DB already had a dedicated `allegro-service` service principal (`b490...`) and `internal:allegro-service:service` role assignment; a dedicated JWT was projected into `allegro-service-secret/WAREHOUSE_INTERNAL_SERVICE_TOKEN` and `secret/allegro-warehouse-service-token/WAREHOUSE_SERVICE_TOKEN` without printing token values. Live `allegro-service` deployment now has `WAREHOUSE_INTERNAL_SERVICE_TOKEN=true`, `ALLEGRO_WAREHOUSE_SHIPMENT_CORRELATION_ENABLED=true`, and Auth validates the dedicated token as `serviceName=allegro-service` with roles `[internal:allegro-service:service]`. Warehouse `d9ebb47` is deployed with shipment endpoints requiring the dedicated role. Runtime smoke from the Allegro pod proved the old broad `ALLEGRO_INTERNAL_SERVICE_TOKEN` is rejected by Warehouse shipment correlation with HTTP 403, while the dedicated `WAREHOUSE_INTERNAL_SERVICE_TOKEN` passes auth and reaches the expected synthetic business lookup HTTP 404.
+
+IPS chain: Vision -> provider shipment ingestion uses least-privilege service identity; Goal Impact -> the broad-token runtime blocker is closed for Allegro shipment correlation/status ingestion; System -> Auth owns service-principal role validation, Allegro owns token projection, Warehouse owns endpoint RBAC; Feature -> dedicated Warehouse shipment service token cutover; Task -> project dedicated token, deploy Warehouse hardening, smoke old-token rejection/new-token acceptance; Execution Plan -> no token output, no provider write, no real order mutation; Coding Prompt -> token values and raw payloads remain hidden; Code -> Warehouse `d9ebb47`, Allegro runtime env projection; Validation -> Auth validate 201, Warehouse old-token 403, dedicated-token 404 auth-pass smoke, Allegro health 200.
+
+Remaining gates:
+
+- [PROVEN: dedicated Allegro shipment service token projected and accepted by hardened Warehouse runtime.]
+- [PROVEN: broad `ALLEGRO_INTERNAL_SERVICE_TOKEN` rejected by hardened shipment endpoint.]
+- [MISSING: product-approved tracking visibility policy for customer/admin UI display beyond bounded lifecycle stage.]
+- [MISSING: provider sample with carrier tracking status other than UNKNOWN if product requires live status mutation evidence beyond bounded fixture.]
+
+
 ## 2026-07-03 - Real Allegro Shipment Live-Read Snapshot Proven Against Warehouse Runtime
 
 Result: optional real-provider live-read proof completed on the currently deployed runtime without printing token values, raw Allegro checkout-form ids, raw account ids, waybills, customer fields, addresses, or provider payloads. The live `allegro-service` pod had no `ALLEGRO_SHIPMENT_STATUS_ACCESS_TOKEN`/`ALLEGRO_ACCESS_TOKEN` env, so the proof selected one already-forwarded Allegro order from the local projection using a pod-local read-only helper, decrypted the existing account OAuth token in memory, and wrote only temporary pod files under `/tmp`. The selected candidate had an active account, future token expiry, local order id, and central Orders id. `export-shipment-status-snapshots.js --live-read --confirm-live-read ALLEGRO_SHIPMENT_STATUS_LIVE_READ` called the real Allegro shipment endpoints and produced one sanitized `allegro.shipment_status_snapshot.v1` file. Sanitized result: `snapshotCount=1`, `sourceRead.status=AVAILABLE`, `latestStatus=UNKNOWN`, `sourceRead.reason=[UNKNOWN: carrier tracking details absent or older than provider retention]`, `packageCount=1`, waybill present only as hash, central/local order ids present in the file but not printed. Posting that snapshot to Warehouse provider-status intake returned HTTP 201; Warehouse DB readback showed `fulfillment_provider_status_observations=2`, latest real-provider observation `decision=accepted`, `source_status_class=UNKNOWN`, `normalized_warehouse_status=noop`, and the existing fulfillment order remained `in_delivery`.
