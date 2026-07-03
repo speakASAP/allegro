@@ -37,6 +37,8 @@ import { CatalogProductEventsSubscriber } from './catalog-events/catalog-product
 import { AvailabilityReconciliationService } from './availability-reconciliation/availability-reconciliation.service';
 import { WarehouseShipmentCorrelationClient } from './shipments/warehouse-shipment-correlation.client';
 import { ShipmentStatusHandoffService } from './shipments/shipment-status-handoff.service';
+import { ShipmentStatusSourceClient } from './shipments/shipment-status-source.client';
+import { ShipmentStatusProjectionService } from './shipments/shipment-status-projection.service';
 
 @Module({
   imports: [
@@ -90,7 +92,9 @@ import { ShipmentStatusHandoffService } from './shipments/shipment-status-handof
     AvailabilityReconciliationService,
     WarehouseShipmentCorrelationClient,
     ShipmentStatusHandoffService,
+    ShipmentStatusSourceClient,
+    ShipmentStatusProjectionService,
   ],
-  exports: [AllegroApiService, OffersService, OrdersService, CategoriesService, InventoryService, EventsService, PublishLifecycleService, MarketplacePolicyEngineService, CatalogSellActionService, AdminUsersService, OperationsService, QuantityCommandsService, CatalogProductEventsSubscriber, AvailabilityReconciliationService, WarehouseShipmentCorrelationClient, ShipmentStatusHandoffService],
+  exports: [AllegroApiService, OffersService, OrdersService, CategoriesService, InventoryService, EventsService, PublishLifecycleService, MarketplacePolicyEngineService, CatalogSellActionService, AdminUsersService, OperationsService, QuantityCommandsService, CatalogProductEventsSubscriber, AvailabilityReconciliationService, WarehouseShipmentCorrelationClient, ShipmentStatusHandoffService, ShipmentStatusSourceClient, ShipmentStatusProjectionService],
 })
 export class AllegroModule {}

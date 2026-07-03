@@ -1,5 +1,20 @@
 # Allegro Service Orchestrator Status
 
+## 2026-07-03 - Shipment Source Client And Projection Service
+
+Result: source-only read-only shipment source client and sanitized projection service landed for Allegro-owned shipment status reads. `ShipmentStatusSourceClient` wraps `/order/checkout-forms/{id}/shipments` plus `/order/carriers/{carrierId}/tracking?waybill=...` as a Nest provider, keeps raw provider identifiers in memory only, never calls label/document/write endpoints, and does not attach provider payloads to thrown read errors. `ShipmentStatusProjectionService` converts the read bundle into `allegro.shipment_status_projection.v1` containing redacted `allegro.shipment_status_snapshot.v1` records and idempotency keys for downstream replay/handoff. No live Allegro provider call, Warehouse call, Orders call, DB write, deploy, migration, raw provider payload persistence, tracking output, customer field output, or fulfillment status mutation was performed.
+
+IPS chain: Vision -> Allegro-origin shipment progress can be read and projected without leaking provider payloads; Goal Impact -> the durable read-only client/service implementation gate moved from missing to source-ready while runtime apply gates stay closed; System -> Allegro owns source reads and redacted projection, Warehouse owns correlation/ledger/fulfillment transitions, Orders owns lifecycle callbacks; Feature -> reusable shipment source client and projection service; Task -> add Nest providers, synthetic verifier coverage, and status handoff notes; Execution Plan -> source/test/docs only, no deploy/migration/live calls; Coding Prompt -> only read `/order/checkout-forms/{id}/shipments` and carrier tracking, keep shipment-management optional/fail-soft, no labels/documents/provider writes; Code -> `shipment-status-source.client.ts`, `shipment-status-projection.service.ts`, verifier scripts, module wiring, docs; Validation -> source client verifier, projection verifier, export verifier, replay verifier, handoff verifier, correlation verifier, snapshot verifier, service build, diff check.
+
+Remaining gates:
+
+- `[LANDED: source-only Nest read client for checkout-form shipments and carrier tracking]`
+- `[LANDED: source-only sanitized projection service for allegro.shipment_status_snapshot.v1 records]`
+- `[MISSING: owner-approved live runtime smoke using safe order selection file and real token source through the Nest client/projection service]`
+- `[MISSING: Warehouse migration/deploy approval for fulfillment_provider_shipment_correlations]`
+- `[MISSING: owner approval to enable ALLEGRO_WAREHOUSE_SHIPMENT_CORRELATION_ENABLED=true]`
+- `[MISSING: deploy approval before the runtime pod receives shipment source/projection code and dead-letter PVC mount/env]`
+
 ## 2026-07-03 - Dead-Letter Runtime Path Manifest Readiness
 
 Result: source-only manifest readiness landed for the shipment correlation dead-letter path. Kubernetes source now declares `ALLEGRO_SHIPMENT_DEAD_LETTER_DIR=/var/lib/allegro-service/shipment-correlation-dead-letter`, mounts that path from PVC `allegro-shipment-dead-letter-data`, and the service Docker image creates the same directory for non-Kubernetes/local runs. No deploy, `kubectl apply`, migration, provider call, Warehouse call, Orders call, DB write, secret read, production data read, raw provider payload, tracking value, customer field, or fulfillment status mutation was performed.
