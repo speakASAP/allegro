@@ -1,3 +1,9 @@
+## 2026-07-03 - Warehouse Service Token Runtime Projection Wired
+
+Result: Allegro deployment source now projects the Auth-issued Warehouse shipment service token from Kubernetes Secret `allegro-warehouse-service-token` key `WAREHOUSE_SERVICE_TOKEN`. This keeps shipment correlation on `WAREHOUSE_SERVICE_TOKEN` / `WAREHOUSE_INTERNAL_SERVICE_TOKEN` only and avoids broad `ALLEGRO_INTERNAL_SERVICE_TOKEN` fallback for shipment posts. Runtime secret value was not printed or committed.
+
+Validation: pending in this cutover lane: focused shipment-correlation verifier, Allegro service build, deploy rollout, and Warehouse auth probe.
+
 ## 2026-07-03 - Warehouse Shipment Token Fallback Hardened In Source
 
 Result: Allegro shipment correlation now requires a Warehouse-specific token from `WAREHOUSE_SERVICE_TOKEN` or `WAREHOUSE_INTERNAL_SERVICE_TOKEN`; broad `ALLEGRO_INTERNAL_SERVICE_TOKEN` and generic `INTERNAL_SERVICE_TOKEN` no longer authorize shipment correlation posts in source. Focused coverage proves the enabled client blocks when only broad fallback tokens are present.
