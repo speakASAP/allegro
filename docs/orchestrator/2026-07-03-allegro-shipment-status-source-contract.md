@@ -1,6 +1,6 @@
 # Allegro Shipment Status Source Contract
 
-Status: draft, documentation-only Worker E output
+Status: source contract with synthetic fixture verifier landed; runtime OAuth/projection gates remain
 Date: 2026-07-03
 Scope: Allegro-owned read-only shipment status source for Allegro-origin orders only
 Repository: `/home/ssf/Documents/Github/allegro`
@@ -14,8 +14,8 @@ Repository: `/home/ssf/Documents/Github/allegro`
 - Task: document the source endpoint choice, OAuth and credential blockers, sanitized payload, idempotency/timestamp/retry policy, sensitive-field policy, validation fixtures, and Warehouse handoff notes.
 - Execution Plan: inspect current Allegro repo state, current order/shipment source docs and code, sanitized k8s/env hints, official Ship with Allegro references, then publish a docs-only contract because source code is not yet sufficient for a narrow read-only implementation.
 - Coding Prompt: do not edit Orders, Warehouse, deployment, secrets, DB, or shipment write paths; do not create fake simulators; mark unknowns as `[MISSING: ...]` or `[UNKNOWN: ...]`.
-- Code: documentation-only, no runtime code change.
-- Validation: `git diff --check` plus read-only inspection evidence below.
+- Code: initial contract was documentation-only; source-only verifier now landed in `services/allegro-service/src/allegro/shipments/` with no runtime provider calls.
+- Validation: contract inspection plus `npm run verify:shipment-status-snapshot`, `npm run build`, and `git diff --check`.
 
 ## Evidence Inspected
 
@@ -180,9 +180,9 @@ Allowed in docs/tests:
 - status enums;
 - endpoint names with placeholders.
 
-## Validation Fixtures Needed
+## Validation Fixtures
 
-Create fixtures only after approval for source implementation:
+Status: source-only synthetic fixtures and verifier landed after owner approval to continue. The verifier runs with `cd services/allegro-service && npm run verify:shipment-status-snapshot`.
 
 1. `order-with-no-shipments`: checkout form has zero shipment records; emits `UNKNOWN` without write fallback.
 2. `single-waybill-delivered`: one carrier, one waybill, tracking status history ending in `DELIVERED`.
@@ -193,7 +193,7 @@ Create fixtures only after approval for source implementation:
 7. `shipment-management-detail-redaction`: when `shipmentId` exists, redact sender/receiver/COD/additionalProperties and keep only status/package count/hashed waybill.
 8. `allegro-origin-filter`: non-Allegro order rows are ignored.
 
-Fixtures must be synthetic or masked and must not contain raw production order ids, waybills, buyer contact data, addresses, tokens, labels, or raw provider responses.
+Fixtures are synthetic and must remain synthetic or masked. They must not contain raw production order ids, waybills, buyer contact data, addresses, tokens, labels, or raw provider responses. The current verifier asserts hashed external identifiers, no raw waybill/order leakage, no bearer/token output, non-Allegro filtering, and redacted shipment-management detail output.
 
 ## Warehouse Handoff Notes
 
@@ -230,14 +230,15 @@ Integration blockers for Warehouse:
 | E2 OAuth proof | dependency-gated | Prove token/account read permissions without printing secrets | read-only token capability probe and sanitized result doc | validation docs only, if approved | Vault mutation, token output | scope evidence or blocker | active token and approval for live read probe |
 | E3 projection design | ready_parallel after E1 | Design durable shipment/package/status projection | schema/docs planning | schema proposal docs | migrations until owner approval | schema handoff | integration owner to avoid schema races |
 | E4 Warehouse consumer | blocked | Define Warehouse read consumer contract | Warehouse docs/source in separate owner lane | Warehouse-owned files only | Allegro source edits in same lane | consumer contract | Warehouse owner approval |
-| E5 runtime implementation | blocked | Implement read-only client and DTO | Allegro shipment client/service/tests | write endpoints, labels, documents, deploy | tested source change | E2 and E3 |
+| E5a source mapper/verifier | complete | Implement source-only DTO mapper and synthetic fixture verifier | Allegro shipment mapper/spec | runtime calls, persistence, write endpoints, labels, documents, deploy | tested source-only verifier | E1 |
+| E5b runtime implementation | blocked | Implement read-only client and durable projection | Allegro shipment client/service/tests | write endpoints, labels, documents, deploy | tested source change | E2 and E3 |
 
 Integration owner: Allegro orchestration thread.
 Validation owner: integration owner until E2/E5 are dispatched.
-Merge order: E1 docs, E2 capability proof, E3 schema design, E5 Allegro read implementation, E4 Warehouse consumer integration.
+Merge order: E1 docs, E5a source mapper/verifier, E2 capability proof, E3 schema design, E5b Allegro read implementation, E4 Warehouse consumer integration.
 
 ## Handoff Summary
 
-This worker does not prove runtime OAuth capability and does not implement source code. The current repo already documents shipment-management as a gap, and the source has no durable shipment projection. The next safe step is a read-only capability proof that checks only status codes/headers and sanitized counters for the three read surfaces, then a schema/client design before Warehouse consumes anything.
+This contract now has a source-only mapper/verifier for sanitized snapshots, but it still does not prove runtime OAuth capability and does not add durable shipment projection or Warehouse consumer code. The current repo still documents shipment-management as a runtime gap. The next safe step is a read-only capability proof that checks only status codes/headers and sanitized counters for the three read surfaces, then a schema/client design before Warehouse consumes anything.
 
 Next step: run a sanitized read-only OAuth capability probe for shipment read endpoints, then dispatch projection schema design only if scopes are sufficient.

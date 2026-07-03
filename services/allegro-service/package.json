@@ -14,7 +14,8 @@
     "audit:raw-payload-retention": "node dist/scripts/audit-raw-payload-retention.js",
     "import:current-stock:warehouse": "node dist/scripts/import-current-allegro-stock-to-warehouse.js",
     "export:catalog-products:allegro": "node dist/scripts/export-catalog-products-to-allegro.js",
-    "reconcile:availability": "node dist/scripts/reconcile-catalog-availability.js"
+    "reconcile:availability": "node dist/scripts/reconcile-catalog-availability.js",
+    "verify:shipment-status-snapshot": "ts-node src/allegro/shipments/shipment-status-snapshot.mapper.spec.ts"
   },
   "dependencies": {
     "@allegro/shared": "file:../../shared",

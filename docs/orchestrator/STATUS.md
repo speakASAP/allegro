@@ -2,6 +2,32 @@
 
 Updated: 2026-07-03
 
+## 2026-07-03 - Allegro Shipment Status Snapshot Fixtures And Verifier
+
+Result: source-only shipment status snapshot contract verifier implemented for Allegro-origin shipments. The implementation adds `allegro.shipment_status_snapshot.v1` mapper fixtures and a self-running verifier under `services/allegro-service/src/allegro/shipments/`, plus `npm run verify:shipment-status-snapshot` in `services/allegro-service`. No live Allegro API calls, OAuth reads, DB writes, Kubernetes changes, provider simulator, or deploy were performed.
+
+IPS chain: Vision -> Allegro-origin shipment progress can be passed to Warehouse/Orders without raw provider payloads; Goal Impact -> downstream integration now has executable redaction/idempotency/status-mapping proof before runtime reads; System -> `allegro-service` owns the Allegro source boundary and emits sanitized snapshots only; Feature -> source-only shipment status snapshot mapper and synthetic validation fixtures; Task -> cover the approved eight fixtures from the shipment source contract; Execution Plan -> pure mapper/spec only, no provider calls or persistence; Coding Prompt -> hash external ids/waybills, ignore non-Allegro channels, keep OAuth/permission failures as explicit blockers; Code -> `shipment-status-snapshot.mapper.ts`, `shipment-status-snapshot.fixtures.ts`, `shipment-status-snapshot.mapper.spec.ts`, and package script; Validation -> `npm run verify:shipment-status-snapshot`, `npm run build`, `git diff --check`.
+
+Covered fixtures:
+
+- `order-with-no-shipments` emits `UNKNOWN` without shipment write fallback.
+- `single-waybill-delivered` hashes account/order/shipment/waybill identifiers and derives latest `DELIVERED`.
+- `multi-package-single-carrier` batches tracking waybills at 20 per carrier.
+- `mixed-carrier` groups by `carrierId`.
+- `tracking-null` emits `UNKNOWN` with provider-retention reason.
+- `oauth-403` emits `UNAVAILABLE` with `[MISSING: OAuth scope or account permission for shipment tracking read]` and no secret output.
+- `shipment-management-detail-redaction` keeps only approved contract fields.
+- `allegro-origin-filter` ignores non-Allegro rows.
+
+Remaining gates:
+
+- `[MISSING: sanitized live OAuth capability proof for /order/checkout-forms/{id}/shipments and /order/carriers/{carrierId}/tracking]`
+- `[MISSING: durable Allegro shipment projection schema/client before runtime handoff]`
+- `[MISSING: Warehouse consumer contract/runtime adapter for read-only shipment snapshots]`
+- `[UNKNOWN: whether Warehouse wants per-waybill status, per-order rolled-up status, or both]`
+
+Next action: run the approved sanitized OAuth capability probe, then design the durable projection/client before any Warehouse runtime consumer is deployed.
+
 ## 2026-07-03 - Buyer Auth Ownership Option 2 Approved
 
 Result: product/Auth/security owner approved Option 2 for the Allegro buyer personal cabinet ownership model via orchestrator instruction `Approved. Option2`. Source implementation is now present: backend commit `78e0f5f` adds subject-bound buyer order reads, `buyerAuthSubject`, migration, buyer-safe DTOs, and isolation specs; the current frontend slice adds `/cabinet/orders` against `GET /api/allegro/buyer/orders`. Runtime remains deploy/migration-gated.
