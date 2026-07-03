@@ -323,3 +323,17 @@ Merge order: E1 docs, E5a source mapper/verifier, E2 capability proof, E3 schema
 This contract now has a source-only mapper/verifier for sanitized snapshots, but it still does not prove runtime OAuth capability and does not add durable shipment projection or Warehouse consumer code. The current repo still documents shipment-management as a runtime gap. The next safe step is a read-only capability proof that checks only status codes/headers and sanitized counters for the three read surfaces, then a schema/client design before Warehouse consumes anything.
 
 Next step: run a sanitized read-only OAuth capability probe for shipment read endpoints, then dispatch projection schema design only if scopes are sufficient.
+
+## Sanitized Live Snapshot Export And Warehouse Intake Proof - 2026-07-03
+
+A bounded real-provider proof was completed from the live `allegro-service` pod using one existing forwarded Allegro order selected from the local projection. The helper used only temporary `/tmp` files, decrypted the account OAuth token in memory, and printed only hashes, counts, booleans, and statuses. No token value, raw account id, raw checkout-form id, raw waybill, customer field, address, or raw provider payload was printed.
+
+Evidence:
+
+- candidate selection: `accounts=3`, `accounts_with_access_token=3`, `forwarding_attempts=1`, `successful_attempts=1`, `orders=118`; selected candidate had active account, future token expiry, local order id, and central order id.
+- live exporter: `export-shipment-status-snapshots.js --live-read --confirm-live-read ALLEGRO_SHIPMENT_STATUS_LIVE_READ` wrote one sanitized snapshot file.
+- sanitized snapshot summary: `sourceRead.status=AVAILABLE`, `latestStatus=UNKNOWN`, `sourceRead.reason=[UNKNOWN: carrier tracking details absent or older than provider retention]`, `packageCount=1`, `hasWaybillHash=true`, `hasCentralOrderId=true`, `hasLocalOrderId=true`.
+- Warehouse provider-status intake: HTTP 201.
+- Warehouse DB readback: latest real-provider observation was `decision=accepted`, `source_status_class=UNKNOWN`, `normalized_warehouse_status=noop`, `attempt_count=1`; total observations became `2` and correlations remained `1`.
+
+This closes the previous missing proof for a real provider shipment read and sanitized Warehouse intake. It does not prove a real provider status mutation because the provider returned `UNKNOWN`; the previous `IN_TRANSIT -> in_delivery` mutation remains bounded fixture evidence.
