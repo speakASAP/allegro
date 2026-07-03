@@ -2,6 +2,14 @@
 
 Updated: 2026-07-03
 
+## 2026-07-03 - Goal 24 Allegro Affinity Replay Runtime Deploy
+
+Result: deployed on live tag `2c72f6b`, which contains Goal 24 replay merge `40e7f0e`, and validated the protected replay endpoint with aggregate-only output. The endpoint returned HTTP 200, contract `marketplace.order_affinity_candidate.v1`, channel `allegro`, `count=8`, `skippedRecords=92`, and `eventSampleCount=8` from a bounded dry-run sample. No customer, address, payment, provider, token, raw marketplace order id, or raw event payload was printed.
+
+IPS chain: Vision -> marketplace purchase history can improve related-product evidence without leaking sensitive data; Goal Impact -> Allegro has a live protected source for multi-product affinity candidates; System -> Allegro producer is live while Marketing/Catalog remain downstream owners; Feature -> protected replay endpoint; Task -> deploy and smoke aggregate-only; Execution Plan -> producer-first deployment and no live data mutation; Coding Prompt -> pod-local token use without printing secrets; Code -> deployed image `2c72f6b`; Validation -> rollout plus protected endpoint smoke; State Update -> producer ready, Marketing replay blocked by token mapping.
+
+Blocker remains: `[MISSING: Marketing runtime token mapping for ORDER_AFFINITY_MARKETPLACE_REPLAY_TOKEN or ALLEGRO_INTERNAL_SERVICE_TOKEN]`.
+
 ## 2026-07-03 - Goal 24 W1 Allegro Protected Affinity Replay Producer
 
 Result: source-only protected order-affinity replay producer implemented. IPS chain: Vision -> Allegro marketplace purchase history can feed related-product evidence without leaking buyer/address/payment/provider data; Goal Impact -> the temporary `/tmp` affinity export has a durable Allegro-owned source path; System -> Allegro owns local order projection and replay producer while Marketing/Catalog own aggregation/persistence; Feature -> `GET /internal/allegro/order-affinity/replay-candidates`; Task -> emit bounded marketplace replay envelopes for paid `READY_FOR_PROCESSING` multi-Catalog-product orders; Execution Plan -> source/test/docs only, no deploy or data mutation; Coding Prompt -> hash local marketplace order refs and emit only Catalog product item snapshots; Code -> orders controller/service/spec; Validation -> focused orders service spec, service build, and diff check.
