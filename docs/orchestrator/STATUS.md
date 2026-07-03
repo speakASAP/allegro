@@ -1,3 +1,11 @@
+## 2026-07-03 - Warehouse Shipment Token Fallback Hardened In Source
+
+Result: Allegro shipment correlation now requires a Warehouse-specific token from `WAREHOUSE_SERVICE_TOKEN` or `WAREHOUSE_INTERNAL_SERVICE_TOKEN`; broad `ALLEGRO_INTERNAL_SERVICE_TOKEN` and generic `INTERNAL_SERVICE_TOKEN` no longer authorize shipment correlation posts in source. Focused coverage proves the enabled client blocks when only broad fallback tokens are present.
+
+IPS chain: Vision -> recurring shipment provider ingestion must use least-privilege service identity; Goal Impact -> Allegro no longer relies on broad internal tokens for Warehouse shipment correlation; System -> Auth owns service-token issuance, Allegro owns caller token projection, Warehouse owns endpoint RBAC; Feature -> minimal Warehouse shipment token source; Task -> remove broad fallback token resolution and document runtime gate; Execution Plan -> source/tests/docs only, no secret or runtime mutation; Coding Prompt -> no token values, raw provider payload, tracking value, customer field, DB query, deploy, or provider read; Validation -> `npm run verify:warehouse-shipment-correlation`, build, diff check.
+
+Remaining gate: `[MISSING: Auth-issued Allegro service token projected to Allegro runtime as WAREHOUSE_SERVICE_TOKEN or WAREHOUSE_INTERNAL_SERVICE_TOKEN before deploy/runtime cutover.]`
+
 # Allegro Service Orchestrator Status
 
 ## 2026-07-03 - Warehouse Shipment Correlation Enabled And Intake Proven

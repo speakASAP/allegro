@@ -159,8 +159,6 @@ function resolveWarehouseToken(): string | null {
   return (
     process.env.WAREHOUSE_SERVICE_TOKEN ||
     process.env.WAREHOUSE_INTERNAL_SERVICE_TOKEN ||
-    process.env.ALLEGRO_INTERNAL_SERVICE_TOKEN ||
-    process.env.INTERNAL_SERVICE_TOKEN ||
     null
   );
 }

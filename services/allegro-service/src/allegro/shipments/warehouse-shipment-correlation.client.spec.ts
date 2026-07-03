@@ -124,6 +124,22 @@ async function testEnabledClientBlocksWithoutWarehouseToken() {
   });
 }
 
+async function testEnabledClientBlocksWithOnlyBroadInternalFallbackTokens() {
+  await withEnv({
+    ALLEGRO_WAREHOUSE_SHIPMENT_CORRELATION_ENABLED: "true",
+    WAREHOUSE_SERVICE_TOKEN: undefined,
+    WAREHOUSE_INTERNAL_SERVICE_TOKEN: undefined,
+    ALLEGRO_INTERNAL_SERVICE_TOKEN: "broad-allegro-token",
+    INTERNAL_SERVICE_TOKEN: "generic-internal-token",
+  }, async () => {
+    const client = new WarehouseShipmentCorrelationClient({ post: async () => ({ data: { success: true } }) } as any);
+    const result = await client.publishSnapshotCorrelation(snapshot(), async () => {
+      throw new Error("should not post");
+    });
+    assert.equal(result.status, "blocked");
+  });
+}
+
 export async function runWarehouseShipmentCorrelationClientSpec(): Promise<void> {
   await testBuildsWarehouseEndpointAndPayloadFromSanitizedSnapshot();
   await testPayloadContainsNoRawProviderOrBuyerMarkers();
@@ -131,6 +147,7 @@ export async function runWarehouseShipmentCorrelationClientSpec(): Promise<void>
   await testClientIsDisabledByDefaultAndDoesNotPost();
   await testClientPostsOnlyWhenEnabledAndConfigured();
   await testEnabledClientBlocksWithoutWarehouseToken();
+  await testEnabledClientBlocksWithOnlyBroadInternalFallbackTokens();
 }
 
 if (require.main === module) {

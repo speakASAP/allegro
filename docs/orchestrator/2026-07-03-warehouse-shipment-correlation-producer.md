@@ -22,7 +22,7 @@ Producer gate:
 
 - `ALLEGRO_WAREHOUSE_SHIPMENT_CORRELATION_ENABLED` must be exactly `true`.
 - Warehouse base URL comes from `WAREHOUSE_SERVICE_URL`, defaulting to `http://warehouse-microservice:3201`.
-- Token source order: `WAREHOUSE_SERVICE_TOKEN`, `WAREHOUSE_INTERNAL_SERVICE_TOKEN`, `ALLEGRO_INTERNAL_SERVICE_TOKEN`, `INTERNAL_SERVICE_TOKEN`.
+- Token source order: `WAREHOUSE_SERVICE_TOKEN`, `WAREHOUSE_INTERNAL_SERVICE_TOKEN`. Broad `ALLEGRO_INTERNAL_SERVICE_TOKEN` and generic `INTERNAL_SERVICE_TOKEN` are intentionally not accepted for shipment correlation.
 - Missing token/config returns a blocked result and does not call Warehouse.
 
 Warehouse request:
