@@ -136,11 +136,21 @@ function extractCentralOrderId(responseSummary: any): string | null {
 
 function extractCentralLifecycle(order: any): any {
   const payload = readModelRecord(order);
-  const fulfillment = readModelRecord(payload.fulfillment);
-  const warehouseHandoff = readModelRecord(payload.warehouseHandoff || payload.warehouseHandoffSummary || payload.reservation);
+  const lifecycle = readModelRecord(payload.lifecycle);
+  const fulfillment = readModelRecord(payload.fulfillment || lifecycle.fulfillment);
+  const warehouseHandoff = readModelRecord(
+    payload.warehouseHandoff ||
+    payload.warehouseHandoffSummary ||
+    payload.reservation ||
+    lifecycle.warehouseHandoff ||
+    lifecycle.reservation,
+  );
   const lifecycleStage = normalizeReadModelString(
     payload.lifecycleStage ||
     payload.lifecycleStatus ||
+    lifecycle.lifecycleStage ||
+    lifecycle.stage ||
+    lifecycle.status ||
     payload.stage ||
     payload.state ||
     payload.status,
@@ -148,11 +158,15 @@ function extractCentralLifecycle(order: any): any {
 
   return {
     lifecycleStage,
-    status: normalizeReadModelString(payload.status),
-    paymentStatus: normalizeReadModelString(payload.paymentStatus),
-    fulfillmentStatus: normalizeReadModelString(payload.fulfillmentStatus || fulfillment.status),
-    warehouseHandoffStatus: normalizeReadModelString(warehouseHandoff.status || payload.warehouseHandoffStatus),
-    updatedAt: normalizeReadModelDate(payload.updatedAt),
+    status: normalizeReadModelString(payload.rawStatus || lifecycle.rawStatus || payload.status),
+    paymentStatus: normalizeReadModelString(payload.paymentStatus || lifecycle.paymentStatus),
+    fulfillmentStatus: normalizeReadModelString(payload.fulfillmentStatus || lifecycle.fulfillmentStatus || fulfillment.status),
+    warehouseHandoffStatus: normalizeReadModelString(
+      warehouseHandoff.status ||
+      payload.warehouseHandoffStatus ||
+      lifecycle.warehouseHandoffStatus,
+    ),
+    updatedAt: normalizeReadModelDate(payload.updatedAt || lifecycle.updatedAt),
   };
 }
 

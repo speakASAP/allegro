@@ -306,8 +306,8 @@ async function testDefaultSyncProjectsLocallyWithoutCentralForwarding() {
   assert.equal(fixture.logs.some((entry) => entry[0] === 'Projected Allegro order locally; central orders forwarding is disabled'), true);
   assert.equal(fixture.forwardingAttempts.length, 1);
   assert.equal(fixture.forwardingAttempts[0].status, 'DISABLED');
-  assert.equal(fixture.forwardingAttempts[0].payloadEqualityStatus, 'FIRST_SEEN');
-  assert.equal(fixture.forwardingAttempts[0].requestSummary.itemCount, 1);
+  assert.equal(fixture.forwardingAttempts[0].payloadEqualityStatus, 'NOT_APPLICABLE');
+  assert.deepEqual(fixture.forwardingAttempts[0].requestSummary, { forwardingEnabled: false });
 }
 
 async function testMultiLineOrderForwardsEachLineCatalogProductId() {
@@ -666,9 +666,14 @@ async function testGetBuyerOrdersRequiresAuthSubjectAndReturnsBuyerSafeDto() {
     centralLifecycleReads: {
       'central-order-1': {
         id: 'central-order-1',
-        status: 'processing',
-        paymentStatus: 'paid',
-        fulfillmentStatus: 'reserved',
+        status: 'pending',
+        lifecycle: {
+          lifecycleStage: 'ordered_unpaid',
+          status: 'ordered_unpaid',
+          paymentStatus: 'pending',
+          fulfillmentStatus: 'reserved',
+          warehouseHandoffStatus: 'reserved',
+        },
       },
     },
   });
@@ -682,6 +687,12 @@ async function testGetBuyerOrdersRequiresAuthSubjectAndReturnsBuyerSafeDto() {
   assert.deepEqual(fixture.captured.orderCount.where, fixture.captured.orderFindMany.where);
   assert.equal(result.items.length, 1);
   assert.equal(result.items[0].centralOrderReadModel.state, 'available');
+  assert.equal(result.items[0].centralOrderReadModel.displayStatus, 'ordered_unpaid');
+  assert.equal(result.items[0].centralOrderReadModel.lifecycleStage, 'ordered_unpaid');
+  assert.equal(result.items[0].centralOrderReadModel.status, 'pending');
+  assert.equal(result.items[0].centralOrderReadModel.paymentStatus, 'pending');
+  assert.equal(result.items[0].centralOrderReadModel.fulfillmentStatus, 'reserved');
+  assert.equal(result.items[0].centralOrderReadModel.warehouseHandoffStatus, 'reserved');
   assert.equal(result.items[0].items[0].catalogProductId, 'catalog-a');
   const serialized = JSON.stringify(result);
   assert.equal(serialized.includes('buyer@example.invalid'), false);
