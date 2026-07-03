@@ -1,5 +1,18 @@
 # Allegro Service Orchestrator Status
 
+## 2026-07-03 - Shipment Correlation Dead-Letter Report
+
+Result: source-only dead-letter report support landed for Warehouse shipment correlation replay. `replay-shipment-status-handoff.ts` now accepts `--dead-letter-file` in apply mode and can write bounded `allegro.shipment_status_dead_letter.v1` reports for blocked, failed, and terminal skipped correlation attempts. Reports contain idempotency key, bounded reason, retry class, optional central order id and source reference hash only. No live Warehouse call, live Allegro read, Orders call, DB write, deploy, migration, raw provider payload, tracking value, customer field, or fulfillment status mutation was performed.
+
+IPS chain: Vision -> failed shipment correlation attempts must be reviewable and retryable without raw provider payloads; Goal Impact -> the retry/DLQ policy gate now has source-level bounded artifact support; System -> Allegro owns handoff retry evidence, Warehouse owns correlation/ledger/fulfillment transitions, Orders owns lifecycle callbacks; Feature -> shipment correlation dead-letter report; Task -> emit bounded retry/terminal failure report from handoff outcomes; Execution Plan -> replay script/spec/docs only; Coding Prompt -> no DB writes, no deploy, no Warehouse or Orders mutation, no raw output; Code -> `replay-shipment-status-handoff.ts` dead-letter report support; Validation -> replay verifier, export verifier, handoff verifier, correlation verifier, snapshot verifier, build, diff check.
+
+Remaining gates:
+
+- `[MISSING: owner-approved live runtime smoke with a safe order selection file and real token source]`
+- `[MISSING: Warehouse migration/deploy approval for fulfillment_provider_shipment_correlations]`
+- `[MISSING: owner approval to enable ALLEGRO_WAREHOUSE_SHIPMENT_CORRELATION_ENABLED=true]`
+- `[MISSING: owner-approved operational retention location for generated dead-letter report artifacts]`
+
 ## 2026-07-03 - Live Shipment Read Bundle Producer
 
 Result: source-only live shipment read bundle producer landed behind exact confirmation. `export-shipment-status-snapshots.ts --live-read` now accepts an explicit order selection file, requires `--confirm-live-read ALLEGRO_SHIPMENT_STATUS_LIVE_READ`, reads only `/order/checkout-forms/{id}/shipments` plus `/order/carriers/{carrierId}/tracking?waybill=...`, keeps raw provider identifiers in memory only, and writes the same sanitized replay snapshot file. Tests use an injected read function; no live Allegro provider call, Warehouse call, Orders call, DB write, deploy, migration, raw provider payload persistence, tracking output, customer field output, or fulfillment status mutation was performed.

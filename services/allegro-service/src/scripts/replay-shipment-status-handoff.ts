@@ -17,6 +17,7 @@ export const SHIPMENT_STATUS_HANDOFF_CONFIRMATION = "ALLEGRO_SHIPMENT_STATUS_WAR
 
 type Args = {
   snapshotFile?: string;
+  deadLetterFile?: string;
   apply: boolean;
   confirmWarehouseHandoff?: string;
   help: boolean;
@@ -31,6 +32,25 @@ export interface ShipmentStatusReplaySummary {
   snapshotCount: number;
   handoff: Awaited<ReturnType<ShipmentStatusHandoffService["publishWarehouseCorrelations"]>> | null;
   safety: Record<string, unknown>;
+  deadLetterReport?: ShipmentStatusDeadLetterReport | null;
+}
+
+export interface ShipmentStatusDeadLetterReport {
+  contract: "allegro.shipment_status_dead_letter.v1";
+  source: "allegro-service";
+  generatedAt: string;
+  retryableCount: number;
+  terminalCount: number;
+  items: ShipmentStatusDeadLetterItem[];
+}
+
+export interface ShipmentStatusDeadLetterItem {
+  idempotencyKey: string;
+  status: "blocked" | "failed" | "skipped";
+  retryClass: "retryable" | "terminal";
+  reason: string;
+  orderId?: string;
+  sourceReferenceHash?: string;
 }
 
 function printHelp(): void {
@@ -39,6 +59,7 @@ function printHelp(): void {
 Usage:
   npm run replay:shipment-status-handoff -- --snapshot-file /path/to/sanitized-snapshots.json --dry-run
   npm run replay:shipment-status-handoff -- --snapshot-file /path/to/sanitized-snapshots.json --apply --confirm-warehouse-handoff ${SHIPMENT_STATUS_HANDOFF_CONFIRMATION}
+  npm run replay:shipment-status-handoff -- --snapshot-file /path/to/sanitized-snapshots.json --apply --confirm-warehouse-handoff ${SHIPMENT_STATUS_HANDOFF_CONFIRMATION} --dead-letter-file /path/to/dead-letter.json
 
 Input may be:
   - an array of allegro.shipment_status_snapshot.v1 snapshots, or
@@ -46,6 +67,7 @@ Input may be:
 
 Dry-run is the default and does not call Warehouse, Allegro, Orders, or the database.
 Apply mode posts only through ShipmentStatusHandoffService and still requires ALLEGRO_WAREHOUSE_SHIPMENT_CORRELATION_ENABLED=true plus Warehouse token config.
+Use --dead-letter-file to write bounded retry/terminal failure metadata for blocked, skipped, or failed correlation posts.
 `);
 }
 
@@ -62,6 +84,7 @@ export function parseReplayArgs(argv: string[]): Args {
 
     if (arg === "--help" || arg === "-h") args.help = true;
     else if (arg === "--snapshot-file") args.snapshotFile = next();
+    else if (arg === "--dead-letter-file") args.deadLetterFile = next();
     else if (arg === "--dry-run") args.apply = false;
     else if (arg === "--apply") args.apply = true;
     else if (arg === "--confirm-warehouse-handoff") args.confirmWarehouseHandoff = next();
@@ -125,6 +148,7 @@ export async function runShipmentStatusReplay(
       snapshotCount: snapshots.length,
       handoff: null,
       safety,
+      deadLetterReport: null,
     };
   }
 
@@ -137,7 +161,42 @@ export async function runShipmentStatusReplay(
     snapshotCount: snapshots.length,
     handoff,
     safety,
+    deadLetterReport: buildShipmentStatusDeadLetterReport(handoff),
   };
+}
+
+export function buildShipmentStatusDeadLetterReport(
+  handoff: Awaited<ReturnType<ShipmentStatusHandoffService["publishWarehouseCorrelations"]>>,
+  generatedAt = new Date().toISOString(),
+): ShipmentStatusDeadLetterReport {
+  const items = handoff.items
+    .filter((item) => item.status === "blocked" || item.status === "failed" || item.status === "skipped")
+    .map((item) => {
+      const retryClass: "retryable" | "terminal" = item.status === "skipped" ? "terminal" : "retryable";
+      return {
+        idempotencyKey: item.idempotencyKey,
+        status: item.status as "blocked" | "failed" | "skipped",
+        retryClass,
+        reason: String(item.reason || "UNKNOWN_SHIPMENT_CORRELATION_OUTCOME").slice(0, 200),
+        orderId: item.orderId,
+        sourceReferenceHash: item.sourceReferenceHash,
+      };
+    });
+
+  return {
+    contract: "allegro.shipment_status_dead_letter.v1",
+    source: "allegro-service",
+    generatedAt,
+    retryableCount: items.filter((item) => item.retryClass === "retryable").length,
+    terminalCount: items.filter((item) => item.retryClass === "terminal").length,
+    items,
+  };
+}
+
+export function writeShipmentStatusDeadLetterReport(report: ShipmentStatusDeadLetterReport, filePath: string): void {
+  const absolutePath = path.resolve(filePath);
+  fs.mkdirSync(path.dirname(absolutePath), { recursive: true });
+  fs.writeFileSync(absolutePath, `${JSON.stringify(report, null, 2)}\n`, "utf8");
 }
 
 async function postWarehouseJson(
@@ -192,7 +251,13 @@ async function main(): Promise<void> {
 
   const snapshots = loadReplaySnapshots(args.snapshotFile);
   const summary = await runShipmentStatusReplay(snapshots, args.apply ? "apply" : "dry-run");
-  process.stdout.write(`${JSON.stringify(summary, null, 2)}\n`);
+  if (args.deadLetterFile && summary.deadLetterReport) {
+    writeShipmentStatusDeadLetterReport(summary.deadLetterReport, args.deadLetterFile);
+  }
+  process.stdout.write(`${JSON.stringify({
+    ...summary,
+    deadLetterFile: args.deadLetterFile ? path.resolve(args.deadLetterFile) : undefined,
+  }, null, 2)}\n`);
 }
 
 if (require.main === module) {
