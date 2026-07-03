@@ -1,5 +1,18 @@
 # Allegro Service Orchestrator Status
 
+## 2026-07-03 - Dead-Letter Runtime Deployed With Correlation Still Disabled
+
+Result: Allegro `c00013b` is deployed for `allegro-service`, `allegro-api-gateway`, `allegro-frontend`, `allegro-settings`, and `allegro-imports`; all rolled out ready `1/1`. Runtime health returned HTTP 200 from `https://allegro.alfares.cz/api/health`. The deployed `allegro-service` manifest now has `ALLEGRO_SHIPMENT_DEAD_LETTER_DIR=/var/lib/allegro-service/shipment-correlation-dead-letter`, volume mount `shipment-correlation-dead-letter -> /var/lib/allegro-service/shipment-correlation-dead-letter`, and volume `shipment-correlation-dead-letter`. `ALLEGRO_WAREHOUSE_SHIPMENT_CORRELATION_ENABLED` remains absent, so Warehouse correlation remains fail-closed. A synthetic redacted apply-mode replay with exact confirmation returned `posted=0`, `disabled=1`, reason `ALLEGRO_WAREHOUSE_SHIPMENT_CORRELATION_ENABLED_NOT_TRUE`, `blocked=0`, `failed=0`; no dead-letter file was emitted because the dead-letter report had zero items. Warehouse readback stayed unchanged before/after at `fulfillment_provider_shipment_correlations=1` and `fulfillment_provider_status_observations=0`. No live Allegro provider read, Warehouse post, Orders call, fulfillment status mutation, raw provider payload, tracking value, customer field, or credential value was used.
+
+IPS chain: Vision -> failed shipment correlation attempts have durable runtime storage while live correlation still requires explicit owner enablement; Goal Impact -> the dead-letter PVC/env deploy gate is closed and fail-closed behavior is reproven on the deployed image; System -> Allegro owns sanitized shipment replay and dead-letter artifact location, Warehouse owns correlation/ledger/fulfillment transitions, Orders owns lifecycle callbacks; Feature -> deployed dead-letter runtime path with disabled correlation gate; Task -> deploy `c00013b`, verify manifest/health, run disabled-gate replay, and prove Warehouse counts did not change; Execution Plan -> keep correlation flag absent, use synthetic redacted snapshot input, exact confirmation, and count readback only; Coding Prompt -> no provider live read, no raw output, no status mutation; Code -> Allegro `c00013b`; Validation -> shipment verifier suite, build, rollout, health, manifest check, disabled-gate smoke, Warehouse count readback.
+
+Remaining gates:
+
+- [MISSING: owner approval to set `ALLEGRO_WAREHOUSE_SHIPMENT_CORRELATION_ENABLED=true` for one bounded live smoke.]
+- [MISSING: approved safe order selection file and real token-source smoke boundaries.]
+- [MISSING: end-to-end readback proving Warehouse correlation registration and no raw snapshot fields enter Orders events.]
+
+
 ## 2026-07-03 - Shipment Projection Runtime Deployed With Correlation Disabled
 
 Result: Allegro guarded shipment projection/correlation source deployed after owner approval. Images `localhost:5000/allegro-service:ae9d381`, `allegro-api-gateway:ae9d381`, `allegro-frontend:ae9d381`, `allegro-settings:ae9d381`, and `allegro-imports:ae9d381` rolled out ready. Runtime health returned HTTP 200. `ALLEGRO_WAREHOUSE_SHIPMENT_CORRELATION_ENABLED` is absent/null, so the Warehouse correlation path remains disabled by default. A synthetic redacted apply-mode replay with exact confirmation returned `posted=0`, `disabled=1`, reason `ALLEGRO_WAREHOUSE_SHIPMENT_CORRELATION_ENABLED_NOT_TRUE`, and Warehouse row counts remained zero. No live Allegro provider read, Warehouse post, Orders call, fulfillment mutation, raw provider payload, tracking value, customer field, or credential value was used.
