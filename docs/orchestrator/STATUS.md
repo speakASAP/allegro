@@ -1,5 +1,26 @@
 # Allegro Service Orchestrator Status
 
+## 2026-07-03 - Buyer Auth Runtime Migration Deploy And Smoke
+
+Result: approved buyer ownership Option 2 is now runtime-deployed on Allegro tag `aa612fa`. The live database has additive `AllegroOrder.buyerAuthSubject` support, buyer list/detail APIs are protected by Auth subject binding, `/cabinet/orders` is live, and the API gateway now preserves upstream non-2xx HTTP statuses instead of returning 404-shaped JSON as HTTP 200.
+
+IPS chain: Vision -> customer-facing Allegro cabinets show only orders explicitly bound to the authenticated Auth subject; Goal Impact -> source, migration, deploy, and synthetic runtime isolation proof are complete for empty/unbound buyer state; System -> Auth owns identity, Allegro owns buyer-safe read projection and UI, Orders remains canonical lifecycle source; Feature -> subject-bound buyer order cabinet runtime; Task -> apply migration, deploy backend/frontend/gateway, and smoke buyer access; Execution Plan -> fail closed for unauthenticated/unbound rows, no email-only authorization, no historical backfill; Coding Prompt -> no token/customer/provider payload output; Code -> backend `78e0f5f`, hardening `9f07efc`, frontend `735ad1f`, gateway fix `aa612fa`; Validation -> DB column/index probe, `orders.service.spec: PASS`, `services/allegro-service npm run build`, `services/frontend npm run build`, `services/api-gateway npm run build`, `npm run verify:shipment-status-snapshot`, `git diff --check`, deploy rollouts, and live smokes.
+
+Runtime evidence:
+
+- Migration DDL was applied idempotently in the live Postgres pod; verification confirmed `buyerAuthSubject` as `character varying` plus `allegro_orders_buyerAuthSubject_idx`.
+- Deploy completed with images `localhost:5000/allegro-service:aa612fa`, `allegro-api-gateway:aa612fa`, `allegro-frontend:aa612fa`, `allegro-settings:aa612fa`, and `allegro-imports:aa612fa`; all deployments are `1/1` ready.
+- Public smokes: `/` 200, `/cabinet/orders` 200, `/api/health` 200.
+- Buyer API smokes: unauthenticated `GET /api/allegro/buyer/orders` returned 401; synthetic Auth-subject buyer list returned `success=true`, `items=0`, `total=0`; synthetic non-owned/missing detail returned HTTP 404 after the gateway status propagation fix.
+
+Remaining gates:
+
+- `[MISSING: live authenticated buyer smoke with a real buyer Auth bearer and an approved subject-bound order row.]`
+- `[MISSING: approved historical binding/backfill source, if product wants old imported marketplace rows visible in buyer cabinet.]`
+- `[MISSING: central Orders lifecycle display smoke with a real forwarded Allegro order visible to the bound buyer.]`
+
+Next action: create or identify one safe real subject-bound Allegro buyer order row, then run real-user buyer list/detail and lifecycle-display smoke without relying on synthetic JWTs.
+
 Updated: 2026-07-03
 
 ## 2026-07-03 - Allegro Shipment Live Read Probe
