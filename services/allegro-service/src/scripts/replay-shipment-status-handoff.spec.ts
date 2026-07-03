@@ -3,10 +3,12 @@ import * as fs from "fs";
 import * as os from "os";
 import * as path from "path";
 import {
+  DEFAULT_SHIPMENT_STATUS_DEAD_LETTER_DIR,
   SHIPMENT_STATUS_HANDOFF_CONFIRMATION,
   buildShipmentStatusDeadLetterReport,
   loadReplaySnapshots,
   parseReplayArgs,
+  resolveShipmentStatusDeadLetterPath,
   runShipmentStatusReplay,
   writeShipmentStatusDeadLetterReport,
 } from "./replay-shipment-status-handoff";
@@ -63,11 +65,14 @@ async function testParsesDeadLetterFileArg() {
     SHIPMENT_STATUS_HANDOFF_CONFIRMATION,
     "--dead-letter-file",
     "/tmp/dead-letter.json",
+    "--dead-letter-dir",
+    "/tmp/dead-letter-dir",
   ]), {
     snapshotFile: "/tmp/snapshots.json",
     apply: true,
     confirmWarehouseHandoff: SHIPMENT_STATUS_HANDOFF_CONFIRMATION,
     deadLetterFile: "/tmp/dead-letter.json",
+    deadLetterDir: "/tmp/dead-letter-dir",
     help: false,
   });
 }
@@ -114,6 +119,33 @@ async function testBuildsBoundedDeadLetterReport() {
   }
 }
 
+
+async function testResolvesDeadLetterRetentionPath() {
+  const report = buildShipmentStatusDeadLetterReport({
+    contract: "allegro.shipment_status_handoff.v1",
+    source: "allegro-service",
+    channel: "allegro",
+    total: 1,
+    posted: 0,
+    disabled: 0,
+    skipped: 0,
+    blocked: 1,
+    failed: 0,
+    items: [{ idempotencyKey: "blocked-key", status: "blocked", reason: "MISSING_WAREHOUSE_CONFIG" }],
+  }, "2026-07-03T13:02:03.000Z");
+
+  assert.equal(resolveShipmentStatusDeadLetterPath(report, { filePath: "/tmp/custom.json" }), "/tmp/custom.json");
+  assert.equal(
+    resolveShipmentStatusDeadLetterPath(report, { directory: "/tmp/dead-letter-dir" }),
+    "/tmp/dead-letter-dir/shipment-correlation-dead-letter-2026-07-03T13-02-03-000Z.json",
+  );
+  assert.equal(
+    resolveShipmentStatusDeadLetterPath(report, { env: { ALLEGRO_SHIPMENT_DEAD_LETTER_DIR: "/tmp/env-dead-letter" } as any }),
+    "/tmp/env-dead-letter/shipment-correlation-dead-letter-2026-07-03T13-02-03-000Z.json",
+  );
+  assert.ok(resolveShipmentStatusDeadLetterPath(report, { env: {} as any }).startsWith(DEFAULT_SHIPMENT_STATUS_DEAD_LETTER_DIR));
+}
+
 async function testWritesDeadLetterReportFile() {
   const filePath = path.join(os.tmpdir(), `shipment-status-dead-letter-${Date.now()}-${Math.random()}.json`);
   const report = buildShipmentStatusDeadLetterReport({
@@ -146,6 +178,7 @@ export async function runShipmentStatusReplaySpec(): Promise<void> {
   await testParsesDeadLetterFileArg();
   await testDryRunDoesNotInvokeWarehouseHandoff();
   await testBuildsBoundedDeadLetterReport();
+  await testResolvesDeadLetterRetentionPath();
   await testWritesDeadLetterReportFile();
   await testRejectsRawSensitiveMarkerInSnapshotFile();
 }

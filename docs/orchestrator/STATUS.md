@@ -1,5 +1,18 @@
 # Allegro Service Orchestrator Status
 
+## 2026-07-03 - Dead-Letter Retention Location
+
+Result: source-only operational retention location support landed for shipment correlation dead-letter reports. `replay-shipment-status-handoff.ts` now resolves generated reports to `--dead-letter-file`, `--dead-letter-dir`, `ALLEGRO_SHIPMENT_DEAD_LETTER_DIR`, or the default `/var/lib/allegro-service/shipment-correlation-dead-letter` directory. Reports are written only when apply-mode handoff produces blocked, failed, or skipped items, and remain bounded to idempotency/retry metadata with no raw provider/customer/tracking fields. No live Warehouse call, live Allegro read, Orders call, DB write, deploy, migration, raw provider payload, tracking value, customer field, or fulfillment status mutation was performed.
+
+IPS chain: Vision -> failed shipment correlation attempts have a durable operational review location without raw provider payloads; Goal Impact -> the dead-letter retention-location gate moved from missing to source-supported default plus overrides; System -> Allegro owns retry artifact creation, Warehouse owns correlation/ledger/fulfillment transitions, Orders owns lifecycle callbacks; Feature -> dead-letter report retention location; Task -> resolve default and override report paths; Execution Plan -> replay script/spec/docs only; Coding Prompt -> no DB writes, no deploy, no Warehouse or Orders mutation, no raw output; Code -> `resolveShipmentStatusDeadLetterPath`; Validation -> replay verifier, export verifier, handoff verifier, correlation verifier, snapshot verifier, build, diff check.
+
+Remaining gates:
+
+- `[MISSING: owner-approved live runtime smoke with a safe order selection file and real token source]`
+- `[MISSING: Warehouse migration/deploy approval for fulfillment_provider_shipment_correlations]`
+- `[MISSING: owner approval to enable ALLEGRO_WAREHOUSE_SHIPMENT_CORRELATION_ENABLED=true]`
+- `[MISSING: runtime volume/permission confirmation for /var/lib/allegro-service/shipment-correlation-dead-letter before deployment]`
+
 ## 2026-07-03 - Shipment Correlation Dead-Letter Report
 
 Result: source-only dead-letter report support landed for Warehouse shipment correlation replay. `replay-shipment-status-handoff.ts` now accepts `--dead-letter-file` in apply mode and can write bounded `allegro.shipment_status_dead_letter.v1` reports for blocked, failed, and terminal skipped correlation attempts. Reports contain idempotency key, bounded reason, retry class, optional central order id and source reference hash only. No live Warehouse call, live Allegro read, Orders call, DB write, deploy, migration, raw provider payload, tracking value, customer field, or fulfillment status mutation was performed.

@@ -14,10 +14,12 @@ import {
 } from "../allegro/shipments/warehouse-shipment-correlation.client";
 
 export const SHIPMENT_STATUS_HANDOFF_CONFIRMATION = "ALLEGRO_SHIPMENT_STATUS_WAREHOUSE_CORRELATION";
+export const DEFAULT_SHIPMENT_STATUS_DEAD_LETTER_DIR = "/var/lib/allegro-service/shipment-correlation-dead-letter";
 
 type Args = {
   snapshotFile?: string;
   deadLetterFile?: string;
+  deadLetterDir?: string;
   apply: boolean;
   confirmWarehouseHandoff?: string;
   help: boolean;
@@ -59,6 +61,7 @@ function printHelp(): void {
 Usage:
   npm run replay:shipment-status-handoff -- --snapshot-file /path/to/sanitized-snapshots.json --dry-run
   npm run replay:shipment-status-handoff -- --snapshot-file /path/to/sanitized-snapshots.json --apply --confirm-warehouse-handoff ${SHIPMENT_STATUS_HANDOFF_CONFIRMATION}
+  npm run replay:shipment-status-handoff -- --snapshot-file /path/to/sanitized-snapshots.json --apply --confirm-warehouse-handoff ${SHIPMENT_STATUS_HANDOFF_CONFIRMATION} --dead-letter-dir /var/lib/allegro-service/shipment-correlation-dead-letter
   npm run replay:shipment-status-handoff -- --snapshot-file /path/to/sanitized-snapshots.json --apply --confirm-warehouse-handoff ${SHIPMENT_STATUS_HANDOFF_CONFIRMATION} --dead-letter-file /path/to/dead-letter.json
 
 Input may be:
@@ -67,7 +70,7 @@ Input may be:
 
 Dry-run is the default and does not call Warehouse, Allegro, Orders, or the database.
 Apply mode posts only through ShipmentStatusHandoffService and still requires ALLEGRO_WAREHOUSE_SHIPMENT_CORRELATION_ENABLED=true plus Warehouse token config.
-Use --dead-letter-file to write bounded retry/terminal failure metadata for blocked, skipped, or failed correlation posts.
+Dead-letter reports for blocked, skipped, or failed correlation posts are written to --dead-letter-file, --dead-letter-dir, ALLEGRO_SHIPMENT_DEAD_LETTER_DIR, or the default /var/lib/allegro-service/shipment-correlation-dead-letter directory.
 `);
 }
 
@@ -85,6 +88,7 @@ export function parseReplayArgs(argv: string[]): Args {
     if (arg === "--help" || arg === "-h") args.help = true;
     else if (arg === "--snapshot-file") args.snapshotFile = next();
     else if (arg === "--dead-letter-file") args.deadLetterFile = next();
+    else if (arg === "--dead-letter-dir") args.deadLetterDir = next();
     else if (arg === "--dry-run") args.apply = false;
     else if (arg === "--apply") args.apply = true;
     else if (arg === "--confirm-warehouse-handoff") args.confirmWarehouseHandoff = next();
@@ -193,6 +197,19 @@ export function buildShipmentStatusDeadLetterReport(
   };
 }
 
+export function resolveShipmentStatusDeadLetterPath(
+  report: ShipmentStatusDeadLetterReport,
+  options: { filePath?: string; directory?: string; env?: NodeJS.ProcessEnv } = {},
+): string {
+  if (options.filePath) {
+    return path.resolve(options.filePath);
+  }
+  const env = options.env || process.env;
+  const directory = options.directory || env.ALLEGRO_SHIPMENT_DEAD_LETTER_DIR || DEFAULT_SHIPMENT_STATUS_DEAD_LETTER_DIR;
+  const safeTimestamp = report.generatedAt.replace(/[^0-9A-Za-z]+/g, "-").replace(/^-+|-+$/g, "");
+  return path.resolve(directory, `shipment-correlation-dead-letter-${safeTimestamp}.json`);
+}
+
 export function writeShipmentStatusDeadLetterReport(report: ShipmentStatusDeadLetterReport, filePath: string): void {
   const absolutePath = path.resolve(filePath);
   fs.mkdirSync(path.dirname(absolutePath), { recursive: true });
@@ -251,12 +268,17 @@ async function main(): Promise<void> {
 
   const snapshots = loadReplaySnapshots(args.snapshotFile);
   const summary = await runShipmentStatusReplay(snapshots, args.apply ? "apply" : "dry-run");
-  if (args.deadLetterFile && summary.deadLetterReport) {
-    writeShipmentStatusDeadLetterReport(summary.deadLetterReport, args.deadLetterFile);
+  let deadLetterFile: string | undefined;
+  if (summary.deadLetterReport && summary.deadLetterReport.items.length > 0) {
+    deadLetterFile = resolveShipmentStatusDeadLetterPath(summary.deadLetterReport, {
+      filePath: args.deadLetterFile,
+      directory: args.deadLetterDir,
+    });
+    writeShipmentStatusDeadLetterReport(summary.deadLetterReport, deadLetterFile);
   }
   process.stdout.write(`${JSON.stringify({
     ...summary,
-    deadLetterFile: args.deadLetterFile ? path.resolve(args.deadLetterFile) : undefined,
+    deadLetterFile,
   }, null, 2)}\n`);
 }
 
