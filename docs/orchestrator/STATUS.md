@@ -37,6 +37,22 @@ Remaining gates:
 
 Next action: verify Orders source-reference preservation for Allegro-origin Warehouse handoff joins without exposing raw provider payloads.
 
+
+## 2026-07-03 - Real Buyer Synthetic Fixture Harness Source Prepared
+
+Result: source-only, approval-gated synthetic buyer fixture lifecycle script added. Default execution performs no DB connection or mutation and exits with `approval_required_no_db_mutation`; approved create/cleanup modes require explicit confirmation, DB URL source, and Auth subject source. Created rows are prefixed `codex-real-buyer-smoke-` and cleanup is restricted to that prefix.
+
+IPS chain: Vision -> real buyer cabinet smoke must prove Auth-subject ownership without email-only authorization; Goal Impact -> when no natural bound row exists, an approved synthetic subject-bound row can support the real buyer smoke and then be cleaned up; System -> Auth owns subject, Allegro owns buyer-safe projection, Orders lifecycle remains separate, provider/courier lane remains contract-gated; Feature -> guarded synthetic buyer fixture lifecycle; Task -> add default no-mutation create/cleanup script; Execution Plan -> insert one synthetic order and line item only after explicit confirmation; Coding Prompt -> no token/subject/raw id/customer/provider output; Code -> `scripts/manage-allegro-real-buyer-fixture.js`, package script `fixture:real-buyer-cabinet`, and fixture harness doc; Validation -> `node --check`, default `npm run fixture:real-buyer-cabinet`, default `npm run smoke:real-buyer-cabinet`, `git diff --check`.
+
+Remaining gates:
+
+- `[MISSING: owner approval to create a synthetic subject-bound Allegro fixture row.]`
+- `[MISSING: safe runtime DB URL source and Auth subject file/env path for approved execution.]`
+- `[MISSING: approved Auth-valid buyer bearer for paired buyer smoke harness.]`
+- `[MISSING: cleanup execution evidence after any approved fixture smoke.]`
+
+Next action: approve fixture create plus guarded buyer smoke execution, then cleanup and record sanitized evidence.
+
 ## 2026-07-03 - Real Buyer Cabinet Smoke Harness Source Prepared
 
 Result: source-only, approval-gated real buyer cabinet smoke harness added. Default execution performs no live calls and exits with `approval_required_no_live_call`; approved live mode requires explicit confirmation plus a caller-supplied buyer bearer and prints only sanitized statuses, counts, booleans, and short hashes.

@@ -22,7 +22,8 @@
     "import:allegro-orders:catalog": "cd services/allegro-service && npm run import:order-offers:catalog --",
     "export:catalog-products:allegro": "cd services/allegro-service && npm run export:catalog-products:allegro --",
     "reconcile:availability": "cd services/allegro-service && npm run reconcile:availability --",
-    "smoke:real-buyer-cabinet": "node scripts/smoke-allegro-real-buyer-cabinet.js"
+    "smoke:real-buyer-cabinet": "node scripts/smoke-allegro-real-buyer-cabinet.js",
+    "fixture:real-buyer-cabinet": "node scripts/manage-allegro-real-buyer-fixture.js"
   },
   "dependencies": {
     "@nestjs/axios": "^3.0.1",
