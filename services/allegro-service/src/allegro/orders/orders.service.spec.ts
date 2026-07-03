@@ -33,9 +33,18 @@ function createServiceFixture(
   const captured: any = {};
 
   const filterRows = (rows: any[], where: any = {}) => rows.filter((row) => Object.entries(where || {}).every(([key, condition]) => {
+    if (key === "AND" && Array.isArray(condition)) {
+      return condition.every((entry) => filterRows([row], entry).length === 1);
+    }
+    if (key === "OR" && Array.isArray(condition)) {
+      return condition.some((entry) => filterRows([row], entry).length === 1);
+    }
     const value = row[key];
     if (condition && typeof condition === "object" && Object.prototype.hasOwnProperty.call(condition, "not")) {
       return value !== (condition as any).not;
+    }
+    if (condition && typeof condition === "object") {
+      return true;
     }
     return value === condition;
   }));
@@ -60,7 +69,10 @@ function createServiceFixture(
     allegroOrder: {
       findMany: async (args: any) => {
         captured.orderFindMany = args;
-        return options.localOrders || [];
+        const rows = filterRows(options.localOrders || [], args.where);
+        const skip = args.skip || 0;
+        const take = args.take || rows.length;
+        return rows.slice(skip, skip + take);
       },
       count: async (args: any = {}) => {
         captured.orderCount = args;
@@ -73,8 +85,7 @@ function createServiceFixture(
       },
       findFirst: async (args: any) => {
         captured.orderFindFirst = args;
-        const id = args.where?.id || args.where?.AND?.find((entry: any) => entry.id)?.id;
-        return (options.localOrders || []).find((order) => order.id === id) || null;
+        return filterRows(options.localOrders || [], args.where)[0] || null;
       },
       findUnique: async (args: any) => {
         captured.orderFindUnique = args;
@@ -680,6 +691,64 @@ async function testGetBuyerOrderScopesDetailByAuthSubject() {
 }
 
 
+async function testGetBuyerOrdersHidesUnboundAndOtherBuyerRows() {
+  const fixture = createServiceFixture([], [], {
+    localOrders: [
+      buildLocalOrder({ id: 'buyer-a-order', allegroOrderId: 'allegro-a', buyerAuthSubject: 'buyer-a', buyerEmail: 'shared@example.invalid' }),
+      buildLocalOrder({ id: 'buyer-b-order', allegroOrderId: 'allegro-b', buyerAuthSubject: 'buyer-b', buyerEmail: 'shared@example.invalid' }),
+      buildLocalOrder({ id: 'unbound-order', allegroOrderId: 'allegro-unbound', buyerAuthSubject: null, buyerEmail: 'shared@example.invalid' }),
+    ],
+  });
+
+  const result = await fixture.service.getBuyerOrders(
+    { page: 1, limit: 25 },
+    { sub: 'buyer-a', email: 'shared@example.invalid', roles: ['app:allegro-service:user'] } as any,
+  );
+
+  assert.deepEqual(fixture.captured.orderFindMany.where, { buyerAuthSubject: 'buyer-a' });
+  assert.deepEqual(result.items.map((order: any) => order.id), ['buyer-a-order']);
+  assert.equal(JSON.stringify(result).includes('buyer-b-order'), false);
+  assert.equal(JSON.stringify(result).includes('unbound-order'), false);
+}
+
+async function testGetBuyerOrderReturns404ForCrossBuyerOrUnboundRows() {
+  const fixture = createServiceFixture([], [], {
+    localOrders: [
+      buildLocalOrder({ id: 'buyer-b-order', buyerAuthSubject: 'buyer-b' }),
+      buildLocalOrder({ id: 'unbound-order', buyerAuthSubject: null }),
+    ],
+  });
+
+  await assert.rejects(
+    () => fixture.service.getBuyerOrder('buyer-b-order', { sub: 'buyer-a' }),
+    (error: any) => error?.getStatus?.() === 404,
+  );
+  await assert.rejects(
+    () => fixture.service.getBuyerOrder('unbound-order', { sub: 'buyer-a' }),
+    (error: any) => error?.getStatus?.() === 404,
+  );
+}
+
+async function testGetOrdersSellerDashboardDoesNotUseBuyerSubjectBinding() {
+  const fixture = createServiceFixture([], [], {
+    localOrders: [buildLocalOrder({ buyerAuthSubject: 'buyer-auth-subject-1' })],
+  });
+
+  await fixture.service.getOrders(
+    { page: 1, limit: 25 },
+    { id: 'seller-user-1', sub: 'buyer-auth-subject-1', roles: ['app:allegro-service:user'] },
+  );
+
+  assert.deepEqual(fixture.captured.orderFindMany.where, {
+    OR: [
+      { offer: { account: { userId: 'seller-user-1' } } },
+      { forwardingAttempts: { some: { account: { userId: 'seller-user-1' } } } },
+    ],
+  });
+  assert.equal(JSON.stringify(fixture.captured.orderFindMany.where).includes('buyerAuthSubject'), false);
+}
+
+
 async function testOrderAffinityReplayCandidatesReturnBoundedMarketplaceEvents() {
   const fixture = createServiceFixture([], [], {
     localOrders: [
@@ -749,6 +818,9 @@ export async function runOrdersServiceSpec(): Promise<void> {
   await testGetBuyerOrdersRequiresAuthSubjectAndReturnsBuyerSafeDto();
   await testGetBuyerOrdersFailClosedWithoutActorSubject();
   await testGetBuyerOrderScopesDetailByAuthSubject();
+  await testGetBuyerOrdersHidesUnboundAndOtherBuyerRows();
+  await testGetBuyerOrderReturns404ForCrossBuyerOrUnboundRows();
+  await testGetOrdersSellerDashboardDoesNotUseBuyerSubjectBinding();
   await testOrderAffinityReplayCandidatesReturnBoundedMarketplaceEvents();
 }
 

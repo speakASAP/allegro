@@ -3,7 +3,7 @@
  */
 
 import { createHash } from 'crypto';
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { CentralOrderLifecycleReadResult, ORDERS_LIFECYCLE_READ_UNAVAILABLE, PrismaService, LoggerService, OrderClientService } from '@allegro/shared';
 import { AllegroApiService } from '../allegro-api.service';
@@ -891,7 +891,7 @@ export class OrdersService {
     });
 
     if (!order) {
-      throw new Error(`Order with ID ${id} not found`);
+      throw new NotFoundException(`Order with ID ${id} not found`);
     }
 
     const [enrichedOrder] = await this.attachCentralOrderReadModels([order]);

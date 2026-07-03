@@ -20,7 +20,7 @@ Remaining implementation gates:
 
 - `[MISSING: implementation source change that persists or derives Auth subject binding for eligible Allegro buyer orders.]`
 - `[MISSING: migration/backfill decision for historical Allegro rows; default is no backfill and no buyer visibility without Auth subject binding.]`
-- `[MISSING: buyer-safe DTO implementation and isolation tests.]`
+- Buyer-safe DTO implementation and isolation tests added source-only in Workstream A.
 - `[MISSING: deploy approval after source validation.]`
 
 Next action: implement source-only buyer API/UI behind the approved Option 2 subject-binding contract, then validate isolation before any deploy.
