@@ -219,7 +219,7 @@ Integration blockers for Warehouse:
 
 - `[MISSING: Warehouse consumer contract for read-only shipment status snapshots]`
 - `[MISSING: central Orders id mapping for every Allegro-origin order that Warehouse wants to correlate]`
-- `[MISSING: durable Allegro shipment projection schema/client before runtime handoff]`
+- `[LANDED: durable Allegro shipment projection schema/client design in docs/orchestrator/2026-07-03-allegro-shipment-projection-design.md; migration/service implementation still gated]`
 - `[UNKNOWN: whether Warehouse wants per-waybill status, per-order rolled-up status, or both]`
 
 ## Parallel Execution
@@ -228,7 +228,7 @@ Integration blockers for Warehouse:
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | E1 contract docs | complete | Define read-only Allegro-owned shipment status source | orchestrator docs | `docs/orchestrator/*` | Orders/Warehouse/runtime/secrets/deploy | this contract | none |
 | E2 OAuth proof | dependency-gated | Prove token/account read permissions without printing secrets | read-only token capability probe and sanitized result doc | validation docs only, if approved | Vault mutation, token output | scope evidence or blocker | active token and approval for live read probe |
-| E3 projection design | ready_parallel after E1 | Design durable shipment/package/status projection | schema/docs planning | schema proposal docs | migrations until owner approval | schema handoff | integration owner to avoid schema races |
+| E3 projection design | complete | Design durable shipment/package/status projection | schema/docs planning | `docs/orchestrator/2026-07-03-allegro-shipment-projection-design.md` | migrations until owner approval | schema handoff | none |
 | E4 Warehouse consumer | blocked | Define Warehouse read consumer contract | Warehouse docs/source in separate owner lane | Warehouse-owned files only | Allegro source edits in same lane | consumer contract | Warehouse owner approval |
 | E5a source mapper/verifier | complete | Implement source-only DTO mapper and synthetic fixture verifier | Allegro shipment mapper/spec | runtime calls, persistence, write endpoints, labels, documents, deploy | tested source-only verifier | E1 |
 | E5b runtime implementation | blocked | Implement read-only client and durable projection | Allegro shipment client/service/tests | write endpoints, labels, documents, deploy | tested source change | E2 and E3 |

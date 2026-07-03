@@ -2,6 +2,29 @@
 
 Updated: 2026-07-03
 
+## 2026-07-03 - Allegro Shipment Projection Design Landed
+
+Result: docs-only durable shipment projection design added for `allegro.shipment_status_snapshot.v1`. No migration, runtime code, live Allegro read, OAuth token access, Warehouse handoff, or deploy was performed.
+
+IPS chain: Vision -> Allegro-origin shipment progress can be replayed and handed off without raw provider payloads; Goal Impact -> durable projection gate now has an owner-reviewable schema/client design; System -> Allegro owns Ship with Allegro/OAuth reads and projection, Warehouse owns intake, Orders owns lifecycle; Feature -> shipment projection schema/client design; Task -> document tables, idempotency, cursors, redaction, client boundaries, and implementation order; Execution Plan -> reuse existing `AllegroSyncRun`, `AllegroSyncCursor`, `AllegroRawPayload`, and `AllegroProjectionAuditLog` foundation; Coding Prompt -> no DB migration, no live read, no tracking number/URL exposure; Code -> `docs/orchestrator/2026-07-03-allegro-shipment-projection-design.md`; Validation -> `git diff --check`.
+
+Design decisions:
+
+- Keep `AllegroOrder.trackingNumber` as legacy display data and do not use it for Warehouse/Orders handoff.
+- Proposed tables: `AllegroShipmentProjection`, `AllegroShipmentPackageProjection`, `AllegroShipmentTrackingEventProjection`, and `AllegroShipmentSnapshotLedger`.
+- Store only hashed external order/shipment/waybill identities, carrier id, package count, bounded statuses, timestamps, payload hashes, and ledger state.
+- Raw shipment payload persistence remains blocked pending security/owner approval; default is no raw provider payload storage.
+- Future runtime source client remains read-only and must not use label/protocol/pickup/cancel/fulfillment write endpoints.
+
+Remaining gates:
+
+- `[MISSING: sanitized live OAuth capability proof for shipment and tracking reads]`
+- `[MISSING: owner approval for Prisma migration adding shipment projection tables]`
+- `[MISSING: Warehouse consumer contract/runtime adapter for read-only shipment snapshots]`
+- `[MISSING: deploy approval and sanitized runtime smoke]`
+
+Next action: run the sanitized OAuth capability proof, then implement the projection migration/service behind an explicit disabled-by-default runtime gate.
+
 ## 2026-07-03 - Allegro Shipment Status Snapshot Fixtures And Verifier
 
 Result: source-only shipment status snapshot contract verifier implemented for Allegro-origin shipments. The implementation adds `allegro.shipment_status_snapshot.v1` mapper fixtures and a self-running verifier under `services/allegro-service/src/allegro/shipments/`, plus `npm run verify:shipment-status-snapshot` in `services/allegro-service`. No live Allegro API calls, OAuth reads, DB writes, Kubernetes changes, provider simulator, or deploy were performed.
