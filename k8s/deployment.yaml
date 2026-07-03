@@ -72,6 +72,11 @@ spec:
                 secretKeyRef:
                   name: allegro-service-secret
                   key: CATALOG_INTERNAL_SERVICE_TOKEN
+            - name: WAREHOUSE_INTERNAL_SERVICE_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: allegro-service-secret
+                  key: WAREHOUSE_INTERNAL_SERVICE_TOKEN
             - name: ALLEGRO_INTERNAL_SERVICE_TOKEN
               valueFrom:
                 secretKeyRef:
