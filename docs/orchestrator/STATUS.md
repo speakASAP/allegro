@@ -1,3 +1,15 @@
+## 2026-07-03 - Synthetic DELIVERED Provider Fixture Proved Delivery Lifecycle
+
+Result: because there are no current real Allegro.cz customer shipments with non-UNKNOWN carrier status, an approved synthetic provider fixture was used to prove the non-UNKNOWN delivery path inside the Alfares Allegro/Warehouse/Orders runtime. Warehouse built a sanitized `allegro.shipment_status_snapshot.v1` from the existing hashed Allegro shipment correlation with `latestStatus=DELIVERED`; the live Allegro pod posted it with the dedicated `WAREHOUSE_INTERNAL_SERVICE_TOKEN`. Warehouse returned HTTP 201, `observationDecision=accepted`, `normalizedWarehouseStatus=delivered`, `statusMutationApplied=true`, and fulfillment status `delivered`. Orders accepted the Warehouse callback and moved lifecycle from `in_delivery` to `received`.
+
+IPS chain: Vision -> provider shipment events update customer/admin order lifecycle before real marketplace traffic exists; Goal Impact -> pre-customer readiness for non-UNKNOWN provider statuses is proven without depending on Allegro.cz buyers; System -> Allegro owns sanitized provider fixture handoff, Warehouse owns status intake/mutation, Orders owns lifecycle projection; Feature -> synthetic provider delivery fixture; Task -> prove `DELIVERED -> delivered -> received` using existing sanitized correlation and dedicated service token; Execution Plan -> temporary pod helpers only, no deploy/provider write/raw tracking reveal; Coding Prompt -> no token values, raw provider payloads, raw tracking numbers, raw waybills, raw account/order ids, customer PII, screenshots, raw DOM, or runtime secret changes; Validation -> Warehouse HTTP 201 accepted/delivered, Orders audit resulting lifecycle `received`, Orders verifier evidence.
+
+Remaining gates:
+
+- [PROVEN: synthetic non-UNKNOWN provider status `DELIVERED` updates Warehouse to `delivered` and Orders lifecycle to `received`.]
+- [FUTURE: real Allegro.cz customer/provider shipment evidence when marketplace traffic exists.]
+- [MISSING: optional future audited full-tracking reveal contract if product/security approves raw tracking visibility.]
+
 ## 2026-07-03 - Approved Non-UNKNOWN Shipment Provider Scan Still Data-Blocked
 
 Result: an approved read-only live provider scan ran from the deployed `allegro-service` pod without provider writes, Warehouse apply, Orders mutation, token output, raw ids, raw waybills, raw payloads, customer PII, raw DB rows, screenshots, or raw DOM. The scan checked up to 50 forwarded candidates and found one token-usable forwarded candidate. Checkout-form shipments returned HTTP 200 with one shipment/package, carrier tracking returned HTTP 200, but tracking history contained zero status events, so `foundNonUnknown=false` and status class counts were `{ UNKNOWN: 1 }`.
