@@ -911,6 +911,16 @@ export class GatewayService implements OnModuleInit {
         };
       }
 
+      if (response.status >= 400) {
+        const upstreamError: any = new Error(
+          response.data?.error?.message
+            || response.data?.message
+            || `Upstream request failed with status ${response.status}`,
+        );
+        upstreamError.response = response;
+        throw upstreamError;
+      }
+
       return response.data;
     } catch (error: any) {
       const axiosCallDuration = Date.now() - axiosCallStartTime;
