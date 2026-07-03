@@ -1,5 +1,29 @@
 # Allegro Service Orchestrator Status
 
+## 2026-07-03 - Checkout-Form Fulfillment Enum Fixtures
+
+Result: sanitized runtime aggregate fixture evidence landed for local Allegro checkout-form status, payment status, fulfillment status, timestamp shapes, and missing source-reference joins. No raw order ids, buyer fields, addresses, raw payloads, tracking values, tokens, provider writes, DB mutations, Orders edits, Warehouse edits, deploys, or migrations were performed.
+
+IPS chain: Vision -> checkout-form status evidence can inform Warehouse/Orders lifecycle work without leaking raw marketplace payloads; Goal Impact -> Warehouse now has sanitized enum fixture evidence for the checkout-form mapping gate; System -> Allegro owns source observation, Warehouse owns fulfillment transitions, Orders owns central lifecycle and paid handoff; Feature -> sanitized checkout-form fulfillment enum fixtures; Task -> record aggregate runtime fixture counts; Execution Plan -> read-only local projection probe; Coding Prompt -> counts/hashes only, no sensitive output; Code -> `docs/orchestrator/2026-07-03-allegro-checkout-form-fulfillment-fixtures.md`; Validation -> sanitized probe output plus `git diff --check`.
+
+Evidence:
+
+- Probe `allegro.checkout_form_enum_fixture_probe.v1` sampled 117 local projected checkout-form rows.
+- `status`: `READY_FOR_PROCESSING=103`, `CANCELLED=14`.
+- `paymentStatus`: `PAID=112`, `[NULL]=5`.
+- `fulfillmentStatus`: `PICKED_UP=61`, `SENT=32`, `CANCELLED=22`, `RETURNED=2`.
+- `trackingNumberPresent=0`, `rawShipmentFieldsPresent=0`, and `ordersWithForwardedCentralId=0`.
+- Timestamp shapes are ISO-like for local `orderDate`/`updatedAt` and raw `updatedAt`; raw `createdAt` is absent in all sampled rows.
+
+Remaining gates:
+
+- `[MISSING: Orders source-reference preservation evidence; sampled local projection has zero forwarded central Orders ids.]`
+- `[MISSING: approved Warehouse durable adapter ledger for checkout-form status observations.]`
+- `[MISSING: approved timestamp ordering/replay semantics across Allegro updatedAt, local observation time, and Warehouse transition occurredAt.]`
+- `[MISSING: owner approval before Warehouse runtime adapter, Allegro projection migration, deployment, or production fulfillment-row mutation.]`
+
+Next action: verify Orders source-reference preservation for Allegro-origin Warehouse handoff joins without exposing raw provider payloads.
+
 ## 2026-07-03 - Buyer Auth Runtime Migration Deploy And Smoke
 
 Result: approved buyer ownership Option 2 is now runtime-deployed on Allegro tag `aa612fa`. The live database has additive `AllegroOrder.buyerAuthSubject` support, buyer list/detail APIs are protected by Auth subject binding, `/cabinet/orders` is live, and the API gateway now preserves upstream non-2xx HTTP statuses instead of returning 404-shaped JSON as HTTP 200.
