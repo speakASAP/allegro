@@ -21,7 +21,8 @@
     "ips:check": "npm run ips:audit && npm run ips:pre-coding && npm run ips:readiness",
     "import:allegro-orders:catalog": "cd services/allegro-service && npm run import:order-offers:catalog --",
     "export:catalog-products:allegro": "cd services/allegro-service && npm run export:catalog-products:allegro --",
-    "reconcile:availability": "cd services/allegro-service && npm run reconcile:availability --"
+    "reconcile:availability": "cd services/allegro-service && npm run reconcile:availability --",
+    "smoke:real-buyer-cabinet": "node scripts/smoke-allegro-real-buyer-cabinet.js"
   },
   "dependencies": {
     "@nestjs/axios": "^3.0.1",

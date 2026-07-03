@@ -36,6 +36,22 @@ Remaining gates:
 - `[MISSING: owner approval before Warehouse runtime adapter, Allegro projection migration, deployment, or production fulfillment-row mutation.]`
 
 Next action: verify Orders source-reference preservation for Allegro-origin Warehouse handoff joins without exposing raw provider payloads.
+
+## 2026-07-03 - Real Buyer Cabinet Smoke Harness Source Prepared
+
+Result: source-only, approval-gated real buyer cabinet smoke harness added. Default execution performs no live calls and exits with `approval_required_no_live_call`; approved live mode requires explicit confirmation plus a caller-supplied buyer bearer and prints only sanitized statuses, counts, booleans, and short hashes.
+
+IPS chain: Vision -> Allegro buyer cabinets must show only orders explicitly bound to the authenticated Auth subject; Goal Impact -> once a subject-bound row exists, real buyer list/detail smoke can run without ad hoc token or response logging; System -> Auth owns user identity, Allegro owns buyer-safe projection/UI, Orders owns canonical lifecycle, Warehouse owns fulfillment state; Feature -> guarded real buyer cabinet smoke harness; Task -> add reusable non-mutating smoke script; Execution Plan -> default source-only mode, explicit live env gate; Coding Prompt -> no token/order/customer/provider/tracking output; Code -> `scripts/smoke-allegro-real-buyer-cabinet.js`, package script `smoke:real-buyer-cabinet`, and harness doc; Validation -> `node --check`, default `npm run smoke:real-buyer-cabinet`, `git diff --check`.
+
+Remaining gates:
+
+- `[MISSING: approved subject-bound Allegro order row for the real buyer smoke.]`
+- `[MISSING: approved Auth-valid buyer bearer acquisition path that does not print token values.]`
+- `[MISSING: real forwarded Orders lifecycle display smoke if the approved row has no central Orders forwarding.]`
+- `[BLOCKED: provider/courier runtime remains contract-gated by missing owner/contract/credentials/mapping/tracking visibility policy.]`
+
+Next action: approve a subject-bound row option, then run `npm run smoke:real-buyer-cabinet` in approved live mode and record sanitized evidence.
+
 ## 2026-07-03 - Buyer Auth Runtime Migration Deploy And Smoke
 
 Result: approved buyer ownership Option 2 is now runtime-deployed on Allegro tag `aa612fa`. The live database has additive `AllegroOrder.buyerAuthSubject` support, buyer list/detail APIs are protected by Auth subject binding, `/cabinet/orders` is live, and the API gateway now preserves upstream non-2xx HTTP statuses instead of returning 404-shaped JSON as HTTP 200.
