@@ -1,3 +1,19 @@
+## 2026-07-03 - Service-Native Redacted Shipment Scan Endpoint Implemented
+
+Result: `allegro-service` now has a service-native internal redacted shipment scan endpoint at `GET /internal/allegro/shipment-status/redacted-scan`. The endpoint is protected by the internal service-token boundary, selects forwarded Allegro orders through Prisma, uses the existing Allegro auth/source/projection services in-process, and returns only aggregate scan evidence: candidate counts, source-read status counts, latest status class counts, package totals, non-UNKNOWN count, redacted blockers, and safety flags. It does not return OAuth tokens, raw account ids, raw checkout-form ids, raw local/central order ids, raw waybills, raw provider payloads, shipment snapshots, DOM, screenshots, Warehouse internals, or customer PII. The scan is read-only by contract and uses a non-refreshing token accessor; if an OAuth token is missing or expiring soon, it returns a `[MISSING: ...]` blocker instead of mutating encrypted credential fields.
+
+IPS chain: Vision -> provider/courier shipment status can be observed safely without credential extraction or raw tracking disclosure; Goal Impact -> future real-provider proof can be run through a service-native boundary instead of temporary DB/token helpers; System -> Allegro owns OAuth access, provider reads, redaction, and aggregate scan output; Warehouse/Orders remain downstream evidence owners; Feature -> internal redacted shipment scan; Task -> implement endpoint/job path for service-native scan; Execution Plan -> source-only service/controller/token-accessor/spec wiring, no DB migration, no provider write, no Warehouse/Orders mutation, no runtime consumer; Coding Prompt -> never return tokens/raw ids/waybills/provider payloads/snapshots; Code -> `shipment-status-redacted-scan.service.ts`, focused spec, module wiring, package verifier, and non-refreshing `AllegroAuthService` accessor; Validation -> `verify:shipment-status-redacted-scan`, full shipment verifier suite, service build, and diff check.
+
+State update:
+
+- [PROVEN: source has service-native redacted scan endpoint protected by internal service auth.]
+- [PROVEN: endpoint output is aggregate-only and focused tests assert raw token/order/account markers do not leak.]
+- [PROVEN: scan does not refresh OAuth tokens or mutate Warehouse/Orders/Allegro provider state.]
+- [MISSING: deployment and live endpoint smoke on `allegro-service` runtime.]
+- [MISSING: real Allegro customer-provider tracking event if product requires production-data proof beyond approved fixture.]
+
+Что потребуется дальше: после deploy нужно вызвать endpoint изнутри кластера с `x-service-name: allegro-service` и internal token, проверить только агрегаты (`latestStatusCounts`, `nonUnknownStatusCount`, `blockers`) и записать результат. Если агрегаты снова только `UNKNOWN`, понадобится реальное Allegro отправление с carrier tracking event или переавторизация аккаунта, но не ручная выгрузка OAuth material из БД.
+
 ## 2026-07-03 - Synthetic RETURNED Provider Fixture Proved Return Lifecycle
 
 Result: the approved synthetic provider fixture chain continued after `DELIVERED`. With the existing sanitized Allegro shipment correlation now in Warehouse status `delivered`, a second synthetic `allegro.shipment_status_snapshot.v1` with `latestStatus=RETURNED` was posted from the live Allegro pod using `WAREHOUSE_INTERNAL_SERVICE_TOKEN`. Warehouse returned HTTP 201 with `observationDecision=accepted`, `normalizedWarehouseStatus=returned`, `statusMutationApplied=true`, and fulfillment status `returned`. Orders accepted the Warehouse callback and moved lifecycle from `received` to `returned`.
