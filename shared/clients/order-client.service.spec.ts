@@ -133,16 +133,17 @@ async function testGetOrderLifecycleReadsCentralOrderById() {
     ALLEGRO_INTERNAL_SERVICE_TOKEN: 'synthetic-orders-token',
   }, async () => {
     const fixture = createFixture({
-      getResponse: { data: { data: { id: 'central-order-1', status: 'processing' } } },
+      getResponse: { data: { data: { id: 'central-order-1', lifecycleStage: 'warehouse_collecting', status: 'warehouse_collecting', rawStatus: 'processing' } } },
     });
 
     const result = await fixture.service.getOrderLifecycle('central-order-1');
 
     assert.equal(result.available, true);
     assert.equal(result.order.id, 'central-order-1');
-    assert.equal(result.order.status, 'processing');
+    assert.equal(result.order.status, 'warehouse_collecting');
+    assert.equal(result.order.rawStatus, 'processing');
     assert.equal(fixture.getCalls.length, 1);
-    assert.equal(fixture.getCalls[0][0], 'http://orders-microservice:3203/api/orders/central-order-1');
+    assert.equal(fixture.getCalls[0][0], 'http://orders-microservice:3203/api/orders/central-order-1/lifecycle');
     assert.equal(fixture.getCalls[0][1].headers['x-internal-service-token'], 'synthetic-orders-token');
     assert.equal(fixture.getCalls[0][1].headers['x-service-name'], 'allegro-service');
   });

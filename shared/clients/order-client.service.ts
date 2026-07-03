@@ -134,7 +134,7 @@ export class OrderClientService {
     try {
       const response = await firstValueFrom(
         this.httpService.get(
-          this.baseUrl + '/api/orders/' + encodeURIComponent(normalizedOrderId),
+          this.baseUrl + '/api/orders/' + encodeURIComponent(normalizedOrderId) + '/lifecycle',
           this.requestOptions() || {},
         ),
       );
