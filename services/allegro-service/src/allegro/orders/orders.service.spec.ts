@@ -1,6 +1,6 @@
 import 'reflect-metadata';
 import { strict as assert } from 'assert';
-import { ALLEGRO_ORDER_FORWARDING_CONFIRMATION, OrdersService } from './orders.service';
+import { ALLEGRO_ORDER_AFFINITY_REPLAY_CONTRACT, ALLEGRO_ORDER_FORWARDING_CONFIRMATION, OrdersService } from './orders.service';
 
 type OfferFixture = {
   id: string;
@@ -529,6 +529,57 @@ async function testGetOrderStatisticsReturnsAggregateOrderDeliveryAndCentralCoun
   assert.equal(JSON.stringify(statistics).includes("rawData"), false);
 }
 
+
+async function testOrderAffinityReplayCandidatesReturnBoundedMarketplaceEvents() {
+  const fixture = createServiceFixture([], [], {
+    localOrders: [
+      buildLocalOrder({
+        id: 'local-order-1',
+        allegroOrderId: 'sensitive-marketplace-order-1',
+        status: 'READY_FOR_PROCESSING',
+        paymentStatus: 'PAID',
+        paidAt: new Date('2026-07-03T09:00:00.000Z'),
+        orderDate: new Date('2026-07-03T08:59:00.000Z'),
+        currency: 'CZK',
+        buyerEmail: 'buyer@example.invalid',
+        deliveryAddress: { city: 'Do not expose' },
+        lineItems: [
+          { catalogProductId: '11111111-1111-4111-8111-111111111111', allegroOfferExternalId: 'offer-a', quantity: 2, price: 10, totalPrice: 20, createdAt: new Date('2026-07-03T09:00:00.000Z') },
+          { catalogProductId: '22222222-2222-4222-8222-222222222222', allegroOfferExternalId: 'offer-b', quantity: 1, price: 5, totalPrice: 5, createdAt: new Date('2026-07-03T09:01:00.000Z') },
+        ],
+      }),
+      buildLocalOrder({
+        id: 'local-order-2',
+        allegroOrderId: 'single-product-order',
+        status: 'READY_FOR_PROCESSING',
+        paymentStatus: 'PAID',
+        lineItems: [
+          { catalogProductId: '11111111-1111-4111-8111-111111111111', quantity: 1, price: 10, totalPrice: 10, createdAt: new Date('2026-07-03T09:02:00.000Z') },
+        ],
+      }),
+    ],
+  });
+
+  const result = await fixture.service.getOrderAffinityReplayCandidates({ limit: 10, from: '2026-07-01T00:00:00.000Z' });
+
+  assert.equal(fixture.captured.orderFindMany.where.status, 'READY_FOR_PROCESSING');
+  assert.equal(fixture.captured.orderFindMany.take, 50);
+  assert.equal(result.contract, ALLEGRO_ORDER_AFFINITY_REPLAY_CONTRACT);
+  assert.equal(result.sourceOwner, 'allegro-service');
+  assert.equal(result.consumerOwner, 'marketing-microservice');
+  assert.equal(result.count, 1);
+  assert.equal(result.skippedRecords, 1);
+  assert.equal(result.events[0].type, ALLEGRO_ORDER_AFFINITY_REPLAY_CONTRACT);
+  assert.equal(result.events[0].source, 'allegro-service');
+  assert.equal(result.events[0].payload.channel, 'allegro');
+  assert.equal(result.events[0].payload.currency, 'CZK');
+  assert.equal(result.events[0].payload.items.length, 2);
+  const serialized = JSON.stringify(result);
+  assert.equal(serialized.includes('buyer@example.invalid'), false);
+  assert.equal(serialized.includes('Do not expose'), false);
+  assert.equal(serialized.includes('sensitive-marketplace-order-1'), false);
+}
+
 export async function runOrdersServiceSpec(): Promise<void> {
   await testDefaultSyncProjectsLocallyWithoutCentralForwarding();
   await testMultiLineOrderForwardsEachLineCatalogProductId();
@@ -541,6 +592,7 @@ export async function runOrdersServiceSpec(): Promise<void> {
   await testGetOrdersFlagsMissingForwardingAttemptUnknown();
   await testGetOrdersFlagsOrdersLifecycleReadFailureStale();
   await testGetOrderStatisticsReturnsAggregateOrderDeliveryAndCentralCountsOnly();
+  await testOrderAffinityReplayCandidatesReturnBoundedMarketplaceEvents();
 }
 
 if (require.main === module) {

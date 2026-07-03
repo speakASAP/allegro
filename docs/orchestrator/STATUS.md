@@ -1,3 +1,4 @@
+2026-07-03: Goal 24 W1 Allegro protected order-affinity replay producer implemented source-only. IPS chain: Vision -> Allegro marketplace purchase history can feed related-product evidence without leaking buyer/address/payment/provider data; Goal Impact -> the temporary `/tmp` affinity export has a durable Allegro-owned source path; System -> Allegro owns local order projection and replay producer while Marketing/Catalog own aggregation/persistence; Feature -> `GET /internal/allegro/order-affinity/replay-candidates`; Task -> emit bounded marketplace replay envelopes for paid `READY_FOR_PROCESSING` multi-Catalog-product orders; Execution Plan -> source/test/docs only, no deploy or data mutation; Coding Prompt -> hash local marketplace order refs and emit only Catalog product item snapshots; Code -> orders controller/service/spec; Validation -> focused orders service spec, service build, and diff check.
 # Allegro Service Orchestrator Status
 
 Updated: 2026-07-02

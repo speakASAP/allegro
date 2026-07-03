@@ -11,7 +11,7 @@ import { AllegroAuthService } from './allegro-auth.service';
 import { AllegroOAuthService } from './allegro-oauth.service';
 import { OffersController } from './offers/offers.controller';
 import { OffersService } from './offers/offers.service';
-import { OrdersController } from './orders/orders.controller';
+import { InternalOrderAffinityController, OrdersController } from './orders/orders.controller';
 import { OrdersService } from './orders/orders.service';
 import { CategoriesController } from './categories/categories.controller';
 import { CategoriesService } from './categories/categories.service';
@@ -54,6 +54,7 @@ import { AvailabilityReconciliationService } from './availability-reconciliation
   controllers: [
     OffersController,
     OrdersController,
+    InternalOrderAffinityController,
     CategoriesController,
     EventsController,
     OAuthController,
