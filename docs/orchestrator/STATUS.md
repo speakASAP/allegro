@@ -1,5 +1,18 @@
 # Allegro Service Orchestrator Status
 
+## 2026-07-03 - Shipment Status Replay Caller
+
+Result: source-only Allegro replay caller landed for sanitized shipment status handoff artifacts. `replay-shipment-status-handoff.ts` accepts a JSON file containing either sanitized `allegro.shipment_status_snapshot.v1` snapshots or order-input fixtures that are first mapped through the redacting snapshot mapper. Dry-run validates and summarizes without network or DB access. Apply mode requires `--confirm-warehouse-handoff ALLEGRO_SHIPMENT_STATUS_WAREHOUSE_CORRELATION`, then feeds snapshots into `ShipmentStatusHandoffService`; the existing `ALLEGRO_WAREHOUSE_SHIPMENT_CORRELATION_ENABLED=true` and Warehouse token gate still control actual posting. No live Allegro read, local DB write, Orders call, deploy, migration, raw provider payload, tracking value, customer field, or fulfillment status mutation was performed.
+
+IPS chain: Vision -> approved shipment observations can be replayed to Warehouse without raw provider payloads; Goal Impact -> the missing durable replay-caller gate now has a source-ready CLI boundary for future projection artifacts; System -> Allegro owns sanitized replay input and handoff invocation, Warehouse owns correlation/ledger/fulfillment transitions, Orders owns lifecycle callbacks; Feature -> guarded shipment status replay caller; Task -> validate sanitized snapshot files and invoke handoff only under exact confirmation; Execution Plan -> script/spec/package/docs only; Coding Prompt -> no provider reads, no DB writes, no deploy, no Orders mutation; Code -> `replay-shipment-status-handoff.ts`, verifier, package scripts; Validation -> replay verifier, handoff verifier, correlation verifier, snapshot verifier, build, diff check.
+
+Remaining gates:
+
+- `[MISSING: approved producer that creates sanitized replay snapshot files from live Allegro shipment projection reads]`
+- `[MISSING: Warehouse migration/deploy approval for fulfillment_provider_shipment_correlations]`
+- `[MISSING: owner approval to enable ALLEGRO_WAREHOUSE_SHIPMENT_CORRELATION_ENABLED=true]`
+- `[MISSING: retention/retry/DLQ policy for failed correlation posts]`
+
 ## 2026-07-03 - Shipment Status Handoff Hook
 
 Result: source-only Allegro handoff hook landed for future shipment projection/replay jobs. `ShipmentStatusHandoffService.publishWarehouseCorrelations()` accepts sanitized `allegro.shipment_status_snapshot.v1` snapshots, invokes the disabled-by-default Warehouse correlation producer for each snapshot, aggregates posted/disabled/skipped/blocked/failed counts, and returns bounded per-snapshot idempotency-key summaries. No live Allegro read, Warehouse call, Orders call, DB write, deploy, migration, raw provider payload, tracking value, customer field, or fulfillment status mutation was performed.

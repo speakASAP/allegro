@@ -2,6 +2,7 @@ import { Injectable } from "@nestjs/common";
 import { AllegroShipmentStatusSnapshot } from "./shipment-status-snapshot.mapper";
 import {
   WarehouseShipmentCorrelationClient,
+  WarehouseShipmentCorrelationPost,
   WarehouseShipmentCorrelationPublishResult,
 } from "./warehouse-shipment-correlation.client";
 
@@ -32,6 +33,7 @@ export class ShipmentStatusHandoffService {
 
   async publishWarehouseCorrelations(
     snapshots: AllegroShipmentStatusSnapshot[],
+    post?: WarehouseShipmentCorrelationPost,
   ): Promise<ShipmentStatusHandoffSummary> {
     const summary: ShipmentStatusHandoffSummary = {
       contract: "allegro.shipment_status_handoff.v1",
@@ -47,7 +49,7 @@ export class ShipmentStatusHandoffService {
     };
 
     for (const snapshot of snapshots) {
-      const item = await this.publishOne(snapshot);
+      const item = await this.publishOne(snapshot, post);
       summary.items.push(item);
       summary[item.status] += 1;
     }
@@ -55,9 +57,12 @@ export class ShipmentStatusHandoffService {
     return summary;
   }
 
-  private async publishOne(snapshot: AllegroShipmentStatusSnapshot): Promise<ShipmentStatusHandoffItem> {
+  private async publishOne(
+    snapshot: AllegroShipmentStatusSnapshot,
+    post?: WarehouseShipmentCorrelationPost,
+  ): Promise<ShipmentStatusHandoffItem> {
     try {
-      const result = await this.warehouseCorrelationClient.publishSnapshotCorrelation(snapshot);
+      const result = await this.warehouseCorrelationClient.publishSnapshotCorrelation(snapshot, post);
       return this.toItem(snapshot, result);
     } catch (error) {
       return {
