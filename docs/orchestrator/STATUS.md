@@ -2,11 +2,11 @@
 
 Updated: 2026-07-03
 
-## 2026-07-03 - Allegro Shipment OAuth Refresh And Live Read Probe
+## 2026-07-03 - Allegro Shipment Live Read Probe
 
-Result: active Allegro OAuth token was refreshed successfully through the live pod without printing token material. The refreshed token is no longer expired. A live-listed checkout form then validated the read path: list=200, detail=200, shipments=200 with one shipment, and carrier tracking=200 for extracted carrier+waybill. Shipment-management detail returned 404 for the extracted shipment id and remains optional/fail-soft. No raw order id, waybill, shipment id, buyer data, address, token, or provider payload was printed or persisted.
+Result: active Allegro OAuth token was non-expired at verification time. A live-listed checkout form validated the read path: list=200, detail=200, shipments=200 with one shipment, and carrier tracking=200 for extracted carrier+waybill. Shipment-management detail returned 404 for the extracted shipment id and remains optional/fail-soft. No raw order id, waybill, shipment id, buyer data, address, token, or provider payload was printed or persisted.
 
-IPS chain: Vision -> runtime shipment reads must be proven before projection/adapter work; Goal Impact -> Allegro can now proceed toward a read-only shipment projection using proven order-level shipments plus carrier tracking; System -> Allegro owns provider read evidence and token refresh, Warehouse/Orders remain downstream consumers; Feature -> sanitized live capability proof; Task -> refresh expired token and rerun live-listed read probe; Execution Plan -> in-pod read-only provider calls, encrypted token DB update only after OAuth refresh success, no deploy; Coding Prompt -> no raw identifiers or provider payload output; Code -> docs-only evidence update; Validation -> sanitized pod output plus `git diff --check`.
+IPS chain: Vision -> runtime shipment reads must be proven before projection/adapter work; Goal Impact -> Allegro can now proceed toward a read-only shipment projection using proven order-level shipments plus carrier tracking; System -> Allegro owns provider read evidence, Warehouse/Orders remain downstream consumers; Feature -> sanitized live capability proof; Task -> rerun live-listed read probe after the expired-token blocker cleared; Execution Plan -> in-pod read-only provider calls, no deploy; Coding Prompt -> no raw identifiers or provider payload output; Code -> docs-only evidence update; Validation -> sanitized pod output plus `git diff --check`.
 
 Remaining gates:
 

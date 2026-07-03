@@ -164,7 +164,7 @@ Retry policy:
 
 ## Sanitized Live OAuth Capability Probe - 2026-07-03
 
-Runtime target: live `allegro-service` pod in `statex-apps`. Initial expired-token probe ran on image `2c72f6b`; final successful read probe ran after rollout to image `8b1eb49`.
+Runtime target: live `allegro-service` pod in `statex-apps`. Initial expired-token probe ran on image `2c72f6b`; final successful read probe was verified on image `8b1eb49` with a current non-expired token.
 
 Probe behavior:
 
@@ -178,10 +178,9 @@ Probe behavior:
 Chronology:
 
 1. First local-order shipment probe: token was present but expired; `/order/checkout-forms/{id}/shipments` returned 401.
-2. OAuth refresh: Allegro token endpoint returned 200; access token, refresh token, scope, and `expires_in` were returned; encrypted DB token fields were updated; token expired after refresh: false.
-3. Historical local-order samples: some local projected order ids still returned 404 from detail/shipments, so local projection ids must be revalidated before use.
-4. Live-listed order probe: checkout-form list, checkout-form detail, order shipments, and carrier tracking all returned 200 for a currently accessible checkout form.
-5. Shipment-management detail for the extracted shipment id returned 404 and remains optional/fail-soft.
+2. Historical local-order samples: some local projected order ids still returned 404 from detail/shipments, so local projection ids must be revalidated before use.
+3. Live-listed order probe: checkout-form list, checkout-form detail, order shipments, and carrier tracking all returned 200 for a currently accessible checkout form.
+4. Shipment-management detail for the extracted shipment id returned 404 and remains optional/fail-soft.
 
 Final sanitized read result:
 
