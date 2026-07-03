@@ -1,3 +1,11 @@
+# Allegro Service Orchestrator Status
+
+Updated: 2026-07-03
+
+## 2026-07-03 - Goal 24 W1 Allegro Protected Affinity Replay Producer
+
+Result: source-only protected order-affinity replay producer implemented. IPS chain: Vision -> Allegro marketplace purchase history can feed related-product evidence without leaking buyer/address/payment/provider data; Goal Impact -> the temporary `/tmp` affinity export has a durable Allegro-owned source path; System -> Allegro owns local order projection and replay producer while Marketing/Catalog own aggregation/persistence; Feature -> `GET /internal/allegro/order-affinity/replay-candidates`; Task -> emit bounded marketplace replay envelopes for paid `READY_FOR_PROCESSING` multi-Catalog-product orders; Execution Plan -> source/test/docs only, no deploy or data mutation; Coding Prompt -> hash local marketplace order refs and emit only Catalog product item snapshots; Code -> orders controller/service/spec; Validation -> focused orders service spec, service build, and diff check.
+
 ## 2026-07-03 - Buyer Auth Ownership Contract Audit
 
 Result: documentation-only audit completed after the buyer-cabinet gap plan. Auth provides canonical user identity (`sub`, `email`, profile, checkout wallet), but current Allegro source does not define an approved ownership rule from Auth identity to `AllegroOrder.buyerId`, `buyerEmail`, or `buyerLogin`.
@@ -18,10 +26,6 @@ Blockers remain:
 - `[MISSING: buyer-safe API response contract and isolation tests.]`
 
 Next action: product/Auth/security owner must approve one ownership model before buyer-cabinet API/UI implementation.
-
-# Allegro Service Orchestrator Status
-
-Updated: 2026-07-02
 
 ## 2026-07-02 - A2 Cabinet Order Stats And Delivery Admin Summary
 

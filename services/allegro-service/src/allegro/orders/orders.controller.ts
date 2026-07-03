@@ -5,10 +5,13 @@
 import {
   Controller,
   Get,
+  Headers,
   Param,
   Query,
+  UnauthorizedException,
   UseGuards,
 } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { OrdersService } from './orders.service';
 import { JwtAuthGuard } from '@allegro/shared';
 
@@ -52,3 +55,33 @@ export class OrdersController {
   }
 }
 
+@Controller('internal/allegro/order-affinity')
+export class InternalOrderAffinityController {
+  constructor(
+    private readonly ordersService: OrdersService,
+    private readonly configService: ConfigService,
+  ) {}
+
+  @Get('replay-candidates')
+  async getReplayCandidates(
+    @Query() query: any,
+    @Headers('x-internal-service-token') token?: string,
+    @Headers('x-service-name') serviceName?: string,
+  ): Promise<{ success: boolean; data: any }> {
+    this.assertMarketingService(token, serviceName);
+    const data = await this.ordersService.getOrderAffinityReplayCandidates(query);
+    return { success: true, data };
+  }
+
+  private assertMarketingService(token?: string, serviceName?: string): void {
+    const expected = (
+      this.configService.get<string>('ALLEGRO_INTERNAL_SERVICE_TOKEN')
+      || this.configService.get<string>('INTERNAL_SERVICE_TOKEN')
+      || ''
+    ).trim();
+    const supplied = String(token || '').replace(/^Bearer\s+/i, '').trim();
+    if (!expected || !supplied || supplied !== expected || serviceName !== 'marketing-microservice') {
+      throw new UnauthorizedException('internal_service_auth_required');
+    }
+  }
+}

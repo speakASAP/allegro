@@ -10,6 +10,7 @@ import { AllegroApiService } from '../allegro-api.service';
 import { AllegroForwardingOffer, ForwardedOrderPayload, buildOrderForwardingPayload, getAllegroLineOfferIds } from './order-forwarding.mapper';
 
 export const ALLEGRO_ORDER_FORWARDING_CONFIRMATION = 'ALLEGRO_ORDER_FORWARDING_TO_ORDERS_MICROSERVICE';
+export const ALLEGRO_ORDER_AFFINITY_REPLAY_CONTRACT = 'marketplace.order_affinity_candidate.v1';
 
 const ORDER_CREATE_CONTRACT_VERSION = 'orders.create.v1';
 const DEFAULT_CHANNEL_ACCOUNT_ID = 'default';
@@ -187,6 +188,66 @@ export type SyncOrdersFromAllegroOptions = {
   forwardToOrdersMicroservice?: boolean;
   confirmForwarding?: string;
 };
+
+export type OrderAffinityReplayQuery = {
+  from?: string;
+  to?: string;
+  limit?: string | number;
+  cursor?: string;
+  dryRun?: string | boolean;
+};
+
+function positiveInteger(value: any, fallback: number, max: number): number {
+  const parsed = Number.parseInt(String(value ?? ''), 10);
+  if (!Number.isInteger(parsed) || parsed <= 0) return fallback;
+  return Math.min(parsed, max);
+}
+
+function isoOrNull(value: any): string | null {
+  const parsed = parseDate(value);
+  return parsed ? parsed.toISOString() : null;
+}
+
+function decimalToNumber(value: any, fallback = 0): number {
+  if (value && typeof value === 'object' && typeof value.toNumber === 'function') {
+    return value.toNumber();
+  }
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : fallback;
+}
+
+function hashedReplayRef(value: string): string {
+  return createHash('sha256').update(value).digest('hex').slice(0, 32);
+}
+
+function buildOrderAffinityReplayEvent(order: any): any | null {
+  const safeRef = hashedReplayRef(String(order.allegroOrderId || order.id));
+  const mappedItems = (Array.isArray(order.lineItems) ? order.lineItems : [])
+    .filter((lineItem) => normalizeReadModelString(lineItem.catalogProductId))
+    .map((lineItem) => ({
+      productId: normalizeReadModelString(lineItem.catalogProductId),
+      ...(normalizeReadModelString(lineItem.allegroOfferExternalId) ? { sku: normalizeReadModelString(lineItem.allegroOfferExternalId) } : {}),
+      quantity: Math.max(1, Number.parseInt(String(lineItem.quantity || 1), 10) || 1),
+      unitPrice: decimalToNumber(lineItem.price),
+      totalPrice: decimalToNumber(lineItem.totalPrice),
+    }));
+  const distinctProductIds = new Set(mappedItems.map((item) => item.productId));
+  if (distinctProductIds.size < 2) return null;
+  const occurredAt = order.paidAt || order.orderDate || order.createdAt || new Date();
+  return {
+    type: ALLEGRO_ORDER_AFFINITY_REPLAY_CONTRACT,
+    eventVersion: 1,
+    eventId: `allegro.order-affinity:${safeRef}`,
+    occurredAt: occurredAt instanceof Date ? occurredAt.toISOString() : String(occurredAt),
+    source: 'allegro-service',
+    payload: {
+      orderId: `allegro-replay:${safeRef}`,
+      channel: 'allegro',
+      currency: normalizeReadModelString(order.currency) || 'PLN',
+      items: mappedItems,
+    },
+  };
+}
 
 function resolveOrderForwardingEnabled(options: SyncOrdersFromAllegroOptions): boolean {
   if (!options.forwardToOrdersMicroservice) {
@@ -413,6 +474,72 @@ export class OrdersService {
       reason: null,
       forwardingAttempt,
       source: 'orders-microservice',
+    };
+  }
+
+  async getOrderAffinityReplayCandidates(query: OrderAffinityReplayQuery = {}): Promise<any> {
+    const limit = positiveInteger(query.limit, 50, 200);
+    const fetchLimit = Math.min(limit * 5, 1000);
+    const orderDate: any = {};
+    const from = isoOrNull(query.from);
+    const to = isoOrNull(query.to);
+    if (from) orderDate.gte = new Date(from);
+    if (to) orderDate.lte = new Date(to);
+    const where: any = {
+      status: 'READY_FOR_PROCESSING',
+      OR: [
+        { paymentStatus: 'PAID' },
+        { paidAt: { not: null } },
+      ],
+      ...(Object.keys(orderDate).length > 0 ? { orderDate } : {}),
+    };
+    const rows = await this.prisma.allegroOrder.findMany({
+      where,
+      take: fetchLimit,
+      orderBy: { orderDate: 'asc' },
+      select: {
+        id: true,
+        allegroOrderId: true,
+        status: true,
+        paymentStatus: true,
+        paidAt: true,
+        orderDate: true,
+        currency: true,
+        createdAt: true,
+        lineItems: {
+          orderBy: { createdAt: 'asc' },
+          select: {
+            catalogProductId: true,
+            allegroOfferExternalId: true,
+            quantity: true,
+            price: true,
+            totalPrice: true,
+            currency: true,
+          },
+        },
+      },
+    });
+    const events = rows
+      .map((order) => buildOrderAffinityReplayEvent(order))
+      .filter((event): event is Record<string, unknown> => Boolean(event))
+      .slice(0, limit);
+    return {
+      sourceOwner: 'allegro-service',
+      consumerOwner: 'marketing-microservice',
+      contract: ALLEGRO_ORDER_AFFINITY_REPLAY_CONTRACT,
+      channel: 'allegro',
+      filters: {
+        from,
+        to,
+        limit,
+        cursor: query.cursor || null,
+        dryRun: query.dryRun === true || query.dryRun === 'true',
+      },
+      cursorBefore: query.cursor || null,
+      cursorAfter: null,
+      count: events.length,
+      events,
+      skippedRecords: Math.max(0, rows.length - events.length),
     };
   }
 
