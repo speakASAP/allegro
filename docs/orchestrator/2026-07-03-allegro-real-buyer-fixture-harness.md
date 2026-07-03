@@ -13,7 +13,7 @@ Status: source-prepared, approval-gated
 - Execution Plan: use `allegro_orders.buyerAuthSubject` for ownership proof; insert one synthetic order and one synthetic line item; delete only rows whose external id starts with the guarded fixture prefix.
 - Coding Prompt: no token output, no raw Auth subject output, no raw row id output, no production row mutation without explicit confirm.
 - Code: `scripts/manage-allegro-real-buyer-fixture.js` and package script `fixture:real-buyer-cabinet`.
-- Validation: node syntax check and default no-mutation script execution.
+- Validation: node syntax check, default no-mutation script execution, and approved-mode missing-DB gate check. Runtime create/cleanup uses the host `psql` binary instead of a Node `pg` module.
 
 ## Default Mode
 
@@ -25,6 +25,10 @@ Expected result:
 
 - `status=approval_required_no_db_mutation`
 - no DB connection, live API call, deploy, provider call, Orders call, or production mutation.
+
+## Runtime Dependency
+
+Approved create/cleanup mode requires the host `psql` binary. The connection string is supplied through environment or file and passed through process environment, not printed by the script.
 
 ## Approved Create Mode
 

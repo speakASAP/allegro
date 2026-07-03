@@ -2,6 +2,7 @@
 "use strict";
 
 const crypto = require("crypto");
+const { execFileSync } = require("child_process");
 const fs = require("fs");
 
 const REQUIRED_CREATE_CONFIRM = "CREATE_SYNTHETIC_BUYER_FIXTURE";
@@ -31,18 +32,52 @@ function assertSafeFixtureKey(value) {
   }
 }
 
-async function createFixture(client, subject) {
+function sqlLiteral(value) {
+  return `'${String(value).replace(/'/g, "''")}'`;
+}
+
+function jsonLiteral(value) {
+  return `${sqlLiteral(JSON.stringify(value))}::jsonb`;
+}
+
+function runPsql(databaseUrl, sql) {
+  try {
+    return execFileSync("psql", ["-v", "ON_ERROR_STOP=1", "-At"], {
+      input: sql,
+      encoding: "utf8",
+      env: {
+        ...process.env,
+        PGDATABASE: databaseUrl,
+      },
+      stdio: ["pipe", "pipe", "pipe"],
+    }).trim();
+  } catch {
+    throw new Error("psql_execution_failed");
+  }
+}
+
+function assertSafeSubject(subject) {
+  if (!/^[a-zA-Z0-9._:@-]{1,255}$/.test(subject)) {
+    throw new Error("unsafe_fixture_auth_subject");
+  }
+}
+
+function createFixture(databaseUrl, subject) {
   const orderId = crypto.randomUUID();
   const lineItemId = crypto.randomUUID();
   const suffix = crypto.randomUUID();
   const externalOrderId = `${fixturePrefix}-${suffix}`;
   const externalLineId = `${externalOrderId}-line-1`;
-  const now = new Date();
+  const now = new Date().toISOString();
+  assertSafeFixtureKey(externalOrderId);
+  assertSafeFixtureKey(externalLineId.replace(/-line-1$/, ""));
+  assertSafeSubject(subject);
 
-  await client.query("begin");
-  try {
-    await client.query(
-      `insert into allegro_orders (
+  runPsql(
+    databaseUrl,
+    `
+      begin;
+      insert into allegro_orders (
         id,
         "allegroOrderId",
         "buyerId",
@@ -69,12 +104,12 @@ async function createFixture(client, subject) {
         "createdAt",
         "updatedAt"
       ) values (
-        $1::uuid,
-        $2,
-        $3,
-        $4,
-        $5,
-        $6,
+        ${sqlLiteral(orderId)}::uuid,
+        ${sqlLiteral(externalOrderId)},
+        'synthetic-buyer',
+        'synthetic-buyer@example.invalid',
+        'synthetic-buyer',
+        ${sqlLiteral(subject)},
         1,
         1.00,
         1.00,
@@ -84,36 +119,22 @@ async function createFixture(client, subject) {
         'PAID',
         'NEW',
         'Synthetic pickup',
-        $7::jsonb,
+        ${jsonLiteral({ city: "Synthetic", countryCode: "CZ", redaction: "fixture" })},
         'SYNTHETIC',
-        $8,
+        ${sqlLiteral(now)}::timestamp,
         'allegro-cz',
         'synthetic-fixture-v1',
         false,
-        $9::jsonb,
-        $8,
-        $8,
-        $8
-      )`,
-      [
-        orderId,
-        externalOrderId,
-        "synthetic-buyer",
-        "synthetic-buyer@example.invalid",
-        "synthetic-buyer",
-        subject,
-        JSON.stringify({ city: "Synthetic", countryCode: "CZ", redaction: "fixture" }),
-        now,
-        JSON.stringify({
+        ${jsonLiteral({
           classification: "synthetic",
           fixturePrefix,
           externalOrderHash: shortHash(externalOrderId),
-        }),
-      ],
-    );
-
-    await client.query(
-      `insert into allegro_order_line_items (
+        })},
+        ${sqlLiteral(now)}::timestamp,
+        ${sqlLiteral(now)}::timestamp,
+        ${sqlLiteral(now)}::timestamp
+      );
+      insert into allegro_order_line_items (
         id,
         "orderId",
         "allegroLineItemId",
@@ -128,35 +149,23 @@ async function createFixture(client, subject) {
         "createdAt",
         "updatedAt"
       ) values (
-        $1::uuid,
-        $2::uuid,
-        $3,
-        $4,
+        ${sqlLiteral(lineItemId)}::uuid,
+        ${sqlLiteral(orderId)}::uuid,
+        ${sqlLiteral(externalLineId)},
+        'synthetic-offer',
         'Synthetic buyer smoke item',
         1,
         1.00,
         1.00,
         'PLN',
-        $5::jsonb,
-        $6,
-        $6,
-        $6
-      )`,
-      [
-        lineItemId,
-        orderId,
-        externalLineId,
-        "synthetic-offer",
-        JSON.stringify({ classification: "synthetic", lineHash: shortHash(externalLineId) }),
-        now,
-      ],
-    );
-
-    await client.query("commit");
-  } catch (error) {
-    await client.query("rollback");
-    throw error;
-  }
+        ${jsonLiteral({ classification: "synthetic", lineHash: shortHash(externalLineId) })},
+        ${sqlLiteral(now)}::timestamp,
+        ${sqlLiteral(now)}::timestamp,
+        ${sqlLiteral(now)}::timestamp
+      );
+      commit;
+    `,
+  );
 
   console.log("fixture_created=true");
   console.log(`fixture_order_hash=${shortHash(orderId)}`);
@@ -164,18 +173,22 @@ async function createFixture(client, subject) {
   console.log(`fixture_subject_hash=${shortHash(subject)}`);
 }
 
-async function cleanupFixtures(client) {
-  const result = await client.query(
-    `delete from allegro_orders
+function cleanupFixtures(databaseUrl) {
+  const output = runPsql(
+    databaseUrl,
+    `
+      delete from allegro_orders
       where "allegroOrderId" like $1
-      returning id, "allegroOrderId"`,
-    [`${fixturePrefix}-%`],
+      returning id::text || '|' || "allegroOrderId";
+    `.replace("$1", sqlLiteral(`${fixturePrefix}-%`)),
   );
 
-  console.log(`fixture_cleanup_deleted=${result.rowCount}`);
-  for (const row of result.rows) {
-    console.log(`deleted_order_hash=${shortHash(row.id)}`);
-    console.log(`deleted_external_hash=${shortHash(row.allegroOrderId)}`);
+  const rows = output ? output.split("\n").filter(Boolean) : [];
+  console.log(`fixture_cleanup_deleted=${rows.length}`);
+  for (const row of rows) {
+    const [id, externalId] = row.split("|");
+    console.log(`deleted_order_hash=${shortHash(id)}`);
+    console.log(`deleted_external_hash=${shortHash(externalId)}`);
   }
 }
 
@@ -190,44 +203,36 @@ async function main() {
     process.exit(0);
   }
 
-  const { Client } = require("pg");
   const databaseUrl = readRequiredSecret("ALLEGRO_BUYER_FIXTURE_DATABASE_URL", "ALLEGRO_BUYER_FIXTURE_DATABASE_URL_FILE");
   if (!databaseUrl) {
     throw new Error("missing_fixture_database_url");
   }
 
-  const client = new Client({ connectionString: databaseUrl });
-  await client.connect();
-
-  try {
-    if (mode === "create") {
-      if (process.env.ALLEGRO_BUYER_FIXTURE_CONFIRM !== REQUIRED_CREATE_CONFIRM) {
-        throw new Error(`missing_confirm:${REQUIRED_CREATE_CONFIRM}`);
-      }
-
-      const subject = readRequiredSecret("ALLEGRO_BUYER_FIXTURE_AUTH_SUBJECT", "ALLEGRO_BUYER_FIXTURE_AUTH_SUBJECT_FILE");
-      if (!subject) {
-        throw new Error("missing_fixture_auth_subject");
-      }
-
-      await createFixture(client, subject);
-      return;
+  if (mode === "create") {
+    if (process.env.ALLEGRO_BUYER_FIXTURE_CONFIRM !== REQUIRED_CREATE_CONFIRM) {
+      throw new Error(`missing_confirm:${REQUIRED_CREATE_CONFIRM}`);
     }
 
-    if (mode === "cleanup") {
-      if (process.env.ALLEGRO_BUYER_FIXTURE_CONFIRM !== REQUIRED_CLEANUP_CONFIRM) {
-        throw new Error(`missing_confirm:${REQUIRED_CLEANUP_CONFIRM}`);
-      }
-
-      assertSafeFixtureKey(`${fixturePrefix}-cleanup`);
-      await cleanupFixtures(client);
-      return;
+    const subject = readRequiredSecret("ALLEGRO_BUYER_FIXTURE_AUTH_SUBJECT", "ALLEGRO_BUYER_FIXTURE_AUTH_SUBJECT_FILE");
+    if (!subject) {
+      throw new Error("missing_fixture_auth_subject");
     }
 
-    throw new Error(`unsupported_fixture_mode:${mode}`);
-  } finally {
-    await client.end();
+    createFixture(databaseUrl, subject);
+    return;
   }
+
+  if (mode === "cleanup") {
+    if (process.env.ALLEGRO_BUYER_FIXTURE_CONFIRM !== REQUIRED_CLEANUP_CONFIRM) {
+      throw new Error(`missing_confirm:${REQUIRED_CLEANUP_CONFIRM}`);
+    }
+
+    assertSafeFixtureKey(`${fixturePrefix}-cleanup`);
+    cleanupFixtures(databaseUrl);
+    return;
+  }
+
+  throw new Error(`unsupported_fixture_mode:${mode}`);
 }
 
 main().catch((error) => {
