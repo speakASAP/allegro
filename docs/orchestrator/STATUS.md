@@ -1,3 +1,16 @@
+## 2026-07-03 - Synthetic RETURNED Provider Fixture Proved Return Lifecycle
+
+Result: the approved synthetic provider fixture chain continued after `DELIVERED`. With the existing sanitized Allegro shipment correlation now in Warehouse status `delivered`, a second synthetic `allegro.shipment_status_snapshot.v1` with `latestStatus=RETURNED` was posted from the live Allegro pod using `WAREHOUSE_INTERNAL_SERVICE_TOKEN`. Warehouse returned HTTP 201 with `observationDecision=accepted`, `normalizedWarehouseStatus=returned`, `statusMutationApplied=true`, and fulfillment status `returned`. Orders accepted the Warehouse callback and moved lifecycle from `received` to `returned`.
+
+IPS chain: Vision -> provider return events update customer/admin order lifecycle before real marketplace traffic exists; Goal Impact -> pre-customer readiness for returned provider status is proven synthetically; System -> Allegro owns sanitized provider fixture handoff, Warehouse owns status intake/mutation, Orders owns lifecycle projection; Feature -> synthetic provider return fixture; Task -> prove `RETURNED -> returned -> returned lifecycle`; Execution Plan -> temporary pod helpers only, no deploy/provider write/raw tracking reveal; Coding Prompt -> no token values, raw provider payloads, raw tracking numbers, raw waybills, raw account/order ids, customer PII, screenshots, raw DOM, or runtime secret changes; Validation -> Warehouse HTTP 201 accepted/returned, Orders audit resulting lifecycle `returned`, Orders verifier evidence.
+
+Remaining gates:
+
+- [PROVEN: synthetic provider status `RETURNED` updates Warehouse to `returned` and Orders lifecycle to `returned`.]
+- [BLOCKED: synthetic `ISSUE/not_delivered` runtime proof needs a fresh `in_delivery` fixture because the current fulfillment is now terminal `returned`.]
+- [FUTURE: real Allegro.cz customer/provider shipment evidence when marketplace traffic exists.]
+- [MISSING: optional future audited full-tracking reveal contract if product/security approves raw tracking visibility.]
+
 ## 2026-07-03 - Delivered Shipment Evidence Reconciled From Orders/Warehouse
 
 Result: Orders/Warehouse evidence now closes the pre-customer non-UNKNOWN shipment movement gate through an approved sanitized `DELIVERED` fixture and aggregate live readback. Orders commit `bfccd54` records that the existing sanitized Allegro shipment correlation was used to build a redacted `DELIVERED` snapshot with hashed provider identity fields only; the live Allegro pod posted it to Warehouse with the dedicated `WAREHOUSE_INTERNAL_SERVICE_TOKEN`; Warehouse accepted it with HTTP 201, `statusMutationApplied=true`, `observationDecision=accepted`, `normalizedWarehouseStatus=delivered`, and fulfillment status `delivered`; Orders received the Warehouse callback and moved the central lifecycle to `received`. Follow-up aggregate readback showed Warehouse provider observations by class as `DELIVERED -> delivered -> accepted: 1`, `IN_TRANSIT -> in_delivery -> accepted: 1`, and `UNKNOWN -> noop -> accepted: 1`, with Orders showing one `delivered` order and zero shipment-table rows. No token values, raw provider payloads, raw tracking numbers, raw waybills, raw account/order ids, customer PII, screenshots, raw DOM, provider write, deployment, runtime secret change, or credential material movement was used or printed in this reconciliation.
