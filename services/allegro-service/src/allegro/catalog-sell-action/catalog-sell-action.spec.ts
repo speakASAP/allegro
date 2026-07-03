@@ -37,6 +37,7 @@ import { strict as assert } from 'assert';
           const catalogClient = {
             getProductById: async (catalogProductId: string) => ({
               id: catalogProductId,
+              ...(overrides.catalogProduct || {}),
               sku: 'SKU-1',
               title: 'Synthetic catalog title',
               brand: 'Synthetic brand',
@@ -176,6 +177,72 @@ import { strict as assert } from 'assert';
             (error: any) => error.getStatus?.() === 503 && error.getResponse?.().code === 'CATALOG_QUALITY_PREFLIGHT_UNAVAILABLE',
           );
           assert.equal(createdOffers.length, 0);
+        }
+
+
+        async function testPrepareRejectsCatalogBundleBeforeDraftCreation() {
+          const catalogQualityPreflight = {
+            policyId: 'catalog.bundle_publication_source.v1',
+            productId: 'bundle-3333',
+            canActivate: true,
+            canPublish: true,
+            blockingIssues: [],
+            blockingMissingFields: [],
+            optionalOpportunities: [],
+            nextAction: 'resolve_allegro_bundle_publication_policy',
+            target: { type: 'bundle', contract: 'catalog.bundle.v1' },
+          };
+          const { service, createdOffers } = createHarness({ catalogQualityPreflight });
+
+          await assert.rejects(
+            () => service.prepare({ catalogProductId: 'bundle-3333' }, 'user-1'),
+            (error: any) => error.getStatus?.() === 409 && error.getResponse?.().code === 'CATALOG_BUNDLE_PUBLICATION_BLOCKED',
+          );
+          assert.equal(createdOffers.length, 0);
+        }
+
+        async function testProductStatusSurfacesCatalogBundlePublicationBlocker() {
+          const existingDraft = {
+            id: 'existing-offer',
+            accountId: '22222222-2222-2222-2222-222222222222',
+            catalogProductId: 'bundle-3333',
+            title: 'Existing bundle draft',
+            categoryId: 'cat-123',
+            price: 109,
+            currency: 'PLN',
+            quantity: 5,
+            publicationStatus: 'INACTIVE',
+            status: 'DRAFT',
+            updatedAt: '2026-06-19T00:00:00Z',
+          };
+          const catalogQualityPreflight = {
+            policyId: 'catalog.bundle_publication_source.v1',
+            productId: 'bundle-3333',
+            canActivate: true,
+            canPublish: true,
+            blockingIssues: [],
+            blockingMissingFields: [],
+            optionalOpportunities: [],
+            nextAction: 'resolve_allegro_bundle_publication_policy',
+            target: { type: 'bundle', contract: 'catalog.bundle.v1' },
+          };
+          const { service } = createHarness({
+            existingDraft,
+            catalogQualityPreflight,
+            attempts: [{
+              id: 'attempt-1',
+              status: 'PREPARED',
+              catalogProductId: existingDraft.catalogProductId,
+              requestedByUserId: 'user-1',
+            }],
+          });
+
+          const result = await service.getProductStatus(existingDraft.catalogProductId, 'user-1');
+
+          assert.equal(result.nextAction, 'resolve_allegro_bundle_publication_policy');
+          assert.equal(result.canConfirmPublish, false);
+          assert.equal(result.canEditDraft, false);
+          assert.equal(result.catalogBundlePublicationPolicy.contract, 'catalog.bundle.v1');
         }
 
         async function testPrepareUsesCatalogContentPreviewDescriptionWhenMissing() {
@@ -495,6 +562,8 @@ import { strict as assert } from 'assert';
           await testPrepareCreatesNewDraftAndReturnsConfirmAction();
           await testPrepareRejectsCatalogQualityBlockersBeforeDraft();
           await testPrepareFailsClosedWhenCatalogQualityUnavailableBeforeDraft();
+          await testPrepareRejectsCatalogBundleBeforeDraftCreation();
+          await testProductStatusSurfacesCatalogBundlePublicationBlocker();
           await testPrepareUsesCatalogContentPreviewDescriptionWhenMissing();
           await testPrepareKeepsExplicitDescriptionOverCatalogContentPreview();
           await testPrepareCapsRequestedQuantityToWarehouseAvailability();

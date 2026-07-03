@@ -12,7 +12,13 @@ type CatalogProductQualityPreflight = {
   nextAction?: string;
   sourceEndpoint?: string;
   reviewContractEndpoint?: string;
+  target?: { type?: string; contract?: string };
+  productType?: string;
+  contract?: string;
+  resourceType?: string;
 };
+
+const CATALOG_BUNDLE_CONTRACT = 'catalog.bundle.v1';
 
 export type MarketplacePolicyStatus = 'PASS' | 'BLOCK' | 'WARN' | 'RECOMMEND';
 
@@ -64,6 +70,7 @@ export class MarketplacePolicyEngineService {
 
     results.push(await this.evaluateCatalogGate(input));
     results.push(await this.evaluateCatalogProductQualityGate(input));
+    results.push(await this.evaluateCatalogBundlePublicationGate(input));
     results.push(await this.evaluateAccountGate(input, now));
     results.push(this.pass('rate-limit-readiness', 'allegro-service', 'Confirmed attempts enter the governed queue before Allegro execution.', {
       policy: 'Allegro account max 1 request per second unless an approved newer policy exists',
@@ -176,6 +183,88 @@ export class MarketplacePolicyEngineService {
       sourceEndpoint: preflight.sourceEndpoint,
       reviewContractEndpoint: preflight.reviewContractEndpoint,
     };
+  }
+
+  private async evaluateCatalogBundlePublicationGate(input: MarketplacePolicyInput): Promise<MarketplacePolicyGateResult> {
+    if (!input.catalogProductId) {
+      return this.block('catalog-bundle-publication-policy', 'catalog-microservice', 'catalogProductId is required before bundle policy evaluation', 'Attach the offer to a Catalog product before preparing Allegro publication.');
+    }
+
+    try {
+      const preflight = await this.loadCatalogBundlePolicySource(input.catalogProductId);
+      const evidence = this.catalogBundlePublicationEvidence(preflight);
+      if (!this.isCatalogBundleContract(preflight)) {
+        return this.pass('catalog-bundle-publication-policy', 'allegro-service', 'Catalog target is not catalog.bundle.v1.', evidence);
+      }
+
+      return this.block(
+        'catalog-bundle-publication-policy',
+        'allegro-service',
+        'Allegro external marketplace bundle publication is blocked for catalog.bundle.v1.',
+        'Keep the Catalog bundle as an operator suggestion or Catalog-owned aggregate until Allegro has an owner-approved one-listing bundle contract with Catalog, Orders, Warehouse, Payments, and shipping policy.',
+        {
+          ...evidence,
+          allowedUse: 'operator_suggestion_or_local_draft_review_only',
+          forbiddenUse: 'external_allegro_offer_or_listing_publication',
+          missingContracts: [
+            '[MISSING: Allegro one-listing bundle representation contract for catalog.bundle.v1]',
+            '[MISSING: Warehouse bundle reservation/stock allocation contract]',
+            '[MISSING: Orders bundle create-order and line-item decomposition contract]',
+            '[MISSING: Payments/free-shipping/discount total contract]',
+          ],
+        },
+      );
+    } catch (error: any) {
+      return this.block(
+        'catalog-bundle-publication-policy',
+        'catalog-microservice',
+        `catalog bundle publication policy source unavailable: ${error.message}`,
+        'Retry after Catalog readiness is reachable; Allegro must fail closed meanwhile.',
+        {
+          catalogProductId: input.catalogProductId,
+          contract: CATALOG_BUNDLE_CONTRACT,
+          errorCode: error.status || error.response?.status || 'CATALOG_BUNDLE_POLICY_UNAVAILABLE',
+        },
+      );
+    }
+  }
+
+  private async loadCatalogBundlePolicySource(catalogProductId: string): Promise<any> {
+    const getProductQualityPreflight = (this.catalogClient as any).getProductQualityPreflight;
+    if (typeof getProductQualityPreflight === 'function') {
+      return getProductQualityPreflight.call(this.catalogClient, catalogProductId);
+    }
+    return this.catalogClient.getProductById(catalogProductId);
+  }
+
+  private catalogBundlePublicationEvidence(source: any): Record<string, unknown> {
+    return {
+      policyId: 'allegro.catalog_bundle_publication.v1',
+      catalogProductId: source?.productId || source?.id || null,
+      contract: this.catalogContract(source),
+      targetType: source?.target?.type || source?.productType || source?.type || source?.resourceType || null,
+      sourceEndpoint: source?.sourceEndpoint || 'GET /api/products/:id/readiness',
+      evaluatedSource: source?.policyId || source?.contract || 'catalog-product',
+    };
+  }
+
+  private isCatalogBundleContract(source: any): boolean {
+    return this.catalogContract(source) === CATALOG_BUNDLE_CONTRACT
+      || source?.target?.type === 'bundle'
+      || source?.productType === 'bundle'
+      || source?.type === 'bundle';
+  }
+
+  private catalogContract(source: any): string | null {
+    const candidates = [
+      source?.target?.contract,
+      source?.target?.type,
+      source?.contract,
+      source?.resourceType,
+      source?.productType,
+      source?.type,
+    ].map((value) => String(value || '').trim()).filter(Boolean);
+    return candidates.find((value) => value === CATALOG_BUNDLE_CONTRACT) || null;
   }
 
   private async evaluateAccountGate(input: MarketplacePolicyInput, now: Date): Promise<MarketplacePolicyGateResult> {
