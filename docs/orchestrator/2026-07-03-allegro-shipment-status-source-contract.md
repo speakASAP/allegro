@@ -312,7 +312,7 @@ Integration blockers for Warehouse:
 | E3 projection design | complete | Design durable shipment/package/status projection | schema/docs planning | `docs/orchestrator/2026-07-03-allegro-shipment-projection-design.md` | migrations until owner approval | schema handoff | none |
 | E4 Warehouse consumer | blocked | Define Warehouse read consumer contract | Warehouse docs/source in separate owner lane | Warehouse-owned files only | Allegro source edits in same lane | consumer contract | Warehouse owner approval |
 | E5a source mapper/verifier | complete | Implement source-only DTO mapper and synthetic fixture verifier | Allegro shipment mapper/spec | runtime calls, persistence, write endpoints, labels, documents, deploy | tested source-only verifier | E1 |
-| E5b runtime implementation | blocked | Implement read-only client and durable projection | Allegro shipment client/service/tests | write endpoints, labels, documents, deploy | tested source change | E2 and E3 |
+| E5b read-only runtime implementation | complete-source-only | Implement read-only client and sanitized projection service | Allegro shipment client/service/tests | write endpoints, labels, documents, deploy, DB migration, Warehouse apply mode | tested source change | E2 and E3 |
 
 Integration owner: Allegro orchestration thread.
 Validation owner: integration owner until E2/E5 are dispatched.
