@@ -140,6 +140,30 @@ async function testUnknownCatalogQualityPublishabilityBlocksPolicy() {
   assert.equal(qualityGate?.reason?.includes('catalog_quality_preflight_not_publishable'), true);
 }
 
+
+async function testCatalogBundleContractBlocksExternalPublication() {
+  const { service, offer } = createPolicyHarness({
+    catalogQualityPreflight: {
+      policyId: 'catalog.bundle_publication_source.v1',
+      productId: 'bundle-3333',
+      canActivate: true,
+      canPublish: true,
+      blockingIssues: [],
+      blockingMissingFields: [],
+      nextAction: 'resolve_allegro_bundle_publication_policy',
+      sourceEndpoint: 'GET /api/products/:id/readiness',
+      target: { type: 'bundle', contract: 'catalog.bundle.v1' },
+    },
+  });
+  const result = await service.evaluate({ action: 'PUBLISH', offer, accountId: offer.accountId, catalogProductId: offer.catalogProductId, requestedByUserId: 'user-1' });
+  const bundleGate = result.results.find((entry) => entry.gate === 'catalog-bundle-publication-policy');
+
+  assert.equal(bundleGate?.status, 'BLOCK');
+  assert.equal(bundleGate?.ownerService, 'allegro-service');
+  assert.equal(bundleGate?.evidence?.contract, 'catalog.bundle.v1');
+  assert.equal(Array.isArray(bundleGate?.evidence?.missingContracts), true);
+}
+
 async function testCatalogOutageBlocksWithoutSecrets() {
   const { service, offer } = createPolicyHarness({ catalogThrows: true });
   const result = await service.evaluate({ action: 'UPDATE', offer, accountId: offer.accountId, catalogProductId: offer.catalogProductId, requestedByUserId: 'user-1' });
@@ -155,6 +179,7 @@ export async function runPolicyEngineSpec(): Promise<void> {
   await testBlockedPolicyIncludesOwnersAndRemediation();
   await testCatalogQualityBlockersBlockPolicy();
   await testUnknownCatalogQualityPublishabilityBlocksPolicy();
+  await testCatalogBundleContractBlocksExternalPublication();
   await testCatalogOutageBlocksWithoutSecrets();
 }
 

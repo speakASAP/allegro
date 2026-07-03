@@ -5,6 +5,8 @@ import { PublishLifecycleService } from '../publish-lifecycle/publish-lifecycle.
 import { BulkPrepareCatalogSellActionDto, PrepareCatalogSellActionDto } from './catalog-sell-action.dto';
 
 const CATALOG_PRODUCT_QUALITY_POLICY_ID = 'catalog.product_quality.v1';
+const CATALOG_BUNDLE_PUBLICATION_POLICY_ID = 'allegro.catalog_bundle_publication.v1';
+const CATALOG_BUNDLE_CONTRACT = 'catalog.bundle.v1';
 type CatalogProductQualityPreflight = any;
 
 interface CatalogContentPreview {
@@ -63,6 +65,7 @@ export class CatalogSellActionService {
     const catalogAccess = this.catalogAccessOptions(humanAuthorization);
     const catalogProduct = await this.loadCatalogProduct(dto.catalogProductId, catalogAccess);
     const catalogQualityPreflight = await this.assertCatalogQualityAllowsAllegro(catalogProduct.id || dto.catalogProductId, catalogAccess);
+    const catalogBundlePublicationPolicy = this.assertCatalogBundlePublicationAllowsAllegro(catalogProduct, catalogQualityPreflight);
     const accountChoices = await this.listAccountChoices(requestedByUserId);
     const selectedAccountId = dto.accountId || accountChoices[0]?.id || null;
 
@@ -111,6 +114,7 @@ export class CatalogSellActionService {
       categoryChoice: this.buildCategoryChoice(dto, draft, catalogProduct),
       catalogProduct: this.toCatalogSummary(catalogProduct),
       catalogQualityPreflight,
+      catalogBundlePublicationPolicy,
       catalogContentPreview: this.toCatalogContentPreview(this.getAllegroContentPreview(catalogProduct)),
     };
   }
@@ -180,7 +184,9 @@ export class CatalogSellActionService {
       return null;
     });
     const catalogQualityPreflight = await this.loadCatalogQualityPreflightForStatus(catalogProductId, this.catalogAccessOptions(humanAuthorization));
+    const catalogBundlePublicationPolicy = this.toCatalogBundlePublicationPolicy(catalogProduct, catalogQualityPreflight);
     const catalogQualityBlocked = this.catalogQualityBlocks(catalogQualityPreflight);
+    const catalogBundleBlocked = catalogBundlePublicationPolicy.canPublishExternally !== true;
     const draft = await prismaAny.allegroOffer.findFirst({
       where: {
         catalogProductId,
@@ -198,17 +204,26 @@ export class CatalogSellActionService {
 
     return {
       status: attempt?.status || draft?.publicationStatus || null,
-      nextAction: catalogQualityBlocked ? 'resolve_catalog_quality_blockers' : attempt ? this.deriveNextAction(attempt) : draft ? 'confirm_publish' : 'prepare_draft',
+      nextAction: catalogQualityBlocked
+        ? 'resolve_catalog_quality_blockers'
+        : catalogBundleBlocked
+          ? 'resolve_allegro_bundle_publication_policy'
+          : attempt
+            ? this.deriveNextAction(attempt)
+            : draft
+              ? 'confirm_publish'
+              : 'prepare_draft',
       draft: this.toDraftSummary(draft),
       attempt: attempt || null,
       accountChoices,
       categoryChoice: this.buildCategoryChoice({ catalogProductId } as any, draft, catalogProduct),
       catalogProduct: this.toCatalogSummary(catalogProduct),
       catalogQualityPreflight,
+      catalogBundlePublicationPolicy,
       catalogContentPreview: this.toCatalogContentPreview(this.getAllegroContentPreview(catalogProduct)),
       listingUrl: this.toListingUrl(draft),
-      canEditDraft: !catalogQualityBlocked && Boolean(draft && !['ACTIVE'].includes(String(draft.publicationStatus || '').toUpperCase())),
-      canConfirmPublish: !catalogQualityBlocked && Boolean(attempt && attempt.status === 'PREPARED'),
+      canEditDraft: !catalogQualityBlocked && !catalogBundleBlocked && Boolean(draft && !['ACTIVE'].includes(String(draft.publicationStatus || '').toUpperCase())),
+      canConfirmPublish: !catalogQualityBlocked && !catalogBundleBlocked && Boolean(attempt && attempt.status === 'PREPARED'),
     };
   }
 
@@ -220,6 +235,7 @@ export class CatalogSellActionService {
       throw new HttpException('Prepare an Allegro draft before editing the product presentation', HttpStatus.CONFLICT);
     }
     this.ensureCatalogQualityAllowsAllegro(current.catalogQualityPreflight);
+    this.ensureCatalogBundlePublicationAllowsAllegro(current.catalogBundlePublicationPolicy);
 
     const updatePayload = this.toDraftUpdatePayload(dto);
     if (dto.quantity !== undefined) {
@@ -243,16 +259,18 @@ export class CatalogSellActionService {
       categoryChoice: current.categoryChoice || null,
       catalogProduct: current.catalogProduct || null,
       catalogQualityPreflight: current.catalogQualityPreflight || null,
+      catalogBundlePublicationPolicy: current.catalogBundlePublicationPolicy || null,
       catalogContentPreview: current.catalogContentPreview || null,
       listingUrl: this.toListingUrl(draft),
-      canEditDraft: Boolean(draft && !['ACTIVE'].includes(String(draft.publicationStatus || '').toUpperCase())),
-      canConfirmPublish: Boolean(current.attempt && current.attempt.status === 'PREPARED'),
+      canEditDraft: current.catalogBundlePublicationPolicy?.canPublishExternally === true && Boolean(draft && !['ACTIVE'].includes(String(draft.publicationStatus || '').toUpperCase())),
+      canConfirmPublish: current.catalogBundlePublicationPolicy?.canPublishExternally === true && Boolean(current.attempt && current.attempt.status === 'PREPARED'),
     };
   }
 
   async confirmProductPublish(catalogProductId: string, requestedByUserId: string, previewToken: string, humanAuthorization?: string): Promise<any> {
     const current = await this.getProductStatus(catalogProductId, requestedByUserId, humanAuthorization);
     this.ensureCatalogQualityAllowsAllegro(current.catalogQualityPreflight);
+    this.ensureCatalogBundlePublicationAllowsAllegro(current.catalogBundlePublicationPolicy);
     if (!current.attempt?.id) {
       throw new HttpException('Prepare an Allegro publish attempt before confirmation', HttpStatus.CONFLICT);
     }
@@ -263,6 +281,7 @@ export class CatalogSellActionService {
       categoryChoice: current.categoryChoice || null,
       catalogProduct: current.catalogProduct || null,
       catalogQualityPreflight: current.catalogQualityPreflight || null,
+      catalogBundlePublicationPolicy: current.catalogBundlePublicationPolicy || null,
       catalogContentPreview: current.catalogContentPreview || null,
       listingUrl: this.toListingUrl(confirmed.draft),
       canEditDraft: Boolean(confirmed.draft && !['ACTIVE'].includes(String(confirmed.draft.publicationStatus || '').toUpperCase())),
@@ -330,6 +349,104 @@ export class CatalogSellActionService {
 
   private catalogQualityBlocks(preflight: any): boolean {
     return !preflight || preflight.canPublish !== true || (Array.isArray(preflight.blockingIssues) && preflight.blockingIssues.length > 0);
+  }
+
+  private assertCatalogBundlePublicationAllowsAllegro(catalogProduct: any, preflight: any): any {
+    const policy = this.toCatalogBundlePublicationPolicy(catalogProduct, preflight);
+    this.ensureCatalogBundlePublicationAllowsAllegro(policy);
+    return policy;
+  }
+
+  private ensureCatalogBundlePublicationAllowsAllegro(policy: any): void {
+    if (!policy || policy.canPublishExternally === true) {
+      return;
+    }
+
+    throw new HttpException(
+      {
+        code: 'CATALOG_BUNDLE_PUBLICATION_BLOCKED',
+        message: 'Allegro external marketplace bundle publication is blocked for catalog.bundle.v1.',
+        policyId: CATALOG_BUNDLE_PUBLICATION_POLICY_ID,
+        contract: CATALOG_BUNDLE_CONTRACT,
+        catalogProductId: policy.catalogProductId || null,
+        blockers: policy.blockingIssues || [],
+        missingContracts: policy.missingContracts || [],
+        nextAction: 'resolve_allegro_bundle_publication_policy',
+        catalogBundlePublicationPolicy: policy,
+      },
+      HttpStatus.CONFLICT,
+    );
+  }
+
+  private toCatalogBundlePublicationPolicy(catalogProduct: any, preflight: any): any {
+    const source = this.firstDefined(catalogProduct, preflight) || {};
+    const contract = this.catalogContract(source, catalogProduct, preflight);
+    const isBundle = contract === CATALOG_BUNDLE_CONTRACT
+      || this.catalogTargetType(source, catalogProduct, preflight) === 'bundle';
+    const catalogProductId = catalogProduct?.id || preflight?.productId || source?.productId || source?.id || null;
+
+    if (!isBundle) {
+      return {
+        policyId: CATALOG_BUNDLE_PUBLICATION_POLICY_ID,
+        catalogProductId,
+        contract,
+        canPublishExternally: true,
+        status: 'PASS',
+        allowedUse: 'ordinary_catalog_product_publication',
+      };
+    }
+
+    return {
+      policyId: CATALOG_BUNDLE_PUBLICATION_POLICY_ID,
+      catalogProductId,
+      contract: CATALOG_BUNDLE_CONTRACT,
+      canPublishExternally: false,
+      status: 'BLOCKED',
+      allowedUse: 'operator_suggestion_or_local_draft_review_only',
+      forbiddenUse: 'external_allegro_offer_or_listing_publication',
+      blockingIssues: [{
+        code: 'catalog_bundle_external_publication_not_approved',
+        field: 'catalog.bundle.v1',
+        severity: 'blocking',
+        message: 'Allegro cannot publish a Catalog bundle as one external offer/listing until an owner-approved channel policy and downstream commerce contracts exist.',
+        source: CATALOG_BUNDLE_PUBLICATION_POLICY_ID,
+      }],
+      missingContracts: [
+        '[MISSING: Allegro one-listing bundle representation contract for catalog.bundle.v1]',
+        '[MISSING: Warehouse bundle reservation/stock allocation contract]',
+        '[MISSING: Orders bundle create-order and line-item decomposition contract]',
+        '[MISSING: Payments/free-shipping/discount total contract]',
+      ],
+      nextAction: 'resolve_allegro_bundle_publication_policy',
+    };
+  }
+
+  private catalogContract(...sources: any[]): string | null {
+    for (const source of sources) {
+      const candidates = [
+        source?.target?.contract,
+        source?.contract,
+        source?.resourceType,
+        source?.productType,
+        source?.type,
+      ];
+      const match = candidates.map((value) => String(value || '').trim()).find((value) => value === CATALOG_BUNDLE_CONTRACT);
+      if (match) return match;
+    }
+    return null;
+  }
+
+  private catalogTargetType(...sources: any[]): string | null {
+    for (const source of sources) {
+      const candidates = [source?.target?.type, source?.productType, source?.type];
+      const match = candidates.map((value) => String(value || '').trim().toLowerCase()).find(Boolean);
+      if (match) return match;
+    }
+    return null;
+  }
+
+  private firstDefined(...sources: any[]): any {
+    return sources.find((source) => source && typeof source === 'object') || null;
   }
 
   private unavailableCatalogQualityPreflight(catalogProductId: string, error: any): any {
