@@ -63,6 +63,11 @@ spec:
                   key: ALLEGRO_INTERNAL_SERVICE_TOKEN
             - name: ALLEGRO_ORDER_FORWARDING_WAREHOUSE_ID
               value: "c0de0000-0000-4000-8000-000000000013"
+            - name: SHIPMENT_CORRELATION_DEAD_LETTER_DIR
+              value: "/var/lib/allegro-service/shipment-correlation-dead-letter"
+          volumeMounts:
+            - name: shipment-correlation-dead-letter
+              mountPath: /var/lib/allegro-service/shipment-correlation-dead-letter
           startupProbe:
             httpGet:
               path: /health
@@ -92,3 +97,7 @@ spec:
             limits:
               memory: "512Mi"
               cpu: "500m"
+      volumes:
+        - name: shipment-correlation-dead-letter
+          emptyDir:
+            sizeLimit: "128Mi"

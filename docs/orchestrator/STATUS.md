@@ -1,5 +1,25 @@
 # Allegro Service Orchestrator Status
 
+## 2026-07-03 - Shipment Correlation Dead-Letter Path Source Readiness
+
+Result: source-only readiness patch declared the default shipment correlation dead-letter directory at `/var/lib/allegro-service/shipment-correlation-dead-letter`. No deploy, kubectl apply, migration, secret read, provider call, Warehouse call, or production data read was performed.
+
+IPS chain: Vision -> Allegro shipment correlation failures can be retained without leaking raw provider payloads; Goal Impact -> the new default dead-letter path is explicit in source and Kubernetes manifests before runtime code depends on it; System -> `allegro-service` owns the local shipment correlation dead-letter boundary while Warehouse/Orders remain downstream consumers; Feature -> shipment correlation dead-letter retention path readiness; Task -> inspect source/manifests and declare a writable default path if missing; Execution Plan -> isolated remote worktree, source/manifest/docs only, no deployment; Coding Prompt -> no provider calls, no Warehouse calls, no token output, no production data reads; Code -> `.env.example`, `k8s/configmap.yaml`, `k8s/deployment.yaml`, and `services/allegro-service/Dockerfile`; Validation -> manifest/source inspection, JSON parse for configmap, focused shipment snapshot verifier, service build, and `git diff --check`.
+
+Readiness notes:
+
+- `k8s/deployment.yaml` now mounts `shipment-correlation-dead-letter` at `/var/lib/allegro-service/shipment-correlation-dead-letter` using an `emptyDir` with `128Mi` size limit.
+- `k8s/configmap.yaml` and `.env.example` now expose `SHIPMENT_CORRELATION_DEAD_LETTER_DIR` with the same default path.
+- `services/allegro-service/Dockerfile` now creates the directory in the image for non-Kubernetes/local runs.
+
+Remaining gates:
+
+- `[MISSING: owner-approved durability policy if dead-letter retention must survive pod deletion, eviction, or reschedule; current source declaration uses ephemeral emptyDir storage.]`
+- `[MISSING: shipment correlation dead-letter writer/reader implementation; this patch only declares the path.]`
+- `[MISSING: deploy approval before the runtime pod receives the new mount/env.]`
+
+Next action: implement the disabled-by-default shipment correlation dead-letter writer against `SHIPMENT_CORRELATION_DEAD_LETTER_DIR`, then choose PVC-backed storage if retention must survive pod lifecycle events.
+
 ## 2026-07-03 - Goal 24 Allegro Affinity Replay Producer Hardening
 
 Result: source-only hardening completed for the protected Allegro order-affinity replay producer. The endpoint now returns deterministic window metadata, a bounded effective `windowEnd`, opaque cursor pagination, explicit `completeSnapshot` semantics, and repeatability rules for consumers. Focused tests cover paid/processable filtering, mapped two-product minimum, forbidden-field exclusion, protected access, cursor pagination, and repeatable window metadata. No deploy, Catalog edit, Marketing edit, Orders edit, Kubernetes change, secret read, or live data mutation was performed in this worker.
