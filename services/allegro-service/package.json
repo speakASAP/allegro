@@ -19,7 +19,9 @@
     "verify:warehouse-shipment-correlation": "ts-node src/allegro/shipments/warehouse-shipment-correlation.client.spec.ts",
     "verify:shipment-status-handoff": "ts-node src/allegro/shipments/shipment-status-handoff.service.spec.ts",
     "verify:shipment-status-replay": "ts-node src/scripts/replay-shipment-status-handoff.spec.ts",
-    "replay:shipment-status-handoff": "ts-node src/scripts/replay-shipment-status-handoff.ts"
+    "replay:shipment-status-handoff": "ts-node src/scripts/replay-shipment-status-handoff.ts",
+    "verify:shipment-status-snapshot-export": "ts-node src/scripts/export-shipment-status-snapshots.spec.ts",
+    "export:shipment-status-snapshots": "ts-node src/scripts/export-shipment-status-snapshots.ts"
   },
   "dependencies": {
     "@allegro/shared": "file:../../shared",
