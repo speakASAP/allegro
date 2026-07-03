@@ -398,9 +398,10 @@ model AllegroOrder {
   catalogProductId String? @db.Uuid // Product ID from catalog-microservice (no FK constraint)
 
   // Order details
-  buyerId    String? @db.VarChar(100)
-  buyerEmail String? @db.VarChar(255)
-  buyerLogin String? @db.VarChar(255)
+  buyerId          String? @db.VarChar(100)
+  buyerEmail       String? @db.VarChar(255)
+  buyerLogin       String? @db.VarChar(255)
+  buyerAuthSubject String? @db.VarChar(255)
 
   // Order items
   quantity   Int     @default(1)
@@ -445,6 +446,7 @@ model AllegroOrder {
   @@index([catalogProductId])
   @@index([status])
   @@index([orderDate])
+  @@index([buyerAuthSubject])
   @@index([marketplaceId])
   @@map("allegro_orders")
 }

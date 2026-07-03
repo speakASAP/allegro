@@ -2,6 +2,29 @@
 
 Updated: 2026-07-03
 
+## 2026-07-03 - Buyer Auth Ownership Option 2 Approved
+
+Result: product/Auth/security owner approved Option 2 for the Allegro buyer personal cabinet ownership model via orchestrator instruction `Approved. Option2`. Runtime implementation is now allowed only for buyer orders with explicit Auth subject binding; email-only matching remains forbidden.
+
+IPS chain: Vision -> customer-facing Allegro order cabinet shows only orders proven to belong to the authenticated buyer; Goal Impact -> buyer API/UI work can proceed without exposing imported marketplace rows by email/login; System -> Auth owns human identity and JWT `sub`, Allegro owns marketplace order projection, Orders owns canonical lifecycle snapshots; Feature -> buyer-scoped order cabinet contract; Task -> implement subject-bound read-only list/detail and UI; Execution Plan -> persist or derive an Auth subject binding, add buyer-only APIs and DTOs, keep seller/operator dashboard unchanged, validate isolation before deploy; Coding Prompt -> fail closed for unbound marketplace rows and never authorize by `buyerEmail`; Code -> pending; Validation -> pending implementation tests.
+
+Approved defaults:
+
+- Ownership proof: `AllegroOrder.authUserId`/`buyerAuthSubject` or equivalent Orders `customer.authSubject`/`customer.authUserId` snapshot equals Auth bearer `sub`.
+- Buyer route/API: `/cabinet/orders`, `GET /api/allegro/buyer/orders`, `GET /api/allegro/buyer/orders/:id`.
+- Cross-buyer detail response: 404.
+- Unbound imported marketplace rows: hidden from buyer APIs.
+- Seller/operator `/dashboard/orders`: unchanged.
+
+Remaining implementation gates:
+
+- `[MISSING: implementation source change that persists or derives Auth subject binding for eligible Allegro buyer orders.]`
+- `[MISSING: migration/backfill decision for historical Allegro rows; default is no backfill and no buyer visibility without Auth subject binding.]`
+- `[MISSING: buyer-safe DTO implementation and isolation tests.]`
+- `[MISSING: deploy approval after source validation.]`
+
+Next action: implement source-only buyer API/UI behind the approved Option 2 subject-binding contract, then validate isolation before any deploy.
+
 ## 2026-07-03 - Goal 24 Allegro Affinity Replay Runtime Deploy
 
 Result: deployed on live tag `2c72f6b`, which contains Goal 24 replay merge `40e7f0e`, and validated the protected replay endpoint with aggregate-only output. The endpoint returned HTTP 200, contract `marketplace.order_affinity_candidate.v1`, channel `allegro`, `count=8`, `skippedRecords=92`, and `eventSampleCount=8` from a bounded dry-run sample. No customer, address, payment, provider, token, raw marketplace order id, or raw event payload was printed.
@@ -18,7 +41,7 @@ Result: source-only protected order-affinity replay producer implemented. IPS ch
 
 Result: documentation-only audit completed after the buyer-cabinet gap plan. Auth provides canonical user identity (`sub`, `email`, profile, checkout wallet), but current Allegro source does not define an approved ownership rule from Auth identity to `AllegroOrder.buyerId`, `buyerEmail`, or `buyerLogin`.
 
-Decision: do not implement buyer runtime routes yet, and do not use `Auth.email == AllegroOrder.buyerEmail` as an authorization rule without product/Auth/security approval. Keep `/dashboard/orders` as a seller/workspace surface with central Orders lifecycle polling.
+Decision: Option 2 is now approved for source implementation only when ownership is proven by Auth subject binding. Do not use `Auth.email == AllegroOrder.buyerEmail` as an authorization rule. Keep `/dashboard/orders` as a seller/workspace surface with central Orders lifecycle polling.
 
 Evidence:
 
@@ -28,12 +51,12 @@ Evidence:
 
 Blockers remain:
 
-- `[MISSING: buyer-facing Allegro personal cabinet product requirement.]`
-- `[MISSING: approved Auth-to-Allegro-buyer ownership rule.]`
-- `[MISSING: stable persisted ownership field or verified buyer-link mapping.]`
-- `[MISSING: buyer-safe API response contract and isolation tests.]`
+- `[MISSING: implementation source change that persists or derives Auth subject binding for eligible Allegro buyer orders.]`
+- `[MISSING: migration/backfill decision for historical Allegro rows; default is no backfill and no buyer visibility without Auth subject binding.]`
+- `[MISSING: buyer-safe DTO implementation and isolation tests.]`
+- `[MISSING: deploy approval after source validation.]`
 
-Next action: product/Auth/security owner must approve one ownership model before buyer-cabinet API/UI implementation.
+Next action: implement source-only buyer API/UI behind the approved Option 2 subject-binding contract, then validate isolation before any deploy.
 
 ## 2026-07-02 - A2 Cabinet Order Stats And Delivery Admin Summary
 

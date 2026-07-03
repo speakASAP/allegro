@@ -71,9 +71,9 @@ Result: no runtime change required. `/dashboard/orders` continues polling centra
 
 ### Option 2 - Buyer Cabinet With Explicit Auth Subject Binding
 
-Status: implementable after contract approval.
+Status: approved by product/Auth/security owner on 2026-07-03 via orchestrator instruction: `Approved. Option2`.
 
-Decision: introduce a real buyer cabinet only for orders that contain or can derive an approved Auth subject binding.
+Decision: introduce a real buyer cabinet only for orders that contain or can derive an approved Auth subject binding. Marketplace-imported Allegro rows without that binding remain hidden from buyer APIs.
 
 Required identity rule:
 
@@ -83,11 +83,11 @@ Required identity rule:
 
 Required route/API shape:
 
-- Buyer route: `[MISSING: approved route, suggested /cabinet/orders]`.
+- Buyer route: `/cabinet/orders`.
 - Buyer list API: `GET /api/allegro/buyer/orders`.
 - Buyer detail API: `GET /api/allegro/buyer/orders/:id`.
 - Both endpoints must use Auth bearer identity and apply ownership filtering before returning rows.
-- Cross-buyer access returns 404 or 403 by approved policy.
+- Cross-buyer access returns 404 to avoid confirming another buyer's order exists.
 
 Required buyer-safe DTO:
 
@@ -127,6 +127,17 @@ Choose Option 1 now, or Option 2 if a real buyer cabinet is a product requiremen
 
 Do not choose Option 3 as an engineering default. Email-only matching is not a safe ownership contract for marketplace-imported orders without explicit product/legal acceptance.
 
+## Approved Contract Defaults
+
+The approved Option 2 runtime contract is:
+
+- Ownership proof: `AllegroOrder.authUserId`/`buyerAuthSubject` or an equivalent central Orders `customer.authSubject`/`customer.authUserId` snapshot must equal the Auth bearer `sub`.
+- No email-only authorization: `buyerEmail` can be displayed only when already authorized by subject binding and should not be used as ownership proof.
+- No guest/imported leakage: marketplace-imported orders without Auth subject binding are omitted from buyer list APIs and return 404 on buyer detail APIs.
+- Buyer route/API: `/cabinet/orders`, `GET /api/allegro/buyer/orders`, and `GET /api/allegro/buyer/orders/:id`.
+- Buyer DTO: order display id, date, total/currency, item summary, buyer-safe central lifecycle/payment/fulfillment labels, and approved tracking status only. Exclude raw payloads, addresses, forwarding diagnostics, provider payloads, warehouse internals, admin audit records, and token or secret material.
+- Seller/operator `/dashboard/orders` remains unchanged and keeps workspace ownership semantics.
+
 ## Agent-Ready Implementation Prompt After Approval
 
 Use only after Option 2 is approved:
@@ -137,11 +148,9 @@ You are the Allegro Buyer Cabinet API/UI worker. Preserve Orders as canonical li
 
 ## Remaining Blockers
 
-- `[MISSING: product decision whether Allegro should have buyer self-service order cabinet]`.
-- `[MISSING: approved buyer Auth subject binding source for marketplace-imported Allegro orders]`.
-- `[MISSING: approved buyer route name]`.
-- `[MISSING: approved buyer-safe lifecycle label mapping]`.
-- `[MISSING: approved cross-buyer access response policy, 403 vs 404]`.
+- `[MISSING: implementation source change that persists or derives Auth subject binding for eligible Allegro buyer orders]`.
+- `[MISSING: migration/backfill decision for historical Allegro rows; default is no backfill and no buyer visibility without Auth subject binding]`.
+- `[MISSING: buyer-safe lifecycle label implementation and isolation tests]`.
 
 ## Validation Commands
 

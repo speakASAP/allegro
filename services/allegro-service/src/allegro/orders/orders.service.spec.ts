@@ -222,6 +222,7 @@ function buildLocalOrder(overrides: any = {}) {
     allegroOrderId: 'allegro-order-1',
     buyerEmail: 'buyer@example.invalid',
     buyerLogin: 'buyer-login',
+    buyerAuthSubject: null,
     quantity: 1,
     price: 10,
     totalPrice: 10,
@@ -611,6 +612,73 @@ async function testGetOrderStatisticsReturnsAggregateOrderDeliveryAndCentralCoun
   assert.equal(JSON.stringify(statistics).includes("rawData"), false);
 }
 
+async function testGetBuyerOrdersRequiresAuthSubjectAndReturnsBuyerSafeDto() {
+  const fixture = createServiceFixture([], [], {
+    localOrders: [
+      buildLocalOrder({
+        buyerAuthSubject: 'buyer-auth-subject-1',
+        buyerEmail: 'buyer@example.invalid',
+        buyerLogin: 'buyer-login',
+        deliveryAddress: { city: 'Do not expose' },
+        rawData: { sensitive: true },
+        forwardingAttempts: [buildForwardedAttempt()],
+        lineItems: [
+          { catalogProductId: 'catalog-a', quantity: 1, price: 10, totalPrice: 10, createdAt: new Date('2026-06-26T10:00:03.000Z') },
+        ],
+      }),
+    ],
+    centralLifecycleReads: {
+      'central-order-1': {
+        id: 'central-order-1',
+        status: 'processing',
+        paymentStatus: 'paid',
+        fulfillmentStatus: 'reserved',
+      },
+    },
+  });
+
+  const result = await fixture.service.getBuyerOrders(
+    { page: 1, limit: 25 },
+    { sub: 'buyer-auth-subject-1', roles: ['app:allegro-service:user'] },
+  );
+
+  assert.deepEqual(fixture.captured.orderFindMany.where, { buyerAuthSubject: 'buyer-auth-subject-1' });
+  assert.deepEqual(fixture.captured.orderCount.where, fixture.captured.orderFindMany.where);
+  assert.equal(result.items.length, 1);
+  assert.equal(result.items[0].centralOrderReadModel.state, 'available');
+  assert.equal(result.items[0].items[0].catalogProductId, 'catalog-a');
+  const serialized = JSON.stringify(result);
+  assert.equal(serialized.includes('buyer@example.invalid'), false);
+  assert.equal(serialized.includes('buyer-login'), false);
+  assert.equal(serialized.includes('Do not expose'), false);
+  assert.equal(serialized.includes('rawData'), false);
+  assert.equal(serialized.includes('forwardingAttempts'), false);
+}
+
+async function testGetBuyerOrdersFailClosedWithoutActorSubject() {
+  const fixture = createServiceFixture([], [], {
+    localOrders: [buildLocalOrder({ buyerAuthSubject: 'buyer-auth-subject-1' })],
+  });
+
+  await fixture.service.getBuyerOrders({ page: 1, limit: 25 }, {});
+
+  assert.deepEqual(fixture.captured.orderFindMany.where, { buyerAuthSubject: '__no_allegro_buyer_actor__' });
+}
+
+async function testGetBuyerOrderScopesDetailByAuthSubject() {
+  const fixture = createServiceFixture([], [], {
+    localOrders: [buildLocalOrder({ id: 'local-order-1', buyerAuthSubject: 'buyer-auth-subject-1' })],
+  });
+
+  await fixture.service.getBuyerOrder('local-order-1', { id: 'buyer-auth-subject-1' });
+
+  assert.deepEqual(fixture.captured.orderFindFirst.where, {
+    id: 'local-order-1',
+    buyerAuthSubject: 'buyer-auth-subject-1',
+  });
+  assert.equal(fixture.captured.orderFindUnique, undefined);
+}
+
 
 async function testOrderAffinityReplayCandidatesReturnBoundedMarketplaceEvents() {
   const fixture = createServiceFixture([], [], {
@@ -678,6 +746,9 @@ export async function runOrdersServiceSpec(): Promise<void> {
   await testGetOrderUsesScopedFindFirstForWorkspaceUser();
   await testGetOrdersLeavesAdminReadsUnscoped();
   await testGetOrderStatisticsReturnsAggregateOrderDeliveryAndCentralCountsOnly();
+  await testGetBuyerOrdersRequiresAuthSubjectAndReturnsBuyerSafeDto();
+  await testGetBuyerOrdersFailClosedWithoutActorSubject();
+  await testGetBuyerOrderScopesDetailByAuthSubject();
   await testOrderAffinityReplayCandidatesReturnBoundedMarketplaceEvents();
 }
 

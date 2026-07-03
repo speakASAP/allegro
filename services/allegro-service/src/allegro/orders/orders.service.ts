@@ -26,6 +26,8 @@ type OrdersReadActor = {
   roles?: string[] | null;
 };
 
+type BuyerOrderListResult = { items: any[]; pagination: any };
+
 function normalizeChannelAccountId(channelAccountId?: string | null): string {
   const normalized = channelAccountId?.trim();
   return normalized || DEFAULT_CHANNEL_ACCOUNT_ID;
@@ -176,6 +178,14 @@ function hasAllegroOrderReadAdminRole(actor?: OrdersReadActor | null): boolean {
   return Array.isArray(actor?.roles) && actor.roles.some((role) => ALLEGRO_ORDER_READ_ADMIN_ROLES.has(role));
 }
 
+function requireBuyerSubject(actor?: OrdersReadActor | null): string {
+  const subject = resolveActorUserId(actor);
+  if (!subject) {
+    return '__no_allegro_buyer_actor__';
+  }
+  return subject;
+}
+
 function buildOrderWorkspaceScopeWhere(actor?: OrdersReadActor | null): any {
   if (!actor || hasAllegroOrderReadAdminRole(actor)) {
     return {};
@@ -202,6 +212,40 @@ function mergeOrderWhere(baseWhere: any, scopeWhere: any): any {
     return scopeWhere;
   }
   return { AND: [baseWhere, scopeWhere] };
+}
+
+function buildBuyerOrderWhere(query: any = {}, actor?: OrdersReadActor | null): any {
+  const where: any = { buyerAuthSubject: requireBuyerSubject(actor) };
+  if (query.status) {
+    where.status = query.status;
+  }
+  if (query.paymentStatus) {
+    where.paymentStatus = query.paymentStatus;
+  }
+  return where;
+}
+
+function toBuyerSafeOrderDto(order: any): any {
+  const lineItems = Array.isArray(order.lineItems) ? order.lineItems : [];
+  return {
+    id: order.id,
+    allegroOrderId: order.allegroOrderId,
+    orderedAt: normalizeReadModelDate(order.orderDate || order.createdAt),
+    totalPrice: order.totalPrice,
+    currency: order.currency,
+    status: order.status,
+    paymentStatus: order.paymentStatus,
+    fulfillmentStatus: order.fulfillmentStatus,
+    deliveryMethod: order.deliveryMethod || null,
+    lineItemsCount: order.lineItemsCount ?? lineItems.length,
+    items: lineItems.map((item: any) => ({
+      catalogProductId: item.catalogProductId || null,
+      quantity: item.quantity,
+      price: item.price,
+      totalPrice: item.totalPrice,
+    })),
+    centralOrderReadModel: order.centralOrderReadModel,
+  };
 }
 
 function buildOrderQueryWhere(query: any = {}, actor?: OrdersReadActor | null): any {
@@ -713,7 +757,6 @@ export class OrdersService {
           id: true,
           allegroOrderId: true,
           buyerEmail: true,
-          buyerLogin: true,
           quantity: true,
           price: true,
           totalPrice: true,
@@ -772,6 +815,87 @@ export class OrdersService {
         totalPages: Math.ceil(total / limit),
       },
     };
+  }
+
+  async getBuyerOrders(query: any, actor?: OrdersReadActor | null): Promise<BuyerOrderListResult> {
+    const page = Math.max(1, Number.parseInt(String(query.page || "1"), 10) || 1);
+    const limit = Math.min(100, Math.max(1, Number.parseInt(String(query.limit || "20"), 10) || 20));
+    const skip = (page - 1) * limit;
+    const where = buildBuyerOrderWhere(query, actor);
+
+    const [items, total] = await Promise.all([
+      this.prisma.allegroOrder.findMany({
+        where,
+        skip,
+        take: limit,
+        select: {
+          id: true,
+          allegroOrderId: true,
+          quantity: true,
+          price: true,
+          totalPrice: true,
+          currency: true,
+          status: true,
+          paymentStatus: true,
+          fulfillmentStatus: true,
+          deliveryMethod: true,
+          lineItemsCount: true,
+          orderDate: true,
+          createdAt: true,
+          updatedAt: true,
+          lineItems: {
+            orderBy: { createdAt: 'asc' },
+            select: {
+              catalogProductId: true,
+              quantity: true,
+              price: true,
+              totalPrice: true,
+            },
+          },
+          forwardingAttempts: {
+            orderBy: { attemptedAt: 'desc' },
+            take: 1,
+            select: this.orderForwardingAttemptReadModelSelect(),
+          },
+        },
+        orderBy: { orderDate: 'desc' },
+      }),
+      this.prisma.allegroOrder.count({ where }),
+    ]);
+    const enrichedItems = await this.attachCentralOrderReadModels(items);
+    return {
+      items: enrichedItems.map((order) => toBuyerSafeOrderDto(order)),
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit),
+      },
+    };
+  }
+
+  async getBuyerOrder(id: string, actor?: OrdersReadActor | null): Promise<any> {
+    const where = { id, buyerAuthSubject: requireBuyerSubject(actor) };
+    const order = await this.prisma.allegroOrder.findFirst({
+      where,
+      include: {
+        lineItems: {
+          orderBy: { createdAt: 'asc' },
+        },
+        forwardingAttempts: {
+          orderBy: { attemptedAt: 'desc' },
+          take: 1,
+          select: this.orderForwardingAttemptReadModelSelect(),
+        },
+      },
+    });
+
+    if (!order) {
+      throw new Error(`Order with ID ${id} not found`);
+    }
+
+    const [enrichedOrder] = await this.attachCentralOrderReadModels([order]);
+    return toBuyerSafeOrderDto(enrichedOrder);
   }
 
   /**

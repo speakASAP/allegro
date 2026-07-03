@@ -56,6 +56,25 @@ export class OrdersController {
   }
 }
 
+@Controller('allegro/buyer/orders')
+export class BuyerOrdersController {
+  constructor(private readonly ordersService: OrdersService) {}
+
+  @Get()
+  @UseGuards(JwtAuthGuard)
+  async getBuyerOrders(@Query() query: any, @Req() req: { user?: any }): Promise<{ success: boolean; data: any }> {
+    const result = await this.ordersService.getBuyerOrders(query, req.user || {});
+    return { success: true, data: result };
+  }
+
+  @Get(':id')
+  @UseGuards(JwtAuthGuard)
+  async getBuyerOrder(@Param('id') id: string, @Req() req: { user?: any }): Promise<{ success: boolean; data: any }> {
+    const order = await this.ordersService.getBuyerOrder(id, req.user || {});
+    return { success: true, data: order };
+  }
+}
+
 @Controller('internal/allegro/order-affinity')
 export class InternalOrderAffinityController {
   constructor(
