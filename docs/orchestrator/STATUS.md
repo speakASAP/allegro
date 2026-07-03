@@ -1,3 +1,18 @@
+## 2026-07-03 - Goal 24 Catalog Bundle External Publication Policy Handoff
+
+Result: Allegro-owned handoff for Catalog `catalog.bundle.v1` external publication policy is recorded as fail-closed. Allegro must not publish, queue, regenerate, confirm, mutate, sync, or create one external Allegro offer/listing from a Catalog bundle until a future owner-approved Allegro implementation contract exists. Current allowed use remains operator suggestion, preview, local review evidence, or draft assistance that does not mutate external marketplace offers/listings and does not bypass product-level publication gates.
+
+IPS chain: Vision -> related-product and bundle evidence can inform operators without unsafe external marketplace mutation; Goal Impact -> Catalog Goal 24 can close the Allegro-owned channel policy handoff while preserving downstream commerce blockers; System -> Catalog owns `catalog.bundle.v1`, Allegro owns Allegro marketplace publication policy and fail-closed guards, Orders/Warehouse/Payments/shipping owners retain commerce contracts; Feature -> Allegro Catalog bundle publication policy gate; Task -> resolve `[MISSING: Allegro-owned catalog.bundle.v1 external publication policy handoff]`; Execution Plan -> Allegro docs/status handoff only because source fail-closed gates and validation already exist on `origin/main`; Coding Prompt -> do not invent one-listing bundle support or mutate provider/queue/runtime state; Code -> `docs/validation/2026-07-03-goal24-allegro-bundle-publication-policy.md` and this status entry; Validation -> targeted policy document review, targeted source gate presence check, `git diff --check`, and focused policy/catalog sell-action specs.
+
+State Update:
+
+- `[RESOLVED/NARROWED: Allegro-owned catalog.bundle.v1 external publication policy handoff recorded as fail-closed in docs/validation/2026-07-03-goal24-allegro-bundle-publication-policy.md]`
+- `[MISSING: future owner-approved Allegro one-listing bundle representation contract for catalog.bundle.v1]`
+- `[MISSING: Warehouse bundle reservation/stock allocation contract]`
+- `[MISSING: Orders bundle create-order and line-item decomposition contract]`
+- `[MISSING: Payments/free-shipping/discount total contract]`
+- `[MISSING: owner-approved shipping policy semantics for external marketplace bundles]`
+
 ## 2026-07-03 - Warehouse Service Token Runtime Projection Wired
 
 Result: Allegro deployment source now projects the Auth-issued Warehouse shipment service token from Kubernetes Secret `allegro-service-secret` key `WAREHOUSE_INTERNAL_SERVICE_TOKEN`. This keeps shipment correlation on `WAREHOUSE_SERVICE_TOKEN` / `WAREHOUSE_INTERNAL_SERVICE_TOKEN` only and avoids broad `ALLEGRO_INTERNAL_SERVICE_TOKEN` fallback for shipment posts. Runtime secret value was not printed or committed.
