@@ -1,8 +1,8 @@
 ## 2026-07-03 - Warehouse Service Token Runtime Projection Wired
 
-Result: Allegro deployment source now projects the Auth-issued Warehouse shipment service token from Kubernetes Secret `allegro-warehouse-service-token` key `WAREHOUSE_SERVICE_TOKEN`. This keeps shipment correlation on `WAREHOUSE_SERVICE_TOKEN` / `WAREHOUSE_INTERNAL_SERVICE_TOKEN` only and avoids broad `ALLEGRO_INTERNAL_SERVICE_TOKEN` fallback for shipment posts. Runtime secret value was not printed or committed.
+Result: Allegro deployment source now projects the Auth-issued Warehouse shipment service token from Kubernetes Secret `allegro-service-secret` key `WAREHOUSE_INTERNAL_SERVICE_TOKEN`. This keeps shipment correlation on `WAREHOUSE_SERVICE_TOKEN` / `WAREHOUSE_INTERNAL_SERVICE_TOKEN` only and avoids broad `ALLEGRO_INTERNAL_SERVICE_TOKEN` fallback for shipment posts. Runtime secret value was not printed or committed.
 
-Validation: pending in this cutover lane: focused shipment-correlation verifier, Allegro service build, deploy rollout, and Warehouse auth probe.
+Validation: live rollout is on `localhost:5000/allegro-service:d088104`; runtime env contains `WAREHOUSE_INTERNAL_SERVICE_TOKEN`; Orders runtime evidence verified JWT signature, `internal:allegro-service:service`, absence of Warehouse-admin role, and no-central-order replay skipped with `MISSING_CENTRAL_ORDER_ID` without changing Warehouse aggregate counts.
 
 ## 2026-07-03 - Warehouse Shipment Token Fallback Hardened In Source
 
@@ -10,7 +10,7 @@ Result: Allegro shipment correlation now requires a Warehouse-specific token fro
 
 IPS chain: Vision -> recurring shipment provider ingestion must use least-privilege service identity; Goal Impact -> Allegro no longer relies on broad internal tokens for Warehouse shipment correlation; System -> Auth owns service-token issuance, Allegro owns caller token projection, Warehouse owns endpoint RBAC; Feature -> minimal Warehouse shipment token source; Task -> remove broad fallback token resolution and document runtime gate; Execution Plan -> source/tests/docs only, no secret or runtime mutation; Coding Prompt -> no token values, raw provider payload, tracking value, customer field, DB query, deploy, or provider read; Validation -> `npm run verify:warehouse-shipment-correlation`, build, diff check.
 
-Remaining gate: `[MISSING: Auth-issued Allegro service token projected to Allegro runtime as WAREHOUSE_SERVICE_TOKEN or WAREHOUSE_INTERNAL_SERVICE_TOKEN before deploy/runtime cutover.]`
+Superseded gate: Auth-issued Allegro service token is projected to runtime as `WAREHOUSE_INTERNAL_SERVICE_TOKEN`; remaining gates are optional real provider live-read refresh and future audited full-tracking reveal if product/security approves it.
 
 # Allegro Service Orchestrator Status
 
