@@ -1,5 +1,6 @@
 import 'reflect-metadata';
 import { strict as assert } from 'assert';
+import { InternalOrderAffinityController } from './orders.controller';
 import { ALLEGRO_ORDER_AFFINITY_REPLAY_CONTRACT, ALLEGRO_ORDER_FORWARDING_CONFIRMATION, OrdersService } from './orders.service';
 
 type OfferFixture = {
@@ -32,6 +33,37 @@ function createServiceFixture(
   const forwardingAttempts: any[] = [...(options.forwardingAttempts || [])];
   const captured: any = {};
 
+  const compareValues = (left: any, right: any) => {
+    const leftValue = left instanceof Date ? left.getTime() : left;
+    const rightValue = right instanceof Date ? right.getTime() : right;
+    return { leftValue, rightValue };
+  };
+
+  const matchesCondition = (value: any, condition: any): boolean => {
+    if (condition && typeof condition === "object" && !(condition instanceof Date)) {
+      if (Object.prototype.hasOwnProperty.call(condition, "not")) {
+        return value !== condition.not;
+      }
+      if (Object.prototype.hasOwnProperty.call(condition, "gt")) {
+        const compared = compareValues(value, condition.gt);
+        return compared.leftValue > compared.rightValue;
+      }
+      if (Object.prototype.hasOwnProperty.call(condition, "gte")) {
+        const compared = compareValues(value, condition.gte);
+        return compared.leftValue >= compared.rightValue;
+      }
+      if (Object.prototype.hasOwnProperty.call(condition, "lte")) {
+        const compared = compareValues(value, condition.lte);
+        return compared.leftValue <= compared.rightValue;
+      }
+      return true;
+    }
+    if (value instanceof Date && condition instanceof Date) {
+      return value.getTime() === condition.getTime();
+    }
+    return value === condition;
+  };
+
   const filterRows = (rows: any[], where: any = {}) => rows.filter((row) => Object.entries(where || {}).every(([key, condition]) => {
     if (key === "AND" && Array.isArray(condition)) {
       return condition.every((entry) => filterRows([row], entry).length === 1);
@@ -39,14 +71,7 @@ function createServiceFixture(
     if (key === "OR" && Array.isArray(condition)) {
       return condition.some((entry) => filterRows([row], entry).length === 1);
     }
-    const value = row[key];
-    if (condition && typeof condition === "object" && Object.prototype.hasOwnProperty.call(condition, "not")) {
-      return value !== (condition as any).not;
-    }
-    if (condition && typeof condition === "object") {
-      return true;
-    }
-    return value === condition;
+    return matchesCondition(row[key], condition);
   }));
 
   const groupRows = (rows: any[], field: string, where: any = {}) => {
@@ -761,7 +786,10 @@ async function testOrderAffinityReplayCandidatesReturnBoundedMarketplaceEvents()
         orderDate: new Date('2026-07-03T08:59:00.000Z'),
         currency: 'CZK',
         buyerEmail: 'buyer@example.invalid',
+        buyerLogin: 'buyer-login',
         deliveryAddress: { city: 'Do not expose' },
+        paymentMethod: 'Do not expose provider',
+        rawData: { secret: 'raw marketplace payload' },
         lineItems: [
           { catalogProductId: '11111111-1111-4111-8111-111111111111', allegroOfferExternalId: 'offer-a', quantity: 2, price: 10, totalPrice: 20, createdAt: new Date('2026-07-03T09:00:00.000Z') },
           { catalogProductId: '22222222-2222-4222-8222-222222222222', allegroOfferExternalId: 'offer-b', quantity: 1, price: 5, totalPrice: 5, createdAt: new Date('2026-07-03T09:01:00.000Z') },
@@ -772,20 +800,39 @@ async function testOrderAffinityReplayCandidatesReturnBoundedMarketplaceEvents()
         allegroOrderId: 'single-product-order',
         status: 'READY_FOR_PROCESSING',
         paymentStatus: 'PAID',
+        orderDate: new Date('2026-07-03T09:02:00.000Z'),
         lineItems: [
           { catalogProductId: '11111111-1111-4111-8111-111111111111', quantity: 1, price: 10, totalPrice: 10, createdAt: new Date('2026-07-03T09:02:00.000Z') },
+        ],
+      }),
+      buildLocalOrder({
+        id: 'local-order-3',
+        allegroOrderId: 'unpaid-order',
+        status: 'READY_FOR_PROCESSING',
+        paymentStatus: 'UNPAID',
+        orderDate: new Date('2026-07-03T09:03:00.000Z'),
+        paidAt: null,
+        lineItems: [
+          { catalogProductId: '11111111-1111-4111-8111-111111111111', quantity: 1, price: 10, totalPrice: 10, createdAt: new Date('2026-07-03T09:03:00.000Z') },
+          { catalogProductId: '22222222-2222-4222-8222-222222222222', quantity: 1, price: 5, totalPrice: 5, createdAt: new Date('2026-07-03T09:04:00.000Z') },
         ],
       }),
     ],
   });
 
-  const result = await fixture.service.getOrderAffinityReplayCandidates({ limit: 10, from: '2026-07-01T00:00:00.000Z' });
+  const result = await fixture.service.getOrderAffinityReplayCandidates({ limit: 10, from: '2026-07-01T00:00:00.000Z', to: '2026-07-04T00:00:00.000Z' });
 
   assert.equal(fixture.captured.orderFindMany.where.status, 'READY_FOR_PROCESSING');
-  assert.equal(fixture.captured.orderFindMany.take, 50);
+  assert.equal(fixture.captured.orderFindMany.take, 11);
+  assert.deepEqual(fixture.captured.orderFindMany.orderBy, [{ orderDate: 'asc' }, { id: 'asc' }]);
   assert.equal(result.contract, ALLEGRO_ORDER_AFFINITY_REPLAY_CONTRACT);
   assert.equal(result.sourceOwner, 'allegro-service');
   assert.equal(result.consumerOwner, 'marketing-microservice');
+  assert.equal(result.window.sourceOwner, 'allegro-service');
+  assert.equal(result.window.channel, 'allegro');
+  assert.equal(result.window.windowEnd, '2026-07-04T00:00:00.000Z');
+  assert.equal(result.window.completeSnapshot, true);
+  assert.equal(result.window.repeatability.guaranteed, true);
   assert.equal(result.count, 1);
   assert.equal(result.skippedRecords, 1);
   assert.equal(result.events[0].type, ALLEGRO_ORDER_AFFINITY_REPLAY_CONTRACT);
@@ -795,8 +842,62 @@ async function testOrderAffinityReplayCandidatesReturnBoundedMarketplaceEvents()
   assert.equal(result.events[0].payload.items.length, 2);
   const serialized = JSON.stringify(result);
   assert.equal(serialized.includes('buyer@example.invalid'), false);
+  assert.equal(serialized.includes('buyer-login'), false);
   assert.equal(serialized.includes('Do not expose'), false);
+  assert.equal(serialized.includes('raw marketplace payload'), false);
   assert.equal(serialized.includes('sensitive-marketplace-order-1'), false);
+}
+
+async function testOrderAffinityReplayCandidatesReturnCursorForRepeatablePages() {
+  const firstOrder = buildLocalOrder({
+    id: '00000000-0000-4000-8000-000000000001',
+    allegroOrderId: 'sensitive-page-order-1',
+    orderDate: new Date('2026-07-03T08:00:00.000Z'),
+    lineItems: [
+      { catalogProductId: '11111111-1111-4111-8111-111111111111', quantity: 1, price: 10, totalPrice: 10, createdAt: new Date('2026-07-03T08:00:01.000Z') },
+      { catalogProductId: '22222222-2222-4222-8222-222222222222', quantity: 1, price: 5, totalPrice: 5, createdAt: new Date('2026-07-03T08:00:02.000Z') },
+    ],
+  });
+  const secondOrder = buildLocalOrder({
+    id: '00000000-0000-4000-8000-000000000002',
+    allegroOrderId: 'sensitive-page-order-2',
+    orderDate: new Date('2026-07-03T08:01:00.000Z'),
+    lineItems: firstOrder.lineItems,
+  });
+  const fixture = createServiceFixture([], [], { localOrders: [firstOrder, secondOrder] });
+
+  const firstPage = await fixture.service.getOrderAffinityReplayCandidates({ limit: 1, to: '2026-07-04T00:00:00.000Z' });
+
+  assert.equal(firstPage.count, 1);
+  assert.equal(firstPage.window.completeSnapshot, false);
+  assert.equal(firstPage.window.completionStatus, 'paginated_window');
+  assert.equal(firstPage.page.hasMore, true);
+  assert.equal(typeof firstPage.cursorAfter, 'string');
+
+  await fixture.service.getOrderAffinityReplayCandidates({ limit: 1, to: '2026-07-04T00:00:00.000Z', cursor: firstPage.cursorAfter });
+
+  assert.equal(fixture.captured.orderFindMany.where.AND[1].OR[0].orderDate.gt.toISOString(), '2026-07-03T08:00:00.000Z');
+}
+
+async function testInternalOrderAffinityControllerRequiresMarketingServiceToken() {
+  const fixture = createServiceFixture([], [], { localOrders: [] });
+  const config = {
+    get: (key: string) => key === 'ALLEGRO_INTERNAL_SERVICE_TOKEN' ? 'secret-token' : undefined,
+  };
+  const controller = new InternalOrderAffinityController(fixture.service, config as any);
+
+  await assert.rejects(
+    () => controller.getReplayCandidates({}, undefined, 'marketing-microservice'),
+    (error: any) => error?.getStatus?.() === 401,
+  );
+  await assert.rejects(
+    () => controller.getReplayCandidates({}, 'secret-token', 'orders-microservice'),
+    (error: any) => error?.getStatus?.() === 401,
+  );
+
+  const result = await controller.getReplayCandidates({ limit: 1 }, 'Bearer secret-token', 'marketing-microservice');
+  assert.equal(result.success, true);
+  assert.equal(result.data.sourceOwner, 'allegro-service');
 }
 
 export async function runOrdersServiceSpec(): Promise<void> {
@@ -822,6 +923,8 @@ export async function runOrdersServiceSpec(): Promise<void> {
   await testGetBuyerOrderReturns404ForCrossBuyerOrUnboundRows();
   await testGetOrdersSellerDashboardDoesNotUseBuyerSubjectBinding();
   await testOrderAffinityReplayCandidatesReturnBoundedMarketplaceEvents();
+  await testOrderAffinityReplayCandidatesReturnCursorForRepeatablePages();
+  await testInternalOrderAffinityControllerRequiresMarketingServiceToken();
 }
 
 if (require.main === module) {

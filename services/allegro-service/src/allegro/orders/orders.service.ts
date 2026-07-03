@@ -3,7 +3,7 @@
  */
 
 import { createHash } from 'crypto';
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { CentralOrderLifecycleReadResult, ORDERS_LIFECYCLE_READ_UNAVAILABLE, PrismaService, LoggerService, OrderClientService } from '@allegro/shared';
 import { AllegroApiService } from '../allegro-api.service';
@@ -17,6 +17,8 @@ const DEFAULT_CHANNEL_ACCOUNT_ID = 'default';
 const MISSING_CENTRAL_ORDER_ID_MAPPING = '[MISSING: central Orders id mapping]';
 const MISSING_CENTRAL_FORWARDING_ATTEMPT = '[MISSING: central Orders forwarding attempt]';
 const ALLEGRO_ORDER_READ_ADMIN_ROLES = new Set(['global:superadmin', 'app:allegro-service:admin']);
+const DEFAULT_AFFINITY_REPLAY_LIMIT = 50;
+const MAX_AFFINITY_REPLAY_LIMIT = 200;
 
 type ForwardingAttemptStatus = 'DISABLED' | 'BLOCKED' | 'FORWARDED' | 'FAILED';
 type OrdersReadActor = {
@@ -297,6 +299,43 @@ function isoOrNull(value: any): string | null {
   return parsed ? parsed.toISOString() : null;
 }
 
+type OrderAffinityReplayCursor = { orderDate: string; id: string };
+
+function encodeOrderAffinityReplayCursor(order: any): string {
+  const payload: OrderAffinityReplayCursor = {
+    orderDate: normalizeReadModelDate(order.orderDate || order.createdAt) || new Date(0).toISOString(),
+    id: String(order.id),
+  };
+  return Buffer.from(JSON.stringify(payload), 'utf8').toString('base64url');
+}
+
+function decodeOrderAffinityReplayCursor(cursor?: string | null): OrderAffinityReplayCursor | null {
+  const normalized = normalizeReadModelString(cursor);
+  if (!normalized) return null;
+  try {
+    const parsed = JSON.parse(Buffer.from(normalized, 'base64url').toString('utf8'));
+    const orderDate = isoOrNull(parsed?.orderDate);
+    const id = normalizeReadModelString(parsed?.id);
+    if (!orderDate || !id) {
+      throw new Error('missing cursor fields');
+    }
+    return { orderDate, id };
+  } catch (_error) {
+    throw new BadRequestException('invalid_order_affinity_replay_cursor');
+  }
+}
+
+function buildOrderAffinityCursorWhere(cursor: OrderAffinityReplayCursor | null): any | null {
+  if (!cursor) return null;
+  const orderDate = new Date(cursor.orderDate);
+  return {
+    OR: [
+      { orderDate: { gt: orderDate } },
+      { orderDate, id: { gt: cursor.id } },
+    ],
+  };
+}
+
 function decimalToNumber(value: any, fallback = 0): number {
   if (value && typeof value === 'object' && typeof value.toNumber === 'function') {
     return value.toNumber();
@@ -567,25 +606,28 @@ export class OrdersService {
   }
 
   async getOrderAffinityReplayCandidates(query: OrderAffinityReplayQuery = {}): Promise<any> {
-    const limit = positiveInteger(query.limit, 50, 200);
-    const fetchLimit = Math.min(limit * 5, 1000);
-    const orderDate: any = {};
+    const generatedAt = new Date();
+    const limit = positiveInteger(query.limit, DEFAULT_AFFINITY_REPLAY_LIMIT, MAX_AFFINITY_REPLAY_LIMIT);
     const from = isoOrNull(query.from);
-    const to = isoOrNull(query.to);
+    const to = isoOrNull(query.to) || generatedAt.toISOString();
+    const cursorBefore = normalizeReadModelString(query.cursor);
+    const decodedCursor = decodeOrderAffinityReplayCursor(cursorBefore);
+    const cursorWhere = buildOrderAffinityCursorWhere(decodedCursor);
+    const orderDate: any = { lte: new Date(to) };
     if (from) orderDate.gte = new Date(from);
-    if (to) orderDate.lte = new Date(to);
-    const where: any = {
+    const eligibilityWhere: any = {
       status: 'READY_FOR_PROCESSING',
       OR: [
         { paymentStatus: 'PAID' },
         { paidAt: { not: null } },
       ],
-      ...(Object.keys(orderDate).length > 0 ? { orderDate } : {}),
+      orderDate,
     };
+    const where = cursorWhere ? { AND: [eligibilityWhere, cursorWhere] } : eligibilityWhere;
     const rows = await this.prisma.allegroOrder.findMany({
       where,
-      take: fetchLimit,
-      orderBy: { orderDate: 'asc' },
+      take: limit + 1,
+      orderBy: [{ orderDate: 'asc' }, { id: 'asc' }],
       select: {
         id: true,
         allegroOrderId: true,
@@ -608,27 +650,56 @@ export class OrdersService {
         },
       },
     });
-    const events = rows
+    const pageRows = rows.slice(0, limit);
+    const hasMore = rows.length > limit;
+    const events = pageRows
       .map((order) => buildOrderAffinityReplayEvent(order))
-      .filter((event): event is Record<string, unknown> => Boolean(event))
-      .slice(0, limit);
+      .filter((event): event is Record<string, unknown> => Boolean(event));
+    const cursorAfter = hasMore && pageRows.length > 0 ? encodeOrderAffinityReplayCursor(pageRows[pageRows.length - 1]) : null;
+    const completeSnapshot = !cursorBefore && !cursorAfter;
     return {
       sourceOwner: 'allegro-service',
       consumerOwner: 'marketing-microservice',
       contract: ALLEGRO_ORDER_AFFINITY_REPLAY_CONTRACT,
       channel: 'allegro',
+      generatedAt: generatedAt.toISOString(),
       filters: {
         from,
         to,
         limit,
-        cursor: query.cursor || null,
+        cursor: cursorBefore,
         dryRun: query.dryRun === true || query.dryRun === 'true',
       },
-      cursorBefore: query.cursor || null,
-      cursorAfter: null,
+      window: {
+        sourceOwner: 'allegro-service',
+        channel: 'allegro',
+        windowStart: from,
+        windowEnd: to,
+        highWatermark: to,
+        orderBy: ['orderDate:asc', 'id:asc'],
+        eligibility: {
+          status: 'READY_FOR_PROCESSING',
+          paid: true,
+          minimumDistinctMappedCatalogProducts: 2,
+        },
+        completeSnapshot,
+        completionStatus: completeSnapshot ? 'complete_window' : 'paginated_window',
+        repeatability: {
+          guaranteed: true,
+          rule: 'Use the returned windowEnd and start with cursor=null; follow cursorAfter until null. The producer uses immutable orderDate/id ordering and hashed replay refs.',
+        },
+      },
+      cursorBefore,
+      cursorAfter,
+      page: {
+        sourceRecords: pageRows.length,
+        emittedEvents: events.length,
+        skippedRecords: Math.max(0, pageRows.length - events.length),
+        hasMore,
+      },
       count: events.length,
       events,
-      skippedRecords: Math.max(0, rows.length - events.length),
+      skippedRecords: Math.max(0, pageRows.length - events.length),
     };
   }
 
