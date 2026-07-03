@@ -71,6 +71,11 @@ function createServiceFixture(
         captured.orderGroupBy.push(args);
         return groupRows(options.localOrders || [], args.by[0], args.where);
       },
+      findFirst: async (args: any) => {
+        captured.orderFindFirst = args;
+        const id = args.where?.id || args.where?.AND?.find((entry: any) => entry.id)?.id;
+        return (options.localOrders || []).find((order) => order.id === id) || null;
+      },
       findUnique: async (args: any) => {
         captured.orderFindUnique = args;
         return (options.localOrders || []).find((order) => order.id === args.where.id) || null;
@@ -500,6 +505,83 @@ async function testGetOrdersFlagsOrdersLifecycleReadFailureStale() {
   assert.equal(readModel.reason, ORDERS_LIFECYCLE_READ_UNAVAILABLE);
 }
 
+async function testGetOrdersScopesWorkspaceUserToOwnedAccountRelations() {
+  const fixture = createServiceFixture([], [], {
+    localOrders: [buildLocalOrder()],
+  });
+
+  await fixture.service.getOrders(
+    { page: 1, limit: 25, status: 'READY_FOR_PROCESSING' },
+    { id: 'auth-user-1', roles: ['app:allegro-service:user'] },
+  );
+
+  assert.deepEqual(fixture.captured.orderFindMany.where, {
+    AND: [
+      { status: 'READY_FOR_PROCESSING' },
+      {
+        OR: [
+          { offer: { account: { userId: 'auth-user-1' } } },
+          { forwardingAttempts: { some: { account: { userId: 'auth-user-1' } } } },
+        ],
+      },
+    ],
+  });
+  assert.deepEqual(fixture.captured.orderCount.where, fixture.captured.orderFindMany.where);
+}
+
+async function testGetOrderStatisticsScopesWorkspaceForwardingCounts() {
+  const fixture = createServiceFixture([], [], {
+    localOrders: [buildLocalOrder()],
+    forwardingAttempts: [buildForwardedAttempt({ status: 'FORWARDED' })],
+  });
+
+  await fixture.service.getOrderStatistics({}, { id: 'auth-user-1', roles: ['app:allegro-service:user'] });
+
+  assert.deepEqual(fixture.captured.forwardingAttemptGroupBy.where, {
+    order: {
+      OR: [
+        { offer: { account: { userId: 'auth-user-1' } } },
+        { forwardingAttempts: { some: { account: { userId: 'auth-user-1' } } } },
+      ],
+    },
+  });
+}
+
+async function testGetOrderUsesScopedFindFirstForWorkspaceUser() {
+  const fixture = createServiceFixture([], [], {
+    localOrders: [buildLocalOrder({ id: 'local-order-1' })],
+  });
+
+  await fixture.service.getOrder('local-order-1', { id: 'auth-user-1', roles: ['app:allegro-service:user'] });
+
+  assert.equal(fixture.captured.orderFindUnique, undefined);
+  assert.deepEqual(fixture.captured.orderFindFirst.where, {
+    AND: [
+      { id: 'local-order-1' },
+      {
+        OR: [
+          { offer: { account: { userId: 'auth-user-1' } } },
+          { forwardingAttempts: { some: { account: { userId: 'auth-user-1' } } } },
+        ],
+      },
+    ],
+  });
+}
+
+async function testGetOrdersLeavesAdminReadsUnscoped() {
+  const fixture = createServiceFixture([], [], {
+    localOrders: [buildLocalOrder()],
+  });
+
+  await fixture.service.getOrders(
+    { paymentStatus: 'PAID' },
+    { id: 'admin-user-1', roles: ['app:allegro-service:admin'] },
+  );
+
+  assert.deepEqual(fixture.captured.orderFindMany.where, { paymentStatus: 'PAID' });
+  assert.deepEqual(fixture.captured.orderCount.where, { paymentStatus: 'PAID' });
+}
+
 async function testGetOrderStatisticsReturnsAggregateOrderDeliveryAndCentralCountsOnly() {
   const fixture = createServiceFixture([], [], {
     localOrders: [
@@ -591,6 +673,10 @@ export async function runOrdersServiceSpec(): Promise<void> {
   await testGetOrdersProjectsCentralLifecycleFromLatestForwardingAttempt();
   await testGetOrdersFlagsMissingForwardingAttemptUnknown();
   await testGetOrdersFlagsOrdersLifecycleReadFailureStale();
+  await testGetOrdersScopesWorkspaceUserToOwnedAccountRelations();
+  await testGetOrderStatisticsScopesWorkspaceForwardingCounts();
+  await testGetOrderUsesScopedFindFirstForWorkspaceUser();
+  await testGetOrdersLeavesAdminReadsUnscoped();
   await testGetOrderStatisticsReturnsAggregateOrderDeliveryAndCentralCountsOnly();
   await testOrderAffinityReplayCandidatesReturnBoundedMarketplaceEvents();
 }

@@ -16,8 +16,15 @@ const ORDER_CREATE_CONTRACT_VERSION = 'orders.create.v1';
 const DEFAULT_CHANNEL_ACCOUNT_ID = 'default';
 const MISSING_CENTRAL_ORDER_ID_MAPPING = '[MISSING: central Orders id mapping]';
 const MISSING_CENTRAL_FORWARDING_ATTEMPT = '[MISSING: central Orders forwarding attempt]';
+const ALLEGRO_ORDER_READ_ADMIN_ROLES = new Set(['global:superadmin', 'app:allegro-service:admin']);
 
 type ForwardingAttemptStatus = 'DISABLED' | 'BLOCKED' | 'FORWARDED' | 'FAILED';
+type OrdersReadActor = {
+  id?: string | null;
+  sub?: string | null;
+  userId?: string | null;
+  roles?: string[] | null;
+};
 
 function normalizeChannelAccountId(channelAccountId?: string | null): string {
   const normalized = channelAccountId?.trim();
@@ -159,7 +166,45 @@ function summarizeLatestForwardingAttempt(attempt: any): any {
   };
 }
 
-function buildOrderQueryWhere(query: any = {}): any {
+function resolveActorUserId(actor?: OrdersReadActor | null): string | null {
+  const value = actor?.id || actor?.sub || actor?.userId;
+  const normalized = normalizeReadModelString(value);
+  return normalized;
+}
+
+function hasAllegroOrderReadAdminRole(actor?: OrdersReadActor | null): boolean {
+  return Array.isArray(actor?.roles) && actor.roles.some((role) => ALLEGRO_ORDER_READ_ADMIN_ROLES.has(role));
+}
+
+function buildOrderWorkspaceScopeWhere(actor?: OrdersReadActor | null): any {
+  if (!actor || hasAllegroOrderReadAdminRole(actor)) {
+    return {};
+  }
+
+  const userId = resolveActorUserId(actor);
+  if (!userId) {
+    return { id: '__no_allegro_order_read_actor__' };
+  }
+
+  return {
+    OR: [
+      { offer: { account: { userId } } },
+      { forwardingAttempts: { some: { account: { userId } } } },
+    ],
+  };
+}
+
+function mergeOrderWhere(baseWhere: any, scopeWhere: any): any {
+  if (!scopeWhere || Object.keys(scopeWhere).length === 0) {
+    return baseWhere;
+  }
+  if (!baseWhere || Object.keys(baseWhere).length === 0) {
+    return scopeWhere;
+  }
+  return { AND: [baseWhere, scopeWhere] };
+}
+
+function buildOrderQueryWhere(query: any = {}, actor?: OrdersReadActor | null): any {
   const where: any = {};
   if (query.status) {
     where.status = query.status;
@@ -167,7 +212,7 @@ function buildOrderQueryWhere(query: any = {}): any {
   if (query.paymentStatus) {
     where.paymentStatus = query.paymentStatus;
   }
-  return where;
+  return mergeOrderWhere(where, buildOrderWorkspaceScopeWhere(actor));
 }
 
 function formatStatisticGroups(rows: any[], field: string): Array<{ value: string; count: number }> {
@@ -552,9 +597,11 @@ export class OrdersService {
     return formatStatisticGroups(rows, field);
   }
 
-  private async groupOrderForwardingAttemptCounts(): Promise<Array<{ value: string; count: number }>> {
+  private async groupOrderForwardingAttemptCounts(actor?: OrdersReadActor | null): Promise<Array<{ value: string; count: number }>> {
+    const scopeWhere = buildOrderWorkspaceScopeWhere(actor);
     const rows = await (this.prisma as any).allegroOrderForwardingAttempt.groupBy({
       by: ["status"],
+      where: Object.keys(scopeWhere).length === 0 ? undefined : { order: scopeWhere },
       _count: { _all: true },
     });
     return formatStatisticGroups(rows, "status");
@@ -563,8 +610,8 @@ export class OrdersService {
   /**
    * Get aggregate order and delivery statistics without returning customer rows.
    */
-  async getOrderStatistics(query: any = {}): Promise<any> {
-    const where = buildOrderQueryWhere(query);
+  async getOrderStatistics(query: any = {}, actor?: OrdersReadActor | null): Promise<any> {
+    const where = buildOrderQueryWhere(query, actor);
     const trackingWhere = { ...where, trackingNumber: { not: null } };
     const missingTrackingWhere = { ...where, trackingNumber: null };
     const deliveryMethodWhere = { ...where, deliveryMethod: { not: null } };
@@ -591,7 +638,7 @@ export class OrdersService {
       this.prisma.allegroOrder.count({ where: missingTrackingWhere }),
       this.prisma.allegroOrder.count({ where: deliveryMethodWhere }),
       this.prisma.allegroOrder.count({ where: missingDeliveryMethodWhere }),
-      this.groupOrderForwardingAttemptCounts(),
+      this.groupOrderForwardingAttemptCounts(actor),
     ]);
 
     const centralForwardingAttempts = centralForwardingStatusCounts.reduce((sum, group) => sum + group.count, 0);
@@ -637,14 +684,14 @@ export class OrdersService {
   /**
    * Get orders from database
    */
-  async getOrders(query: any): Promise<{ items: any[]; pagination: any }> {
+  async getOrders(query: any, actor?: OrdersReadActor | null): Promise<{ items: any[]; pagination: any }> {
     const startTime = Date.now();
     const timestamp = new Date().toISOString();
     const page = Math.max(1, Number.parseInt(String(query.page || "1"), 10) || 1);
     const limit = Math.min(100, Math.max(1, Number.parseInt(String(query.limit || "20"), 10) || 20));
     const skip = (page - 1) * limit;
 
-    const where = buildOrderQueryWhere(query);
+    const where = buildOrderQueryWhere(query, actor);
 
     this.logger.log(`[${timestamp}] [TIMING] OrdersService.getOrders START`, {
       filters: {
@@ -730,9 +777,10 @@ export class OrdersService {
   /**
    * Get order by ID
    */
-  async getOrder(id: string): Promise<any> {
-    const order = await this.prisma.allegroOrder.findUnique({
-      where: { id },
+  async getOrder(id: string, actor?: OrdersReadActor | null): Promise<any> {
+    const where = mergeOrderWhere({ id }, buildOrderWorkspaceScopeWhere(actor));
+    const order = await this.prisma.allegroOrder.findFirst({
+      where,
       include: {
         offer: true,
         lineItems: {

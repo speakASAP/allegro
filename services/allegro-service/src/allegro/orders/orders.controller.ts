@@ -8,6 +8,7 @@ import {
   Headers,
   Param,
   Query,
+  Req,
   UnauthorizedException,
   UseGuards,
 } from '@nestjs/common';
@@ -21,14 +22,14 @@ export class OrdersController {
 
   @Get()
   @UseGuards(JwtAuthGuard)
-  async getOrders(@Query() query: any): Promise<{ success: boolean; data: any }> {
+  async getOrders(@Query() query: any, @Req() req: { user?: any }): Promise<{ success: boolean; data: any }> {
     const controllerStartTime = Date.now();
     const timestamp = new Date().toISOString();
     // Note: LoggerService needs to be injected to use logger here
     console.log(`[${timestamp}] [TIMING] OrdersController.getOrders START - Request received at controller`);
     
     const serviceStartTime = Date.now();
-    const result = await this.ordersService.getOrders(query);
+    const result = await this.ordersService.getOrders(query, req.user || {});
     const serviceDuration = Date.now() - serviceStartTime;
     const totalDuration = Date.now() - controllerStartTime;
     
@@ -42,15 +43,15 @@ export class OrdersController {
 
   @Get("statistics")
   @UseGuards(JwtAuthGuard)
-  async getOrderStatistics(@Query() query: any): Promise<{ success: boolean; data: any }> {
-    const statistics = await this.ordersService.getOrderStatistics(query);
+  async getOrderStatistics(@Query() query: any, @Req() req: { user?: any }): Promise<{ success: boolean; data: any }> {
+    const statistics = await this.ordersService.getOrderStatistics(query, req.user || {});
     return { success: true, data: statistics };
   }
 
   @Get(':id')
   @UseGuards(JwtAuthGuard)
-  async getOrder(@Param('id') id: string): Promise<{ success: boolean; data: any }> {
-    const order = await this.ordersService.getOrder(id);
+  async getOrder(@Param('id') id: string, @Req() req: { user?: any }): Promise<{ success: boolean; data: any }> {
+    const order = await this.ordersService.getOrder(id, req.user || {});
     return { success: true, data: order };
   }
 }
