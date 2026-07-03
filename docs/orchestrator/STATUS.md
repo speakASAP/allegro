@@ -65,9 +65,9 @@ Next action: fix/refresh Allegro OAuth shipment read scope and rerun the sanitiz
 
 ## 2026-07-03 - Buyer Auth Ownership Option 2 Approved
 
-Result: product/Auth/security owner approved Option 2 for the Allegro buyer personal cabinet ownership model via orchestrator instruction `Approved. Option2`. Source implementation is now present: backend commit `78e0f5f` adds subject-bound buyer order reads, `buyerAuthSubject`, migration, buyer-safe DTOs, and isolation specs; the current frontend slice adds `/cabinet/orders` against `GET /api/allegro/buyer/orders`. Runtime remains deploy/migration-gated.
+Result: product/Auth/security owner approved Option 2 for the Allegro buyer personal cabinet ownership model via orchestrator instruction `Approved. Option2`. Source implementation is now deployed in live tag `8b1eb49`: backend commit `78e0f5f` adds subject-bound buyer order reads, `buyerAuthSubject`, migration, buyer-safe DTOs, and isolation specs; frontend commit `735ad1f` adds `/cabinet/orders` against `GET /api/allegro/buyer/orders`. Runtime deploy is complete and the live DB contains the additive `buyerAuthSubject` column.
 
-IPS chain: Vision -> customer-facing Allegro order cabinet shows only orders proven to belong to the authenticated buyer; Goal Impact -> buyer API/UI work can proceed without exposing imported marketplace rows by email/login; System -> Auth owns human identity and JWT `sub`, Allegro owns marketplace order projection, Orders owns canonical lifecycle snapshots; Feature -> buyer-scoped order cabinet contract; Task -> implement subject-bound read-only list/detail and UI; Execution Plan -> persist or derive an Auth subject binding, add buyer-only APIs and DTOs, keep seller/operator dashboard unchanged, validate isolation before deploy; Coding Prompt -> fail closed for unbound marketplace rows and never authorize by `buyerEmail`; Code -> backend `78e0f5f` plus frontend `/cabinet/orders` slice; Validation -> `orders.service.spec: PASS`, `services/allegro-service npm run build`, `services/frontend npm run build`, `git diff --check`.
+IPS chain: Vision -> customer-facing Allegro order cabinet shows only orders proven to belong to the authenticated buyer; Goal Impact -> buyer API/UI work can proceed without exposing imported marketplace rows by email/login; System -> Auth owns human identity and JWT `sub`, Allegro owns marketplace order projection, Orders owns canonical lifecycle snapshots; Feature -> buyer-scoped order cabinet contract; Task -> implement subject-bound read-only list/detail and UI; Execution Plan -> persist or derive an Auth subject binding, add buyer-only APIs and DTOs, keep seller/operator dashboard unchanged, validate isolation before deploy; Coding Prompt -> fail closed for unbound marketplace rows and never authorize by `buyerEmail`; Code -> backend `78e0f5f` plus frontend `/cabinet/orders` slice; Validation -> `orders.service.spec: PASS`, `order-client.service.spec: PASS`, `services/allegro-service npm run build`, `services/frontend npm run build`, `git diff --check`, rollouts for `allegro-service`, `allegro-api-gateway`, `allegro-frontend`, `allegro-settings`, and `allegro-imports`, live `/` 200, live `/cabinet/orders` 200, live unauthenticated buyer API 401, live invalid-token buyer API 401, and DB column probe `buyerAuthSubjectColumn=1`.
 
 Approved defaults:
 
@@ -79,12 +79,11 @@ Approved defaults:
 
 Remaining implementation gates:
 
-- Source implementation present for `buyerAuthSubject`; runtime application is `[MISSING: approved DB migration/deploy]`.
-- `[MISSING: migration/backfill decision for historical Allegro rows; default is no backfill and no buyer visibility without Auth subject binding.]`
-- Buyer-safe DTO and source isolation tests are present; `[MISSING: live authenticated buyer smoke after deploy]`.
-- `[MISSING: deploy approval after source validation.]`
+- Historical marketplace rows remain hidden unless a future approved process writes explicit `buyerAuthSubject`; no email-only backfill is approved.
+- `[MISSING: live authenticated buyer smoke with a real buyer Auth bearer and a subject-bound test/order row.]`
+- `[MISSING: approved historical binding/backfill source, if product wants old imported rows visible in buyer cabinet.]`
 
-Next action: review and deploy the source-only buyer API/UI after approving the `buyerAuthSubject` migration; then run authenticated buyer-list/detail isolation smoke.
+Next action: create or identify one safe subject-bound buyer order fixture, then run authenticated buyer-list/detail isolation smoke against live `8b1eb49`.
 
 ## 2026-07-03 - Goal 24 Allegro Affinity Replay Runtime Deploy
 
