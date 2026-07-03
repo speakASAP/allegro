@@ -1,5 +1,19 @@
 # Allegro Service Orchestrator Status
 
+## 2026-07-03 - Goal 24 Allegro Affinity Replay Producer Hardening
+
+Result: source-only hardening completed for the protected Allegro order-affinity replay producer. The endpoint now returns deterministic window metadata, a bounded effective `windowEnd`, opaque cursor pagination, explicit `completeSnapshot` semantics, and repeatability rules for consumers. Focused tests cover paid/processable filtering, mapped two-product minimum, forbidden-field exclusion, protected access, cursor pagination, and repeatable window metadata. No deploy, Catalog edit, Marketing edit, Orders edit, Kubernetes change, secret read, or live data mutation was performed in this worker.
+
+IPS chain: Vision -> marketplace purchase history can improve related-product evidence without leaking sensitive data; Goal Impact -> Allegro no longer depends on temporary `/tmp` SQL export for recurring affinity replay; System -> Allegro owns local replay producer while Marketing/Catalog remain downstream owners; Feature -> protected replay candidates endpoint; Task -> enforce deterministic complete/repeatable window semantics; Execution Plan -> Allegro-only source/test/docs; Coding Prompt -> bounded non-sensitive product snapshots only; Code -> `orders.service.ts` and `orders.service.spec.ts`; Validation -> focused orders spec and service build passed, final `git diff --check` recorded in validation doc; State Update -> Allegro producer blocker resolved, downstream Marketing ledger/parser/token blockers remain.
+
+Remaining gates:
+
+- `[MISSING: Marketing parser support for marketplace-owned replay source envelopes]`
+- `[MISSING: Marketing runtime token mapping for ORDER_AFFINITY_MARKETPLACE_REPLAY_TOKEN or ALLEGRO_INTERNAL_SERVICE_TOKEN]`
+- `[MISSING: durable Marketing backfill run ledger and idempotency key registry]`
+- `[MISSING: owner-approved retention/decay policy for stale affinity rows]`
+
+
 ## 2026-07-03 - Buyer Auth Runtime Migration Deploy And Smoke
 
 Result: approved buyer ownership Option 2 is now runtime-deployed on Allegro tag `aa612fa`. The live database has additive `AllegroOrder.buyerAuthSubject` support, buyer list/detail APIs are protected by Auth subject binding, `/cabinet/orders` is live, and the API gateway now preserves upstream non-2xx HTTP statuses instead of returning 404-shaped JSON as HTTP 200.
