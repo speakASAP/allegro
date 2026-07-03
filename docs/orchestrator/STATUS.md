@@ -2,6 +2,22 @@
 
 Updated: 2026-07-03
 
+## 2026-07-03 - Allegro Shipment OAuth Refresh And Live Read Probe
+
+Result: active Allegro OAuth token was refreshed successfully through the live pod without printing token material. The refreshed token is no longer expired. A live-listed checkout form then validated the read path: list=200, detail=200, shipments=200 with one shipment, and carrier tracking=200 for extracted carrier+waybill. Shipment-management detail returned 404 for the extracted shipment id and remains optional/fail-soft. No raw order id, waybill, shipment id, buyer data, address, token, or provider payload was printed or persisted.
+
+IPS chain: Vision -> runtime shipment reads must be proven before projection/adapter work; Goal Impact -> Allegro can now proceed toward a read-only shipment projection using proven order-level shipments plus carrier tracking; System -> Allegro owns provider read evidence and token refresh, Warehouse/Orders remain downstream consumers; Feature -> sanitized live capability proof; Task -> refresh expired token and rerun live-listed read probe; Execution Plan -> in-pod read-only provider calls, encrypted token DB update only after OAuth refresh success, no deploy; Coding Prompt -> no raw identifiers or provider payload output; Code -> docs-only evidence update; Validation -> sanitized pod output plus `git diff --check`.
+
+Remaining gates:
+
+- `[MISSING: durable Allegro shipment projection schema/client implementation before runtime handoff]`
+- `[MISSING: Warehouse consumer contract/runtime adapter for read-only shipment snapshots]`
+- `[UNKNOWN: shipment-management detail read for sampled shipment returned 404]`
+- `[UNKNOWN: carrier tracking returned 200 with zero tracking events for sampled waybill]`
+- `[UNKNOWN: whether Warehouse wants per-waybill status, per-order rolled-up status, or both]`
+
+Next action: design and implement the durable read-only projection/client for `/order/checkout-forms/{id}/shipments` plus `/order/carriers/{carrierId}/tracking`, treating shipment-management detail as optional/fail-soft.
+
 ## 2026-07-03 - Allegro Shipment Projection Design Landed
 
 Result: docs-only durable shipment projection design added for `allegro.shipment_status_snapshot.v1`. No migration, runtime code, live Allegro read, OAuth token access, Warehouse handoff, or deploy was performed.
@@ -18,7 +34,7 @@ Design decisions:
 
 Remaining gates:
 
-- `[MISSING: sanitized live OAuth capability proof for shipment and tracking reads]`
+- `[PROVEN: live-listed checkout-form shipment read and carrier-tracking read capability in image 8b1eb49; local projection correlation still needs care]`
 - `[MISSING: owner approval for Prisma migration adding shipment projection tables]`
 - `[MISSING: Warehouse consumer contract/runtime adapter for read-only shipment snapshots]`
 - `[MISSING: deploy approval and sanitized runtime smoke]`
@@ -53,15 +69,14 @@ Sanitized live OAuth capability probe:
 
 Remaining gates:
 
-- `[MISSING: OAuth scope or account permission for /order/checkout-forms/{id}/shipments]`
-- `[MISSING: refreshed/non-expired Allegro token capability proof before carrier tracking probe]`
-- `[UNKNOWN: /order/carriers/{carrierId}/tracking read capability until shipment read returns carrier+waybill]`
-- `[UNKNOWN: /shipment-management/shipments/{shipmentId} read capability until shipment read returns shipmentId]`
-- `[MISSING: durable Allegro shipment projection schema/client before runtime handoff]`
+- `[PROVEN: live-listed checkout-form shipment read returned 200 after token refresh; local projection-only sample returned 404]`
+- `[PROVEN: /order/carriers/{carrierId}/tracking returned 200 for a live-listed shipment waybill; sampled history was empty]`
+- `[UNKNOWN: /shipment-management/shipments/{shipmentId} returned 404 for sampled shipment id; keep optional/fail-soft]`
+- `[LANDED: durable Allegro shipment projection schema/client design in commit 9834f09; migration/service implementation remains gated]`
 - `[MISSING: Warehouse consumer contract/runtime adapter for read-only shipment snapshots]`
 - `[UNKNOWN: whether Warehouse wants per-waybill status, per-order rolled-up status, or both]`
 
-Next action: fix/refresh Allegro OAuth shipment read scope and rerun the sanitized capability probe before designing the durable projection/client.
+Next action: design and implement the durable read-only projection/client for order-level shipments plus carrier tracking; keep shipment-management detail optional/fail-soft.
 
 ## 2026-07-03 - Buyer Auth Ownership Option 2 Approved
 

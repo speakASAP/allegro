@@ -1,6 +1,6 @@
 # Allegro Shipment Status Source Contract
 
-Status: source contract with synthetic fixture verifier landed; runtime OAuth/projection gates remain
+Status: source contract with synthetic verifier and live sanitized probes; runtime projection/Warehouse gates remain
 Date: 2026-07-03
 Scope: Allegro-owned read-only shipment status source for Allegro-origin orders only
 Repository: `/home/ssf/Documents/Github/allegro`
@@ -47,6 +47,7 @@ Official Allegro API references checked:
 - The Ship with Allegro guide says `GET /shipment-management/shipments/{shipmentId}` returns shipment detail, including package waybills and carrier information.
 - The Ship with Allegro guide says `GET /order/carriers/{carrierId}/tracking?waybill={waybill}` returns shipment tracking histories, with up to 20 waybills per request.
 - `GET /shipment-management/delivery-services` is marked deprecated and planned for removal in Q1 2027; `GET /shipment-management/delivery-proposals/{orderId}` is the preferred source for proposed shipping settings when creating shipments, but creation is out of scope here.
+
 
 ## Decision
 
@@ -163,69 +164,83 @@ Retry policy:
 
 ## Sanitized Live OAuth Capability Probe - 2026-07-03
 
-Runtime target: live `allegro-service` pod in `statex-apps`, image `localhost:5000/allegro-service:2c72f6b`.
-
-Command shape:
-
-```bash
-kubectl exec -i -n statex-apps allegro-service-5567c6b499-95wwv -- node - < /tmp/allegro-shipment-capability-probe.js
-```
+Runtime target: live `allegro-service` pod in `statex-apps`. Initial expired-token probe ran on image `2c72f6b`; final successful read probe ran after rollout to image `8b1eb49`.
 
 Probe behavior:
 
 - used in-pod runtime env only;
 - constructed `DATABASE_URL` in memory from in-cluster DB env keys after `DATABASE_URL_OVERRIDE` proved unreachable from the pod execution context;
-- selected one active Allegro account and one local Allegro-origin order sample;
-- decrypted the access token in memory only;
+- selected the active Allegro account and live-listed checkout-form samples;
+- decrypted the current access token in memory only;
 - printed no token, raw order id, buyer data, address, waybill, shipment id, or raw provider payload;
-- called only `GET /order/checkout-forms/{id}/shipments`;
-- did not call carrier tracking or shipment-management detail because the first read failed closed.
+- paced provider reads at about one request per second for the final list/detail/shipment/tracking probe.
 
-Sanitized result:
+Chronology:
+
+1. First local-order shipment probe: token was present but expired; `/order/checkout-forms/{id}/shipments` returned 401.
+2. OAuth refresh: Allegro token endpoint returned 200; access token, refresh token, scope, and `expires_in` were returned; encrypted DB token fields were updated; token expired after refresh: false.
+3. Historical local-order samples: some local projected order ids still returned 404 from detail/shipments, so local projection ids must be revalidated before use.
+4. Live-listed order probe: checkout-form list, checkout-form detail, order shipments, and carrier tracking all returned 200 for a currently accessible checkout form.
+5. Shipment-management detail for the extracted shipment id returned 404 and remains optional/fail-soft.
+
+Final sanitized read result:
 
 ```json
 {
-  "probe": "allegro.shipment_status_read_capability.v1",
-  "apiBaseHost": "api.allegro.pl",
+  "probe": "allegro.live_listed_shipment_full_probe.v1",
   "account": {
     "activeAccountFound": true,
     "tokenPresent": true,
-    "tokenScopesConfigured": true,
-    "tokenExpiresAtInPast": true,
-    "sellerIdentityVerified": true
+    "tokenExpiresAtInPast": false
   },
-  "orderSample": {
-    "localOrderFound": true,
-    "localOrderCount": 117,
-    "selectedExternalOrderIdHash": "sha256:082cb96e4cc57e333af4111bda5866977fd84d80b0c83acac1596bd28af787e9"
+  "selectedOrder": {
+    "found": true,
+    "externalOrderIdHash": "sha256:2af8ecc2b0a458667e98d30b6805cda4c9d60aecd2663a358d0980f0b44b0571"
   },
   "endpoints": {
+    "checkoutFormList": { "attempted": true, "ok": true, "status": 200 },
+    "checkoutFormDetail": { "attempted": true, "ok": true, "status": 200 },
     "checkoutFormShipments": {
       "attempted": true,
-      "ok": false,
-      "status": 401,
-      "retryAfterPresent": false,
-      "shipmentCount": 0,
-      "packageCountFirstShipment": 0,
-      "hasCarrierId": false,
-      "hasWaybill": false,
-      "hasShipmentId": false
+      "ok": true,
+      "status": 200,
+      "shipmentCount": 1,
+      "packageCountFirstShipment": 0
     },
-    "carrierTracking": { "attempted": false },
-    "shipmentManagementDetail": { "attempted": false }
+    "carrierTracking": {
+      "attempted": true,
+      "ok": true,
+      "status": 200,
+      "trackingItemCount": 0,
+      "statusEventCount": 0
+    },
+    "shipmentManagementDetail": {
+      "attempted": true,
+      "ok": false,
+      "status": 404,
+      "responseShapeAvailable": false
+    }
+  },
+  "extracted": {
+    "hasCarrierId": true,
+    "hasWaybill": true,
+    "hasShipmentId": true,
+    "waybillHash": "sha256:c20960f6db04a2dec2273c71153bebf69f9fbd8e840e55cc73997ed47506e2b6",
+    "shipmentIdHash": "sha256:cd3338a51974b9a115dd996db842ad17fcf8844f886b41648b73df6276f98480"
   },
   "blockers": [
-    "[MISSING: OAuth scope or account permission for /order/checkout-forms/{id}/shipments]"
+    "[UNKNOWN: shipment-management detail read unavailable for live-listed shipment]"
   ]
 }
 ```
 
 Decision update:
 
-- Runtime read capability is not proven.
-- The active token is present and has configured scopes, but it is expired and the shipment read returned `401`.
-- Do not design or implement the durable shipment projection/client against live Allegro reads until OAuth scope/account permission is fixed and re-probed.
-- Carrier tracking and shipment-management detail remain `[UNKNOWN]` because probing them requires a successful order-shipment read with carrier and waybill evidence.
+- Runtime read capability is proven for `GET /order/checkout-forms`, `GET /order/checkout-forms/{id}`, `GET /order/checkout-forms/{id}/shipments`, and `GET /order/carriers/{carrierId}/tracking` using the current non-expired active token.
+- The sampled live-listed shipment exposed a carrier id, waybill, and shipment id; only hashed identifiers were printed.
+- Carrier tracking returned HTTP 200 but zero tracking items/status events for the sampled waybill, so status mapping must handle empty histories as `UNKNOWN`.
+- Optional `GET /shipment-management/shipments/{shipmentId}` returned 404 for the sampled shipment id and remains `[UNKNOWN]`; do not depend on it for the first runtime projection/client.
+- Durable projection/client design may proceed for the order-level shipments plus carrier-tracking path, while shipment-management detail remains optional and fail-soft.
 
 ## Sensitive-Field Policy
 
