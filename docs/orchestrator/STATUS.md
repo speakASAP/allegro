@@ -1,5 +1,18 @@
 # Allegro Service Orchestrator Status
 
+## 2026-07-03 - Shipment Projection Runtime Deployed With Correlation Disabled
+
+Result: Allegro guarded shipment projection/correlation source deployed after owner approval. Images `localhost:5000/allegro-service:ae9d381`, `allegro-api-gateway:ae9d381`, `allegro-frontend:ae9d381`, `allegro-settings:ae9d381`, and `allegro-imports:ae9d381` rolled out ready. Runtime health returned HTTP 200. `ALLEGRO_WAREHOUSE_SHIPMENT_CORRELATION_ENABLED` is absent/null, so the Warehouse correlation path remains disabled by default. A synthetic redacted apply-mode replay with exact confirmation returned `posted=0`, `disabled=1`, reason `ALLEGRO_WAREHOUSE_SHIPMENT_CORRELATION_ENABLED_NOT_TRUE`, and Warehouse row counts remained zero. No live Allegro provider read, Warehouse post, Orders call, fulfillment mutation, raw provider payload, tracking value, customer field, or credential value was used.
+
+IPS chain: Vision -> shipment observations can be replayed safely only when the owner explicitly enables Warehouse correlation; Goal Impact -> deployed runtime now contains the guarded source path while proving fail-closed disabled behavior; System -> Allegro owns snapshot replay, Warehouse owns correlation/ledger, Orders owns lifecycle callbacks; Feature -> disabled shipment correlation runtime gate; Task -> deploy source and smoke disabled gate; Execution Plan -> deploy `ae9d381`, keep flag absent, run synthetic redacted replay, verify no Warehouse rows; Coding Prompt -> no provider live read, no raw output, no status mutation; Code -> existing Allegro `ae9d381`; Validation -> shipment verifier suite, build, rollout, health, disabled-gate smoke, Warehouse count readback.
+
+Remaining gates:
+
+- [MISSING: owner approval to set `ALLEGRO_WAREHOUSE_SHIPMENT_CORRELATION_ENABLED=true` for one bounded live smoke.]
+- [MISSING: approved safe order selection file and real token-source smoke boundaries.]
+- [MISSING: end-to-end readback proving Warehouse correlation registration and no raw snapshot fields enter Orders events.]
+
+
 ## 2026-07-03 - Shipment Source Client And Projection Service
 
 Result: source-only read-only shipment source client and sanitized projection service landed for Allegro-owned shipment status reads. `ShipmentStatusSourceClient` wraps `/order/checkout-forms/{id}/shipments` plus `/order/carriers/{carrierId}/tracking?waybill=...` as a Nest provider, keeps raw provider identifiers in memory only, never calls label/document/write endpoints, and does not attach provider payloads to thrown read errors. `ShipmentStatusProjectionService` converts the read bundle into `allegro.shipment_status_projection.v1` containing redacted `allegro.shipment_status_snapshot.v1` records and idempotency keys for downstream replay/handoff. No live Allegro provider call, Warehouse call, Orders call, DB write, deploy, migration, raw provider payload persistence, tracking output, customer field output, or fulfillment status mutation was performed.
