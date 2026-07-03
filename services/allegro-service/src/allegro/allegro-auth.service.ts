@@ -159,6 +159,46 @@ export class AllegroAuthService {
   }
 
   /**
+   * Get an account OAuth token for service-native shipment scan without refresh.
+   *
+   * The redacted shipment scan is read-only by contract. If the token is missing
+   * or expiring soon, callers receive a bounded blocker instead of mutating
+   * encrypted credential fields.
+   */
+  async getShipmentStatusScanAccessTokenForAccount(
+    userId: string,
+    accountId: string,
+    minimumTtlMs = 5 * 60 * 1000,
+  ): Promise<string> {
+    const account = await this.prisma.allegroAccount.findFirst({
+      where: {
+        id: accountId,
+        userId,
+        isActive: true,
+      },
+      select: {
+        accessToken: true,
+        tokenExpiresAt: true,
+      },
+    });
+
+    if (!account?.accessToken) {
+      throw new Error('[MISSING: active Allegro OAuth access token for shipment status scan]');
+    }
+
+    const expiresAt = account.tokenExpiresAt;
+    if (expiresAt && new Date(expiresAt.getTime() - minimumTtlMs) <= new Date()) {
+      throw new Error('[MISSING: future-expiry Allegro OAuth access token for shipment status scan]');
+    }
+
+    try {
+      return this.decrypt(account.accessToken);
+    } catch {
+      throw new Error('[MISSING: decryptable Allegro OAuth access token for shipment status scan]');
+    }
+  }
+
+  /**
    * Refresh user's OAuth access token for specific account
    */
   async refreshUserTokenForAccount(userId: string, accountId: string): Promise<string> {

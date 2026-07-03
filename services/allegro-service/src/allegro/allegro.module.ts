@@ -39,6 +39,7 @@ import { WarehouseShipmentCorrelationClient } from './shipments/warehouse-shipme
 import { ShipmentStatusHandoffService } from './shipments/shipment-status-handoff.service';
 import { ShipmentStatusSourceClient } from './shipments/shipment-status-source.client';
 import { ShipmentStatusProjectionService } from './shipments/shipment-status-projection.service';
+import { InternalShipmentStatusController, ShipmentStatusRedactedScanService } from './shipments/shipment-status-redacted-scan.service';
 
 @Module({
   imports: [
@@ -70,6 +71,7 @@ import { ShipmentStatusProjectionService } from './shipments/shipment-status-pro
     AllegroUsersController,
     OperationsController,
     QuantityCommandsController,
+    InternalShipmentStatusController,
   ],
   providers: [
     AllegroApiService,
@@ -94,7 +96,8 @@ import { ShipmentStatusProjectionService } from './shipments/shipment-status-pro
     ShipmentStatusHandoffService,
     ShipmentStatusSourceClient,
     ShipmentStatusProjectionService,
+    ShipmentStatusRedactedScanService,
   ],
-  exports: [AllegroApiService, OffersService, OrdersService, CategoriesService, InventoryService, EventsService, PublishLifecycleService, MarketplacePolicyEngineService, CatalogSellActionService, AdminUsersService, OperationsService, QuantityCommandsService, CatalogProductEventsSubscriber, AvailabilityReconciliationService, WarehouseShipmentCorrelationClient, ShipmentStatusHandoffService, ShipmentStatusSourceClient, ShipmentStatusProjectionService],
+  exports: [AllegroApiService, OffersService, OrdersService, CategoriesService, InventoryService, EventsService, PublishLifecycleService, MarketplacePolicyEngineService, CatalogSellActionService, AdminUsersService, OperationsService, QuantityCommandsService, CatalogProductEventsSubscriber, AvailabilityReconciliationService, WarehouseShipmentCorrelationClient, ShipmentStatusHandoffService, ShipmentStatusSourceClient, ShipmentStatusProjectionService, ShipmentStatusRedactedScanService],
 })
 export class AllegroModule {}
