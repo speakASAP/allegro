@@ -141,6 +141,7 @@ Remaining gates:
 - `[MISSING: owner approval before Warehouse runtime adapter, Allegro projection migration, deployment, or production fulfillment-row mutation.]`
 
 Next action: verify Orders source-reference preservation for Allegro-origin Warehouse handoff joins without exposing raw provider payloads.
+
 ## 2026-07-03 - Buyer Auth Runtime Migration Deploy And Smoke
 
 Result: approved buyer ownership Option 2 is now runtime-deployed on Allegro tag `aa612fa`. The live database has additive `AllegroOrder.buyerAuthSubject` support, buyer list/detail APIs are protected by Auth subject binding, `/cabinet/orders` is live, and the API gateway now preserves upstream non-2xx HTTP statuses instead of returning 404-shaped JSON as HTTP 200.
