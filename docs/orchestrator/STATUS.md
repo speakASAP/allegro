@@ -42,14 +42,26 @@ Covered fixtures:
 - `shipment-management-detail-redaction` keeps only approved contract fields.
 - `allegro-origin-filter` ignores non-Allegro rows.
 
+Sanitized live OAuth capability probe:
+
+- Runtime target: live `allegro-service` pod in `statex-apps`, image `localhost:5000/allegro-service:2c72f6b`.
+- Active account found: true; access token present: true; token scopes configured: true; seller identity verified: true; token expired: true.
+- Local Allegro-order sample found: true; local count: 117; sampled external id was printed only as a hash.
+- `GET /order/checkout-forms/{id}/shipments`: attempted, returned 401, no payload persisted or printed.
+- `GET /order/carriers/{carrierId}/tracking`: not attempted because shipment read failed closed.
+- `GET /shipment-management/shipments/{shipmentId}`: not attempted because shipment read failed closed.
+
 Remaining gates:
 
-- `[MISSING: sanitized live OAuth capability proof for /order/checkout-forms/{id}/shipments and /order/carriers/{carrierId}/tracking]`
+- `[MISSING: OAuth scope or account permission for /order/checkout-forms/{id}/shipments]`
+- `[MISSING: refreshed/non-expired Allegro token capability proof before carrier tracking probe]`
+- `[UNKNOWN: /order/carriers/{carrierId}/tracking read capability until shipment read returns carrier+waybill]`
+- `[UNKNOWN: /shipment-management/shipments/{shipmentId} read capability until shipment read returns shipmentId]`
 - `[MISSING: durable Allegro shipment projection schema/client before runtime handoff]`
 - `[MISSING: Warehouse consumer contract/runtime adapter for read-only shipment snapshots]`
 - `[UNKNOWN: whether Warehouse wants per-waybill status, per-order rolled-up status, or both]`
 
-Next action: run the approved sanitized OAuth capability probe, then design the durable projection/client before any Warehouse runtime consumer is deployed.
+Next action: fix/refresh Allegro OAuth shipment read scope and rerun the sanitized capability probe before designing the durable projection/client.
 
 ## 2026-07-03 - Buyer Auth Ownership Option 2 Approved
 

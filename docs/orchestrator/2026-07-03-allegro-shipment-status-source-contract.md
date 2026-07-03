@@ -160,6 +160,73 @@ Retry policy:
 - `[UNKNOWN: whether carrier tracking endpoint returns all statuses for shipments not created through Ship with Allegro]`
 - `[MISSING: durable proof that current token grants `/order/checkout-forms/{id}/shipments`, `/order/carriers/{carrierId}/tracking`, and optional `/shipment-management/shipments/{shipmentId}` reads]`
 
+
+## Sanitized Live OAuth Capability Probe - 2026-07-03
+
+Runtime target: live `allegro-service` pod in `statex-apps`, image `localhost:5000/allegro-service:2c72f6b`.
+
+Command shape:
+
+```bash
+kubectl exec -i -n statex-apps allegro-service-5567c6b499-95wwv -- node - < /tmp/allegro-shipment-capability-probe.js
+```
+
+Probe behavior:
+
+- used in-pod runtime env only;
+- constructed `DATABASE_URL` in memory from in-cluster DB env keys after `DATABASE_URL_OVERRIDE` proved unreachable from the pod execution context;
+- selected one active Allegro account and one local Allegro-origin order sample;
+- decrypted the access token in memory only;
+- printed no token, raw order id, buyer data, address, waybill, shipment id, or raw provider payload;
+- called only `GET /order/checkout-forms/{id}/shipments`;
+- did not call carrier tracking or shipment-management detail because the first read failed closed.
+
+Sanitized result:
+
+```json
+{
+  "probe": "allegro.shipment_status_read_capability.v1",
+  "apiBaseHost": "api.allegro.pl",
+  "account": {
+    "activeAccountFound": true,
+    "tokenPresent": true,
+    "tokenScopesConfigured": true,
+    "tokenExpiresAtInPast": true,
+    "sellerIdentityVerified": true
+  },
+  "orderSample": {
+    "localOrderFound": true,
+    "localOrderCount": 117,
+    "selectedExternalOrderIdHash": "sha256:082cb96e4cc57e333af4111bda5866977fd84d80b0c83acac1596bd28af787e9"
+  },
+  "endpoints": {
+    "checkoutFormShipments": {
+      "attempted": true,
+      "ok": false,
+      "status": 401,
+      "retryAfterPresent": false,
+      "shipmentCount": 0,
+      "packageCountFirstShipment": 0,
+      "hasCarrierId": false,
+      "hasWaybill": false,
+      "hasShipmentId": false
+    },
+    "carrierTracking": { "attempted": false },
+    "shipmentManagementDetail": { "attempted": false }
+  },
+  "blockers": [
+    "[MISSING: OAuth scope or account permission for /order/checkout-forms/{id}/shipments]"
+  ]
+}
+```
+
+Decision update:
+
+- Runtime read capability is not proven.
+- The active token is present and has configured scopes, but it is expired and the shipment read returned `401`.
+- Do not design or implement the durable shipment projection/client against live Allegro reads until OAuth scope/account permission is fixed and re-probed.
+- Carrier tracking and shipment-management detail remain `[UNKNOWN]` because probing them requires a successful order-shipment read with carrier and waybill evidence.
+
 ## Sensitive-Field Policy
 
 Use `23_documentation_contracts/SENSITIVE_DATA_POLICY.md` and `ALG-INV-004`.
