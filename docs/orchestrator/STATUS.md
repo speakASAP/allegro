@@ -1,5 +1,15 @@
 # Allegro Service Orchestrator Status
 
+## 2026-07-03 - Warehouse Shipment Correlation Enabled And Intake Proven
+
+Result: Allegro shipment correlation is now enabled in source manifests and live runtime. `ALLEGRO_WAREHOUSE_SHIPMENT_CORRELATION_ENABLED=true` is declared in `.env.example`, `k8s/configmap.yaml`, and `k8s/deployment.yaml`; the live deployment also reports the flag as `true`. Existing `ALLEGRO_INTERNAL_SERVICE_TOKEN` passed Warehouse auth without printing token values. A pod-local sanitized replay posted one existing active Allegro shipment correlation to Warehouse with `posted=1`, `disabled=0`, `blocked=0`, `failed=0`; Warehouse correlation count stayed idempotent at `1`. After Warehouse `2553452` deployed the shipment snapshot intake endpoint, a sanitized `IN_TRANSIT` snapshot posted from the Allegro pod returned HTTP 201 with `statusMutationApplied=true`, `observationDecision=accepted`, `normalizedWarehouseStatus=in_delivery`, and fulfillment status `in_delivery`. No live Allegro provider read, raw provider payload, raw tracking value, customer field, credential value, or token value was printed.
+
+Remaining gates:
+
+- [MISSING: optional real provider live-read selection using raw Allegro account/order ids if product requires provider API evidence beyond sanitized existing-correlation smoke.]
+- [MISSING: product-approved tracking visibility policy for customer/admin UI display beyond bounded lifecycle stage.]
+
+
 ## 2026-07-03 - Dead-Letter Runtime Deployed With Correlation Still Disabled
 
 Result: Allegro `c00013b` is deployed for `allegro-service`, `allegro-api-gateway`, `allegro-frontend`, `allegro-settings`, and `allegro-imports`; all rolled out ready `1/1`. Runtime health returned HTTP 200 from `https://allegro.alfares.cz/api/health`. The deployed `allegro-service` manifest now has `ALLEGRO_SHIPMENT_DEAD_LETTER_DIR=/var/lib/allegro-service/shipment-correlation-dead-letter`, volume mount `shipment-correlation-dead-letter -> /var/lib/allegro-service/shipment-correlation-dead-letter`, and volume `shipment-correlation-dead-letter`. `ALLEGRO_WAREHOUSE_SHIPMENT_CORRELATION_ENABLED` remains absent, so Warehouse correlation remains fail-closed. A synthetic redacted apply-mode replay with exact confirmation returned `posted=0`, `disabled=1`, reason `ALLEGRO_WAREHOUSE_SHIPMENT_CORRELATION_ENABLED_NOT_TRUE`, `blocked=0`, `failed=0`; no dead-letter file was emitted because the dead-letter report had zero items. Warehouse readback stayed unchanged before/after at `fulfillment_provider_shipment_correlations=1` and `fulfillment_provider_status_observations=0`. No live Allegro provider read, Warehouse post, Orders call, fulfillment status mutation, raw provider payload, tracking value, customer field, or credential value was used.

@@ -81,6 +81,7 @@
     "SERVICE_NAME": "allegro-service",
     "SETTINGS_SERVICE_URL": "http://gateway-proxy",
     "ALLEGRO_SHIPMENT_DEAD_LETTER_DIR": "/var/lib/allegro-service/shipment-correlation-dead-letter",
+    "ALLEGRO_WAREHOUSE_SHIPMENT_CORRELATION_ENABLED": "true",
     "STOCK_AUTO_REORDER": "false",
     "STOCK_MINIMUM_THRESHOLD": "1",
     "STOCK_PRIMARY_WAREHOUSE": "sklad-internet",

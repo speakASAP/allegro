@@ -81,6 +81,8 @@ spec:
               value: "c0de0000-0000-4000-8000-000000000013"
             - name: ALLEGRO_SHIPMENT_DEAD_LETTER_DIR
               value: "/var/lib/allegro-service/shipment-correlation-dead-letter"
+            - name: ALLEGRO_WAREHOUSE_SHIPMENT_CORRELATION_ENABLED
+              value: "true"
           volumeMounts:
             - name: shipment-correlation-dead-letter
               mountPath: /var/lib/allegro-service/shipment-correlation-dead-letter
