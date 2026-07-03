@@ -44,6 +44,8 @@ FROM node:24-slim
 # Install OpenSSL for Prisma query engine
 RUN apt-get update && apt-get install -y openssl && rm -rf /var/lib/apt/lists/*
 
+RUN mkdir -p /var/lib/allegro-service/shipment-correlation-dead-letter && chmod 0775 /var/lib/allegro-service/shipment-correlation-dead-letter
+
 WORKDIR /app
 
 # Copy entire shared package (needed for file: reference to work, includes generated Prisma client)
