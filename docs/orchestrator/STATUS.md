@@ -1,5 +1,18 @@
 # Allegro Service Orchestrator Status
 
+## 2026-07-03 - Live Shipment Read Bundle Producer
+
+Result: source-only live shipment read bundle producer landed behind exact confirmation. `export-shipment-status-snapshots.ts --live-read` now accepts an explicit order selection file, requires `--confirm-live-read ALLEGRO_SHIPMENT_STATUS_LIVE_READ`, reads only `/order/checkout-forms/{id}/shipments` plus `/order/carriers/{carrierId}/tracking?waybill=...`, keeps raw provider identifiers in memory only, and writes the same sanitized replay snapshot file. Tests use an injected read function; no live Allegro provider call, Warehouse call, Orders call, DB write, deploy, migration, raw provider payload persistence, tracking output, customer field output, or fulfillment status mutation was performed.
+
+IPS chain: Vision -> live shipment observations can become sanitized Warehouse correlation input without raw provider payloads; Goal Impact -> the live-read implementation gate now has a confirmed, explicit-selection source path; System -> Allegro owns live shipment reads and snapshot-file production, Warehouse owns correlation/ledger/fulfillment transitions, Orders owns lifecycle callbacks; Feature -> confirmed live shipment read bundle producer; Task -> read selected shipments/tracking and emit sanitized snapshots; Execution Plan -> script/spec/package/docs only; Coding Prompt -> no DB writes, no deploy, no Warehouse or Orders mutation, no raw output; Code -> `export-shipment-status-snapshots.ts` live-read path and verifier; Validation -> export verifier, replay verifier, handoff verifier, correlation verifier, snapshot verifier, build, diff check.
+
+Remaining gates:
+
+- `[MISSING: owner-approved live runtime smoke with a safe order selection file and real token source]`
+- `[MISSING: Warehouse migration/deploy approval for fulfillment_provider_shipment_correlations]`
+- `[MISSING: owner approval to enable ALLEGRO_WAREHOUSE_SHIPMENT_CORRELATION_ENABLED=true]`
+- `[MISSING: retention/retry/DLQ policy for failed correlation posts]`
+
 ## 2026-07-03 - Shipment Status Snapshot File Producer
 
 Result: source-only snapshot-file producer landed for approved Allegro shipment read bundles. `export-shipment-status-snapshots.ts` accepts `allegro.shipment_status_read_bundle.v1` order inputs, maps them through the redacting `allegro.shipment_status_snapshot.v1` mapper, rejects forbidden raw marker keys in final snapshots, and writes a replay-compatible `allegro.shipment_status_snapshot_file.v1` JSON file for `replay-shipment-status-handoff.ts`. The live provider-read path is intentionally fail-closed behind `--live-read --confirm-live-read ALLEGRO_SHIPMENT_STATUS_LIVE_READ` until account/order selection, token handling, rate limits, and sanitized smoke are approved. No live Allegro read, Warehouse call, Orders call, DB write, deploy, migration, raw provider payload, tracking value, customer field, or fulfillment status mutation was performed.
