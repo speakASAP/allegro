@@ -1,3 +1,17 @@
+## 2026-07-05 - Allegro Admin Orders Cabinet Smoke Proven
+
+Result: owner approved the remaining admin/order statistics smoke. A short-lived Auth-valid bearer was generated into a temporary file without printing it, and the live routes returned sanitized success evidence: `/dashboard/orders` 200, `/api/allegro/orders?page=1&limit=5` 200 with `admin_orders_items=5` and `admin_orders_total=118`, and `/api/allegro/orders/statistics` 200 with totals, central forwarding, and delivery aggregates present. The smoke did not print the token or raw order payload.
+
+IPS chain: Vision -> seller/operator cabinets can inspect Orders lifecycle health without weakening buyer isolation; Goal Impact -> dashboard non-regression and admin read APIs are runtime-proven after buyer-cabinet hardening; System -> Auth owns bearer identity, Allegro owns seller/operator order read model and statistics, Orders remains canonical lifecycle source; Feature -> admin/operator orders cabinet live smoke; Task -> run approved admin list/statistics smoke without raw payload output; Execution Plan -> short-lived bearer file, status/count/hash output only, no provider writes, no DB mutation, no deploy; Coding Prompt -> do not print tokens, raw order/customer/provider payloads, or authorization material; Code -> existing deployed routes plus docs record; Validation -> `dashboard_orders_status=200`, `admin_orders_status=200`, `admin_orders_items=5`, `admin_orders_total=118`, `admin_statistics_status=200`, `admin_statistics_has_totals=true`, `admin_statistics_has_central_forwarding=true`, `admin_statistics_has_delivery=true`, `admin_statistics_mentions_buyerAuthSubject=false`, `raw_token_printed=false`, `raw_order_payload_printed=false`.
+
+State update:
+
+- [PROVEN: seller/operator dashboard `/dashboard/orders` remains live.]
+- [PROVEN: admin orders list API returns 200 under approved bearer without printing raw order payload.]
+- [PROVEN: admin statistics API returns totals, central forwarding, and delivery aggregates.]
+- [PROVEN: admin statistics smoke did not expose buyer subject binding in output.]
+- [MISSING: future real-traffic buyer row with forwarded central Orders lifecycle, beyond synthetic buyer-safe projection smoke.]
+
 ## 2026-07-05 - Allegro Buyer Cabinet Live Smoke Proven
 
 Result: owner approved the live buyer cabinet smoke packet. A short-lived Auth-valid buyer bearer was generated into a temporary file without printing it, one guarded synthetic Allegro order was inserted with `buyerAuthSubject` equal to the approved Auth subject, `npm run smoke:real-buyer-cabinet` passed, and cleanup deleted exactly one `codex-real-buyer-smoke-%` fixture row. Follow-up DB check returned `0` remaining synthetic fixture rows.

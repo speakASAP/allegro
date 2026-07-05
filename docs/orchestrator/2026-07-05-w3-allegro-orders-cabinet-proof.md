@@ -85,14 +85,33 @@ cleanup_deleted=1
 post_cleanup_fixture_count=0
 ```
 
+
+## Approved Admin Orders Smoke
+
+Owner approval was provided on 2026-07-05. The smoke used a temporary short-lived bearer file and printed only statuses, counts, booleans, and a short order hash; no token, raw order payload, customer payload, provider payload, or authorization material was printed.
+
+```text
+dashboard_orders_status=200
+admin_orders_status=200
+admin_orders_items=5
+admin_orders_total=118
+admin_statistics_status=200
+admin_statistics_has_totals=true
+admin_statistics_has_central_forwarding=true
+admin_statistics_has_delivery=true
+admin_statistics_mentions_buyerAuthSubject=false
+raw_token_printed=false
+raw_order_payload_printed=false
+```
+
 ## Runtime Blockers
 
 - `[PROVEN: approved live buyer bearer/session packet ran /api/allegro/buyer/orders list/detail smoke without printing token values.]`
-- `[MISSING: approved live admin bearer/session packet for /api/allegro/orders and /api/allegro/orders/statistics smoke without printing token values.]`
+- `[PROVEN: approved live admin bearer/session packet ran /api/allegro/orders and /api/allegro/orders/statistics smoke without printing token values.]`
 - `[PROVEN: live synthetic subject-bound buyer order row was visible to the approved buyer bearer and cleaned up.]`
 - `[MISSING: live subject-bound buyer order row with forwarded central Orders lifecycle visible to the approved buyer bearer from real traffic.]`
-- `[MISSING: live admin-visible forwarded Allegro order sample for sanitized lifecycle refresh readback, if not covered by the approved admin bearer packet.]`
+- `[PROVEN: live admin statistics exposed central forwarding and delivery aggregates under approved bearer.]`
 
 ## Handoff
 
-W3 is source-proven and buyer-runtime-proven for the approved synthetic subject-bound row. Do not broaden ownership by email, do not use raw Allegro payloads or raw buyer/customer data, and do not deploy for this proof. Remaining runtime work is limited to an approved admin bearer/session smoke and future real-traffic forwarded lifecycle evidence.
+W3 is source-proven and buyer-runtime-proven for the approved synthetic subject-bound row. Do not broaden ownership by email, do not use raw Allegro payloads or raw buyer/customer data, and do not deploy for this proof. Remaining runtime work is limited to future real-traffic forwarded lifecycle evidence.
