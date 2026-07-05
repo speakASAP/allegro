@@ -1,3 +1,18 @@
+## 2026-07-05 - Allegro Buyer Cabinet Live Smoke Proven
+
+Result: owner approved the live buyer cabinet smoke packet. A short-lived Auth-valid buyer bearer was generated into a temporary file without printing it, one guarded synthetic Allegro order was inserted with `buyerAuthSubject` equal to the approved Auth subject, `npm run smoke:real-buyer-cabinet` passed, and cleanup deleted exactly one `codex-real-buyer-smoke-%` fixture row. Follow-up DB check returned `0` remaining synthetic fixture rows.
+
+IPS chain: Vision -> buyers see only orders explicitly bound to their Auth subject; Goal Impact -> buyer list/detail runtime isolation is proven without email-only authorization or raw customer output; System -> Auth owns bearer subject, Allegro owns buyer-safe projection and UI, Orders lifecycle remains canonical but was not mutated by this smoke; Feature -> subject-bound Allegro buyer cabinet live smoke; Task -> create approved synthetic bound row, run read-only buyer list/detail smoke, and clean fixture; Execution Plan -> no token print, no raw subject/order/customer/provider payload output, create one prefixed fixture, run smoke, cleanup and verify zero remaining fixture rows; Coding Prompt -> no Auth.email authorization fallback and no raw token/order/customer payloads; Code -> existing harness plus `da13c85` test hardening; Validation -> `root_status=200`, `cabinet_status=200`, `unauth_status=401`, `buyer_list_status=200`, `buyer_items=1`, `buyer_total=1`, `buyer_detail_status=200`, `missing_detail_status=404`, `raw_token_printed=false`, `raw_order_id_printed=false`, `raw_customer_payload_printed=false`, cleanup `DELETE 1`, post-cleanup fixture count `0`.
+
+State update:
+
+- [PROVEN: live buyer list API returns only an Auth-subject-bound row to the approved buyer bearer.]
+- [PROVEN: live buyer detail API returns 200 for the bound row and 404 for missing/non-owned detail.]
+- [PROVEN: unauthenticated buyer API returns 401.]
+- [PROVEN: synthetic fixture cleanup deleted the only prefixed row and left zero `codex-real-buyer-smoke-%` rows.]
+- [MISSING: live admin bearer/session packet for `/api/allegro/orders` and `/api/allegro/orders/statistics` smoke without printing token values.]
+- [MISSING: live subject-bound buyer order row with forwarded central Orders lifecycle from real traffic, beyond the synthetic buyer-safe projection smoke.]
+
 ## 2026-07-03 - Synthetic ISSUE Provider Fixture Proved Not-Received Lifecycle
 
 Result: the approved synthetic provider fixture chain now covers `ISSUE -> not_delivered -> not_received` before real Allegro.cz customer traffic exists. A fresh synthetic Allegro order was created through Orders and paid through the internal Payments path; Warehouse fulfillment was progressed to `in_delivery`; then the live Allegro pod registered a sanitized provider shipment correlation and posted an `allegro.shipment_status_snapshot.v1` fixture with `latestStatus=ISSUE` using `WAREHOUSE_INTERNAL_SERVICE_TOKEN`. Warehouse returned HTTP 201 with `observationDecision=accepted`, `normalizedWarehouseStatus=not_delivered`, `statusMutationApplied=true`, and fulfillment status `not_delivered`. Orders callback readback exposed lifecycle `not_received` on detail, customer lifecycle list, and admin lifecycle list.

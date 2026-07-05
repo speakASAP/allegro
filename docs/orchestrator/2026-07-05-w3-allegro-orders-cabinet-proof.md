@@ -64,13 +64,35 @@ ssh alfares 'cd /home/ssf/Documents/Github/allegro && git diff --check'
 # passed with no output
 ```
 
+
+## Approved Live Buyer Smoke
+
+Owner approval was provided on 2026-07-05. The smoke used a temporary short-lived bearer file and one synthetic `codex-real-buyer-smoke-%` order bound by `buyerAuthSubject`; no token, raw subject, raw order id, customer payload, provider payload, tracking number, or tracking URL was printed.
+
+```text
+root_status=200
+cabinet_status=200
+unauth_status=401
+buyer_list_status=200
+buyer_items=1
+buyer_total=1
+buyer_detail_status=200
+missing_detail_status=404
+raw_token_printed=false
+raw_order_id_printed=false
+raw_customer_payload_printed=false
+cleanup_deleted=1
+post_cleanup_fixture_count=0
+```
+
 ## Runtime Blockers
 
-- `[MISSING: approved live buyer bearer/session packet for /api/allegro/buyer/orders list/detail smoke without printing token values.]`
+- `[PROVEN: approved live buyer bearer/session packet ran /api/allegro/buyer/orders list/detail smoke without printing token values.]`
 - `[MISSING: approved live admin bearer/session packet for /api/allegro/orders and /api/allegro/orders/statistics smoke without printing token values.]`
-- `[MISSING: live subject-bound buyer order row with forwarded central Orders lifecycle visible to the approved buyer bearer.]`
+- `[PROVEN: live synthetic subject-bound buyer order row was visible to the approved buyer bearer and cleaned up.]`
+- `[MISSING: live subject-bound buyer order row with forwarded central Orders lifecycle visible to the approved buyer bearer from real traffic.]`
 - `[MISSING: live admin-visible forwarded Allegro order sample for sanitized lifecycle refresh readback, if not covered by the approved admin bearer packet.]`
 
 ## Handoff
 
-W3 is source-proven and runtime-auth-gated. Do not broaden ownership by email, do not use raw Allegro payloads or raw buyer/customer data, and do not deploy for this proof. When approved bearer/session packets exist, run the buyer/admin live smoke with sanitized status/count/hash output only and append the result here or to `docs/orchestrator/STATUS.md`.
+W3 is source-proven and buyer-runtime-proven for the approved synthetic subject-bound row. Do not broaden ownership by email, do not use raw Allegro payloads or raw buyer/customer data, and do not deploy for this proof. Remaining runtime work is limited to an approved admin bearer/session smoke and future real-traffic forwarded lifecycle evidence.
