@@ -1,6 +1,8 @@
 import 'reflect-metadata';
 import { strict as assert } from 'assert';
-import { InternalOrderAffinityController } from './orders.controller';
+import { GUARDS_METADATA } from '@nestjs/common/constants';
+import { JwtAuthGuard } from '@allegro/shared';
+import { BuyerOrdersController, InternalOrderAffinityController } from './orders.controller';
 import { ALLEGRO_ORDER_AFFINITY_REPLAY_CONTRACT, ALLEGRO_ORDER_FORWARDING_CONFIRMATION, OrdersService } from './orders.service';
 
 type OfferFixture = {
@@ -242,7 +244,7 @@ function buildAllegroOrder(lineItems: any[]) {
     fulfillment: { status: 'NEW' },
     delivery: {
       method: { name: 'Allegro Automaty Paczkowe One' },
-      address: { city: 'Synthetic' },
+      address: { street: 'Main 1', city: 'Synthetic', postalCode: '00-001', countryCode: 'PL' },
     },
     invoice: { required: false },
     marketplace: { id: 'allegro-cz' },
@@ -306,8 +308,9 @@ async function testDefaultSyncProjectsLocallyWithoutCentralForwarding() {
   assert.equal(fixture.logs.some((entry) => entry[0] === 'Projected Allegro order locally; central orders forwarding is disabled'), true);
   assert.equal(fixture.forwardingAttempts.length, 1);
   assert.equal(fixture.forwardingAttempts[0].status, 'DISABLED');
-  assert.equal(fixture.forwardingAttempts[0].payloadEqualityStatus, 'NOT_APPLICABLE');
-  assert.deepEqual(fixture.forwardingAttempts[0].requestSummary, { forwardingEnabled: false });
+  assert.equal(fixture.forwardingAttempts[0].payloadEqualityStatus, 'FIRST_SEEN');
+  assert.equal(fixture.forwardingAttempts[0].requestSummary.itemCount, 1);
+  assert.deepEqual(fixture.forwardingAttempts[0].requestSummary.productIds, ['catalog-a']);
 }
 
 async function testMultiLineOrderForwardsEachLineCatalogProductId() {
@@ -911,6 +914,47 @@ async function testInternalOrderAffinityControllerRequiresMarketingServiceToken(
   assert.equal(result.data.sourceOwner, 'allegro-service');
 }
 
+function getControllerMethodGuards(controller: any, methodName: string): any[] {
+  return Reflect.getMetadata(GUARDS_METADATA, controller.prototype[methodName]) || [];
+}
+
+async function testBuyerOrdersControllerMethodsUseJwtGuard() {
+  const listGuards = getControllerMethodGuards(BuyerOrdersController, 'getBuyerOrders');
+  const detailGuards = getControllerMethodGuards(BuyerOrdersController, 'getBuyerOrder');
+
+  assert.equal(listGuards.includes(JwtAuthGuard), true);
+  assert.equal(detailGuards.includes(JwtAuthGuard), true);
+}
+
+async function testBuyerOrdersJwtGuardReturns401WithoutBearerToken() {
+  const previousSecret = process.env.JWT_SECRET;
+  process.env.JWT_SECRET = 'synthetic-buyer-cabinet-secret';
+
+  try {
+    const guard = new JwtAuthGuard({} as any);
+    const context = {
+      switchToHttp: () => ({
+        getRequest: () => ({
+          headers: {},
+          method: 'GET',
+          url: '/allegro/buyer/orders',
+        }),
+      }),
+    };
+
+    await assert.rejects(
+      () => guard.canActivate(context as any),
+      (error: any) => error?.getStatus?.() === 401,
+    );
+  } finally {
+    if (previousSecret === undefined) {
+      delete process.env.JWT_SECRET;
+    } else {
+      process.env.JWT_SECRET = previousSecret;
+    }
+  }
+}
+
 export async function runOrdersServiceSpec(): Promise<void> {
   await testDefaultSyncProjectsLocallyWithoutCentralForwarding();
   await testMultiLineOrderForwardsEachLineCatalogProductId();
@@ -932,6 +976,8 @@ export async function runOrdersServiceSpec(): Promise<void> {
   await testGetBuyerOrderScopesDetailByAuthSubject();
   await testGetBuyerOrdersHidesUnboundAndOtherBuyerRows();
   await testGetBuyerOrderReturns404ForCrossBuyerOrUnboundRows();
+  await testBuyerOrdersControllerMethodsUseJwtGuard();
+  await testBuyerOrdersJwtGuardReturns401WithoutBearerToken();
   await testGetOrdersSellerDashboardDoesNotUseBuyerSubjectBinding();
   await testOrderAffinityReplayCandidatesReturnBoundedMarketplaceEvents();
   await testOrderAffinityReplayCandidatesReturnCursorForRepeatablePages();
