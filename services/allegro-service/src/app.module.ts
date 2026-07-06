@@ -8,6 +8,7 @@ import { join } from 'path';
 import { AllegroModule } from './allegro/allegro.module';
 import { PrismaModule, LoggerModule, HealthModule } from '@allegro/shared';
 import { HealthController } from './health/health.controller';
+import { BusinessHealthModule } from './business-health/business-health.module';
 
 @Module({
   imports: [
@@ -19,6 +20,7 @@ import { HealthController } from './health/health.controller';
     LoggerModule,
     HealthModule,
     AllegroModule,
+    BusinessHealthModule,
   ],
   controllers: [HealthController],
 })

@@ -24,7 +24,8 @@
     "reconcile:availability": "cd services/allegro-service && npm run reconcile:availability --",
     "smoke:real-buyer-cabinet": "node scripts/smoke-allegro-real-buyer-cabinet.js",
     "fixture:real-buyer-cabinet": "node scripts/manage-allegro-real-buyer-fixture.js",
-    "verify:orders-lifecycle-ui": "node scripts/verify-orders-lifecycle-ui.js"
+    "verify:orders-lifecycle-ui": "node scripts/verify-orders-lifecycle-ui.js",
+    "verify:business-health-allegro-channel-contract": "node scripts/verify-business-health-allegro-channel-contract.js"
   },
   "dependencies": {
     "@nestjs/axios": "^3.0.1",
