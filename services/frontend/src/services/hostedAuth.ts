@@ -36,6 +36,7 @@ export const startHostedAuth = (mode: HostedAuthMode, returnTo?: string | null):
   authUrl.searchParams.set('client_id', AUTH_CLIENT_ID);
   authUrl.searchParams.set('return_url', `${window.location.origin}${AUTH_CALLBACK_PATH}`);
   authUrl.searchParams.set('state', state);
+  authUrl.searchParams.set('lang', 'cz');
 
   window.location.assign(authUrl.toString());
 };
