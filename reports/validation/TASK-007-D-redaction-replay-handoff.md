@@ -3,11 +3,11 @@
 ## Intent Chain References
 
 - Vision: `[MISSING: Vision details not read in this lane; execution plan references ../01_vision/VISION.md]`
-- Goal Impact: `22_goal_impact/GOAL-IMPACT-TASK-007.md`
-- System: `16_operations/INTEGRATIONS.md`
-- Feature: `10_features/FEAT-007-growth-analytics-and-demand-loops.md`
-- Task: `11_tasks/TASK-007-plan-growth-analytics-and-demand-loops.md`
-- Execution Plan: `21_execution_plans/EP-TASK-007-plan-growth-analytics-and-demand-loops.md`
+- Goal Impact: `docs/22_goal_impact/GOAL-IMPACT-TASK-007.md`
+- System: `docs/16_operations/INTEGRATIONS.md`
+- Feature: `docs/10_features/FEAT-007-growth-analytics-and-demand-loops.md`
+- Task: `docs/11_tasks/TASK-007-plan-growth-analytics-and-demand-loops.md`
+- Execution Plan: `docs/21_execution_plans/EP-TASK-007-plan-growth-analytics-and-demand-loops.md`
 - Coding Prompt: `[MISSING: TASK-007 coding prompt not approved or created]`
 - Code: existing patterns only from `services/allegro-service/src/allegro/publish-lifecycle/publish-lifecycle.service.ts`, `services/allegro-service/src/allegro/ai-offer-optimization/ai-offer-optimization.contract.ts`, `shared/clients/order-client.service.ts`, `shared/logger/logger.util.ts`, and `shared/notifications/notification.interface.ts`
 - Validation: TASK-007 requires contract tests, redaction scan, and replay review before closure
@@ -18,7 +18,7 @@ Define the redaction checklist, replay/idempotency rules, event versioning polic
 
 ## Redaction Checklist
 
-- Keep TASK-007 examples, fixtures, and reports `synthetic` per `23_documentation_contracts/SENSITIVE_DATA_POLICY.md`.
+- Keep TASK-007 examples, fixtures, and reports `synthetic` per `docs/23_documentation_contracts/SENSITIVE_DATA_POLICY.md`.
 - Never include OAuth tokens, authorization headers, client secrets, API keys, passwords, cookies, or raw production logs.
 - Never include raw customer identifiers, real email addresses, phone numbers, account numbers, supplier identifiers, or payment details.
 - Replace asset URLs, recipient addresses, and account identifiers with `example.invalid`, synthetic IDs, or masked placeholders.

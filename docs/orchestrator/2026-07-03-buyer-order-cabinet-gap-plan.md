@@ -43,7 +43,7 @@ Existing seller/workspace routes:
 
 - `services/frontend/src/App.tsx` registers `/dashboard/orders` under `ProtectedRoute`.
 - `services/frontend/src/pages/Dashboard.tsx` describes the workspace as `Alfares CZ marketplace workspace`, includes seller account selector/OAuth guidance, and links `Orders` to `/dashboard/orders`.
-- `10_features/FEAT-009-public-client-ui.md`, `11_tasks/TASK-009-public-client-landing-dashboard.md`, and `21_execution_plans/EP-TASK-009-public-client-landing-dashboard.md` define the public client UI as a registered seller workspace for Catalog-to-Allegro publishing, OAuth/account readiness, drafts/offers, orders, and settings.
+- `docs/10_features/FEAT-009-public-client-ui.md`, `docs/11_tasks/TASK-009-public-client-landing-dashboard.md`, and `docs/21_execution_plans/EP-TASK-009-public-client-landing-dashboard.md` define the public client UI as a registered seller workspace for Catalog-to-Allegro publishing, OAuth/account readiness, drafts/offers, orders, and settings.
 
 Existing order lifecycle projection:
 

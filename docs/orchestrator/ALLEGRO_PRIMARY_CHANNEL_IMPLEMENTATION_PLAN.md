@@ -17,11 +17,11 @@ exported, what cannot be written yet, and which service owns each decision. It
 must be used together with:
 
 - `docs/orchestrator/ALLEGRO_IMPORT_EXPORT_MAPPING.md`
-- `16_operations/INTEGRATIONS.md`
-- `12_validation/VALIDATION_PYRAMID.md`
+- `docs/16_operations/INTEGRATIONS.md`
+- `docs/12_validation/VALIDATION_PYRAMID.md`
 - `docs/orchestrator/VALIDATION_DEBT.md`
-- `11_tasks/*`, `21_execution_plans/*`, `13_context_packages/*`,
-  `14_prompts/*`, and `12_validation/*` for task-specific IPS spines.
+- `docs/11_tasks/*`, `docs/21_execution_plans/*`, `docs/13_context_packages/*`,
+  `docs/14_prompts/*`, and `docs/12_validation/*` for task-specific IPS spines.
 
 ## 1. Intent Preservation Chain
 
@@ -88,12 +88,12 @@ scripts, and explicit validation gates.
 This document defines the master execution plan. Every implementation lane must
 create or update a normal IPS task spine before coding:
 
-- `11_tasks/TASK-0XX-*.md`
-- `22_goal_impact/GI-TASK-0XX-*.md`
-- `13_context_packages/CP-TASK-0XX-*.md`
-- `21_execution_plans/EP-TASK-0XX-*.md`
-- `14_prompts/PROMPT-TASK-0XX-*.md`
-- `12_validation/VAL-TASK-0XX-*.md`
+- `docs/11_tasks/TASK-0XX-*.md`
+- `docs/22_goal_impact/GI-TASK-0XX-*.md`
+- `docs/13_context_packages/CP-TASK-0XX-*.md`
+- `docs/21_execution_plans/EP-TASK-0XX-*.md`
+- `docs/14_prompts/PROMPT-TASK-0XX-*.md`
+- `docs/12_validation/VAL-TASK-0XX-*.md`
 - graph nodes where the repo already expects them.
 
 ### Coding Prompt
@@ -1897,8 +1897,8 @@ Owner role: validation agent
 Objective: Build the validation matrix and operational runbooks for every lane.
 Allowed files:
 
-- `12_validation/*`
-- `16_operations/*`
+- `docs/12_validation/*`
+- `docs/16_operations/*`
 - `docs/orchestrator/*`
 - runbook docs.
 
@@ -2003,7 +2003,7 @@ Only the integration owner should edit shared contracts in parallel:
 
 - `TASKS.md`
 - `STATE.json`
-- `16_operations/INTEGRATIONS.md`
+- `docs/16_operations/INTEGRATIONS.md`
 - `graph/project_graph.example.yaml`
 - shared validation reports
 - shared Prisma schema if multiple lanes add models at once.

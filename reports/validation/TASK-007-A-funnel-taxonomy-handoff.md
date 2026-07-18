@@ -6,12 +6,12 @@ TASK-007-A owns a draft funnel taxonomy handoff only. This file does not approve
 
 ## Intent Chain
 
-- Vision: `01_vision/VISION.md`
-- Goal Impact: `22_goal_impact/GOAL-IMPACT-TASK-007.md`
+- Vision: `docs/01_vision/VISION.md`
+- Goal Impact: `docs/22_goal_impact/GOAL-IMPACT-TASK-007.md`
 - System: `[MISSING: explicit system artifact cited by TASK-007 docs for this lane]`
-- Feature: `10_features/FEAT-007-growth-analytics-and-demand-loops.md`
-- Task: `11_tasks/TASK-007-plan-growth-analytics-and-demand-loops.md`
-- Execution Plan: `21_execution_plans/EP-TASK-007-plan-growth-analytics-and-demand-loops.md`
+- Feature: `docs/10_features/FEAT-007-growth-analytics-and-demand-loops.md`
+- Task: `docs/11_tasks/TASK-007-plan-growth-analytics-and-demand-loops.md`
+- Execution Plan: `docs/21_execution_plans/EP-TASK-007-plan-growth-analytics-and-demand-loops.md`
 - Coding Prompt: `[MISSING: TASK-007 is still execution-plan review only; no coding prompt approved]`
 - Code: existing source mappings below only
 - Validation: synthetic contract examples and review cases below only
@@ -20,7 +20,7 @@ TASK-007-A owns a draft funnel taxonomy handoff only. This file does not approve
 
 - `contractVersion`: `2026-06-20.allegro-funnel.v1`
 - Status: draft candidate for TASK-007-E review
-- Constraint: every event should carry `contractVersion`, `sourceService`, `channel`, `accountId` when relevant, `idempotencyKey`, and redacted error context per `16_operations/INTEGRATIONS.md`
+- Constraint: every event should carry `contractVersion`, `sourceService`, `channel`, `accountId` when relevant, `idempotencyKey`, and redacted error context per `docs/16_operations/INTEGRATIONS.md`
 - `[MISSING: approved contract version registry or naming standard beyond task-local draft examples]`
 
 ## v1 Funnel Taxonomy
@@ -50,14 +50,14 @@ Required for every event:
 
 | Event | Required event-specific fields | Source mapping | Synthetic example |
 |---|---|---|---|
-| `allegro.catalog.ready` | `readinessGate`, `categoryId`, `price`, `stockQuantity` | Planned taxonomy in `16_operations/INTEGRATIONS.md`; upstream product readiness likely catalog-owned. | `{"eventName":"allegro.catalog.ready","catalogProductId":"cat-100","readinessGate":"catalog-ready","stockQuantity":12,"eventOutcome":"pass"}` |
+| `allegro.catalog.ready` | `readinessGate`, `categoryId`, `price`, `stockQuantity` | Planned taxonomy in `docs/16_operations/INTEGRATIONS.md`; upstream product readiness likely catalog-owned. | `{"eventName":"allegro.catalog.ready","catalogProductId":"cat-100","readinessGate":"catalog-ready","stockQuantity":12,"eventOutcome":"pass"}` |
 | `allegro.draft.created` | `draftOrigin`, `categoryId`, `price`, `stockQuantity`, `hasImages` | Offer draft lifecycle in `services/allegro-service/src/allegro/catalog-sell-action/catalog-sell-action.service.ts` and `services/allegro-service/src/allegro/offers/offers.service.ts`. | `{"eventName":"allegro.draft.created","offerId":"offer-100","draftOrigin":"catalog-sell-action","hasImages":true,"eventOutcome":"success"}` |
 | `allegro.policy.blocked` | `action`, `blockedGates`, `blockedReasonCount`, `remediationHints` | `services/allegro-service/src/allegro/publish-lifecycle/publish-lifecycle.service.ts` and `services/allegro-service/src/allegro/policy/policy-engine.service.ts`. | `{"eventName":"allegro.policy.blocked","action":"PUBLISH","blockedGates":["category-readiness"],"blockedReasonCount":1,"eventOutcome":"block"}` |
 | `allegro.publish.confirmed` | `action`, `attemptId`, `requestedByUserIdHash`, `preparedAt` | Publish lifecycle attempt states in `services/allegro-service/src/allegro/publish-lifecycle/publish-lifecycle.service.ts`. | `{"eventName":"allegro.publish.confirmed","attemptId":"attempt-100","action":"PUBLISH","requestedByUserIdHash":"user-hash","eventOutcome":"queued"}` |
 | `allegro.publish.succeeded` | `action`, `attemptId`, `commandId`, `completedAt`, `publicationStatus` | Governed publish success in `services/allegro-service/src/allegro/publish-lifecycle/publish-lifecycle.service.ts`; publish command path in `services/allegro-service/src/allegro/offers/offers.service.ts`. | `{"eventName":"allegro.publish.succeeded","attemptId":"attempt-100","commandId":"cmd-100","publicationStatus":"ACTIVE","eventOutcome":"success"}` |
 | `allegro.publish.failed` | `action`, `attemptId`, `failureCode`, `failureStage`, `retryEligible` | Failure capture and redaction in `services/allegro-service/src/allegro/publish-lifecycle/publish-lifecycle.service.ts`. | `{"eventName":"allegro.publish.failed","attemptId":"attempt-101","failureCode":"ALLEGRO_PUBLISH_FAILED","failureStage":"execute","retryEligible":true,"eventOutcome":"failure"}` |
 | `allegro.stock.synced` | `stockQuantity`, `stockSource`, `syncStatus`, `publicationStatus` | Stock reflected in offer sync/update paths in `services/allegro-service/src/allegro/offers/offers.service.ts`; warehouse boundary in `shared/clients/warehouse-client.service.ts`. | `{"eventName":"allegro.stock.synced","offerId":"offer-200","stockQuantity":7,"stockSource":"warehouse","syncStatus":"SYNCED","eventOutcome":"success"}` |
-| `allegro.stock.drift` | `warehouseStock`, `channelStock`, `driftQuantity`, `threshold` | Planned taxonomy exists in `16_operations/INTEGRATIONS.md`; concrete drift threshold source not found. | `{"eventName":"allegro.stock.drift","offerId":"offer-200","warehouseStock":7,"channelStock":3,"driftQuantity":4,"threshold":"[MISSING: configured drift threshold]","eventOutcome":"warn"}` |
+| `allegro.stock.drift` | `warehouseStock`, `channelStock`, `driftQuantity`, `threshold` | Planned taxonomy exists in `docs/16_operations/INTEGRATIONS.md`; concrete drift threshold source not found. | `{"eventName":"allegro.stock.drift","offerId":"offer-200","warehouseStock":7,"channelStock":3,"driftQuantity":4,"threshold":"[MISSING: configured drift threshold]","eventOutcome":"warn"}` |
 | `allegro.order.received` | `externalOrderId`, `paymentStatus`, `fulfillmentStatus`, `lineItemCount`, `grossTotal` | Order sync/upsert in `services/allegro-service/src/allegro/orders/orders.service.ts`. | `{"eventName":"allegro.order.received","externalOrderId":"ord-100","paymentStatus":"PAID","fulfillmentStatus":"NEW","lineItemCount":1,"grossTotal":149.99,"eventOutcome":"success"}` |
 | `allegro.order.forwarded` | `externalOrderId`, `forwardContractVersion`, `channelAccountId`, `forwardedAt` | Forward to `orders-microservice` in `services/allegro-service/src/allegro/orders/orders.service.ts` and `shared/clients/order-client.service.ts`. | `{"eventName":"allegro.order.forwarded","externalOrderId":"ord-100","forwardContractVersion":"orders.create.v1","channelAccountId":"acct-1","eventOutcome":"success"}` |
 | `allegro.order.forward_failed` | `externalOrderId`, `failureCode`, `retryAttempt`, `notificationCandidate` | Forwarding failure log path in `services/allegro-service/src/allegro/orders/orders.service.ts`; downstream conflict/idempotency behavior in `shared/clients/order-client.service.ts`. | `{"eventName":"allegro.order.forward_failed","externalOrderId":"ord-101","failureCode":"ORDER_IDEMPOTENCY_CONFLICT","retryAttempt":1,"notificationCandidate":true,"eventOutcome":"failure"}` |

@@ -96,11 +96,11 @@ export class BusinessHealthService {
         '[MISSING: approved reconciliation rule that maps Warehouse/Catalog availability to Allegro sellable quantity without provider mutation side effects]',
       ],
       intentChain: {
-        vision: '01_vision/[MISSING: Allegro business health vision artifact]',
-        goalImpact: '22_goal_impact/[MISSING: business-health Allegro channel readback goal impact]',
-        system: '04_systems/[MISSING: Allegro service system artifact]',
-        feature: '10_features/[MISSING: Allegro business-health channel readback feature artifact]',
-        task: '11_tasks/[MISSING: Allegro business-health channel readback task]',
+        vision: 'docs/01_vision/[MISSING: Allegro business health vision artifact]',
+        goalImpact: 'docs/22_goal_impact/[MISSING: business-health Allegro channel readback goal impact]',
+        system: 'docs/04_systems/[MISSING: Allegro service system artifact]',
+        feature: 'docs/10_features/[MISSING: Allegro business-health channel readback feature artifact]',
+        task: 'docs/11_tasks/[MISSING: Allegro business-health channel readback task]',
         executionPlan: 'docs/orchestrator/2026-07-06-allegro-business-health-handoff.md',
         codingPrompt: 'Codex prompt 2026-07-06 Allegro service-owned business-health evidence envelope',
         code: [

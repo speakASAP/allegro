@@ -243,7 +243,7 @@ Decision update:
 
 ## Sensitive-Field Policy
 
-Use `23_documentation_contracts/SENSITIVE_DATA_POLICY.md` and `ALG-INV-004`.
+Use `docs/23_documentation_contracts/SENSITIVE_DATA_POLICY.md` and `ALG-INV-004`.
 
 Never persist or expose to Warehouse:
 

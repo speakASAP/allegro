@@ -8,12 +8,12 @@ TASK-007-B owns a handoff only. It does not approve runtime writes, shared event
 
 | Node | Reference |
 | --- | --- |
-| Vision | `01_vision/VISION.md` |
-| Goal Impact | `22_goal_impact/GOAL-IMPACT-TASK-007.md` |
-| System | `04_systems/SYS-001-allegro-marketplace-integration.md` |
-| Feature | `10_features/FEAT-007-growth-analytics-and-demand-loops.md` |
-| Task | `11_tasks/TASK-007-plan-growth-analytics-and-demand-loops.md` |
-| Execution Plan | `21_execution_plans/EP-TASK-007-plan-growth-analytics-and-demand-loops.md` |
+| Vision | `docs/01_vision/VISION.md` |
+| Goal Impact | `docs/22_goal_impact/GOAL-IMPACT-TASK-007.md` |
+| System | `docs/04_systems/SYS-001-allegro-marketplace-integration.md` |
+| Feature | `docs/10_features/FEAT-007-growth-analytics-and-demand-loops.md` |
+| Task | `docs/11_tasks/TASK-007-plan-growth-analytics-and-demand-loops.md` |
+| Execution Plan | `docs/21_execution_plans/EP-TASK-007-plan-growth-analytics-and-demand-loops.md` |
 | Coding Prompt | `[MISSING: TASK-007 remains in contract-design stage; no approved coding prompt for leads/marketing writes.]` |
 | Code | `[MISSING: TASK-007-B delivers handoff only; no runtime code change is approved in this lane.]` |
 | Validation | This handoff plus TASK-007-E integration validation. |
@@ -156,18 +156,18 @@ Synthetic example:
 | Lead record ownership | `[MISSING: leads-microservice contract owner]` | Block production lead writes until owner, endpoint, and consent semantics are approved. |
 | Marketing audience ownership | `[MISSING: marketing-microservice contract owner]` | Block production segment writes until consent and activation rules are approved. |
 | Customer consent source | `[MISSING: system-of-record for remarketing consent by channel/account]` | Keep `consentStatus` explicit and default unresolved states to blocked/unknown. |
-| Sensitive-data policy | `23_documentation_contracts/SENSITIVE_DATA_POLICY.md` | Use synthetic refs only; never include buyer email, buyer login, addresses, or payment details. |
+| Sensitive-data policy | `docs/23_documentation_contracts/SENSITIVE_DATA_POLICY.md` | Use synthetic refs only; never include buyer email, buyer login, addresses, or payment details. |
 
 ## Source Mappings
 
 | Candidate signal | Current source artifact | Available fields now | Redaction note | Consumer fit |
 | --- | --- | --- | --- | --- |
-| Demand or missed-sale signal | `16_operations/INTEGRATIONS.md` revenue taxonomy for `allegro.demand.signal` | event name, consumer intent only | No payload contract checked in | leads, marketing |
+| Demand or missed-sale signal | `docs/16_operations/INTEGRATIONS.md` revenue taxonomy for `allegro.demand.signal` | event name, consumer intent only | No payload contract checked in | leads, marketing |
 | Publish failure follow-up | `services/allegro-service/src/allegro/publish-lifecycle/publish-lifecycle.service.ts` and `prisma/schema.prisma` `AllegroPublishAttempt` | action, status, accountId, catalogProductId, offerId, commandId, failureContext | Do not export raw failure context; map to redacted reason codes only | leads when failure implies blocked demand; marketing only after owner approval |
-| Publish success promotion candidate | `services/allegro-service/src/allegro/publish-lifecycle/publish-lifecycle.service.ts` and `16_operations/INTEGRATIONS.md` `allegro.publish.succeeded` | offerId, account context, completion timestamp, commandId | No OAuth, raw command payload, or operator identifiers | marketing |
+| Publish success promotion candidate | `services/allegro-service/src/allegro/publish-lifecycle/publish-lifecycle.service.ts` and `docs/16_operations/INTEGRATIONS.md` `allegro.publish.succeeded` | offerId, account context, completion timestamp, commandId | No OAuth, raw command payload, or operator identifiers | marketing |
 | Order-forward failure or success demand proxy | `services/allegro-service/src/allegro/orders/orders.service.ts` | externalOrderId, channel, channelAccountId, paymentStatus, orderedAt, local forwarding success/failure | Current code touches buyer email/login; downstream contract must exclude them | leads, marketing after redaction |
-| Product readiness or stock opportunity | `08_roadmap/ROADMAP.md` Stage 5 and `16_operations/INTEGRATIONS.md` `allegro.catalog.ready` / `allegro.stock.drift` | conceptual event only | Runtime emitter is `[MISSING]` | marketing |
-| Margin-driven remarketing or suppression | `16_operations/INTEGRATIONS.md` `allegro.margin.warning` | conceptual event only | Runtime margin source contract is `[MISSING]` in this repo | marketing |
+| Product readiness or stock opportunity | `docs/08_roadmap/ROADMAP.md` Stage 5 and `docs/16_operations/INTEGRATIONS.md` `allegro.catalog.ready` / `allegro.stock.drift` | conceptual event only | Runtime emitter is `[MISSING]` | marketing |
+| Margin-driven remarketing or suppression | `docs/16_operations/INTEGRATIONS.md` `allegro.margin.warning` | conceptual event only | Runtime margin source contract is `[MISSING]` in this repo | marketing |
 
 ## Contract-Version Fields
 
@@ -186,14 +186,14 @@ Recommended generator rules:
 
 - `idempotencyKey` should be deterministic from `sourceEvent + channelAccountId + stable entity ref + observed window`.
 - `contractVersion` starts as draft-only `0.1.0-draft` until TASK-007-E resolves shared naming and external owners confirm ingestion rules.
-- `sourceEvent` must reuse shared taxonomy names from `16_operations/INTEGRATIONS.md`; TASK-007-B does not rename them.
+- `sourceEvent` must reuse shared taxonomy names from `docs/16_operations/INTEGRATIONS.md`; TASK-007-B does not rename them.
 
 ## Validation Cases For TASK-007-E
 
 1. Redaction case: a leads candidate derived from order forwarding must exclude buyer email, buyer login, delivery address, payment method, and raw order identifiers beyond approved synthetic refs.
 2. Replay case: the same publish failure observed twice for the same attempt must produce the same `idempotencyKey` and no duplicate downstream write request.
 3. Consent case: a marketing segment candidate with unknown remarketing consent must remain blocked or `eligibility=pending_external_marketing_contract`.
-4. Source mapping case: each candidate event must point back to one checked-in source artifact and one allowed event family from `16_operations/INTEGRATIONS.md`.
+4. Source mapping case: each candidate event must point back to one checked-in source artifact and one allowed event family from `docs/16_operations/INTEGRATIONS.md`.
 5. Versioning case: envelopes missing `contractVersion` or `sourceService` fail contract validation.
 6. Safety case: reports and fixtures must contain only synthetic identifiers such as `ACCOUNT_SYNTHETIC_001`, `PRODUCT_SYNTHETIC_001`, and `example.invalid` domains.
 

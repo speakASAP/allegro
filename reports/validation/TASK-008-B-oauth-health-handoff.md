@@ -2,12 +2,12 @@
 
 ## Intent Preservation Chain
 
-- Vision: `01_vision/VISION.md` [MISSING: not re-opened in this lane; upstream traceability inherited from TASK-008 execution plan]
-- Goal Impact: `22_goal_impact/GOAL-IMPACT-TASK-008.md`
+- Vision: `docs/01_vision/VISION.md` [MISSING: not re-opened in this lane; upstream traceability inherited from TASK-008 execution plan]
+- Goal Impact: `docs/22_goal_impact/GOAL-IMPACT-TASK-008.md`
 - System: `[MISSING: no system artifact was opened in this lane]`
-- Feature: `10_features/FEAT-008-operations-trust-and-scale.md`
-- Task: `11_tasks/TASK-008-plan-operations-trust-and-scale.md`
-- Execution Plan: `21_execution_plans/EP-TASK-008-plan-operations-trust-and-scale.md`
+- Feature: `docs/10_features/FEAT-008-operations-trust-and-scale.md`
+- Task: `docs/11_tasks/TASK-008-plan-operations-trust-and-scale.md`
+- Execution Plan: `docs/21_execution_plans/EP-TASK-008-plan-operations-trust-and-scale.md`
 - Coding Prompt: `[MISSING: TASK-008 remains draft and this lane is handoff-only]`
 - Code: inspected only; no runtime code changed
 - Validation: secret-safe handoff plus targeted read-only scans
@@ -18,13 +18,13 @@ TASK-008-B covers OAuth token lifecycle, expiry handling, refresh behavior, oper
 
 ## Source Evidence Reviewed
 
-- `08_roadmap/ROADMAP.md`
-- `09_milestones/MS-007-operations-trust-and-scale.md`
-- `10_features/FEAT-008-operations-trust-and-scale.md`
-- `11_tasks/TASK-008-plan-operations-trust-and-scale.md`
-- `16_operations/INTEGRATIONS.md`
-- `17_governance/PROJECT_INVARIANTS.md`
-- `21_execution_plans/EP-TASK-008-plan-operations-trust-and-scale.md`
+- `docs/08_roadmap/ROADMAP.md`
+- `docs/09_milestones/MS-007-operations-trust-and-scale.md`
+- `docs/10_features/FEAT-008-operations-trust-and-scale.md`
+- `docs/11_tasks/TASK-008-plan-operations-trust-and-scale.md`
+- `docs/16_operations/INTEGRATIONS.md`
+- `docs/17_governance/PROJECT_INVARIANTS.md`
+- `docs/21_execution_plans/EP-TASK-008-plan-operations-trust-and-scale.md`
 - `services/allegro-service/src/allegro/allegro-auth.service.ts`
 - `services/allegro-service/src/allegro/allegro-oauth.service.ts`
 - `services/allegro-service/src/allegro/oauth/oauth.controller.ts`

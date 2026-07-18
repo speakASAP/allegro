@@ -2,12 +2,12 @@
 
 ## Intent Preservation Chain
 
-- Vision: `01_vision/VISION.md` [MISSING: not re-opened in this lane; execution-plan trace used instead]
-- Goal Impact: `22_goal_impact/GOAL-IMPACT-TASK-008.md` [MISSING: not re-opened in this lane; execution-plan trace used instead]
-- System: `04_systems/SYS-001-allegro-marketplace-integration.md` [MISSING: not re-opened in this lane; roadmap/integrations/runtime evidence used instead]
-- Feature: `10_features/FEAT-008-operations-trust-and-scale.md`
-- Task: `11_tasks/TASK-008-plan-operations-trust-and-scale.md`
-- Execution Plan: `21_execution_plans/EP-TASK-008-plan-operations-trust-and-scale.md`
+- Vision: `docs/01_vision/VISION.md` [MISSING: not re-opened in this lane; execution-plan trace used instead]
+- Goal Impact: `docs/22_goal_impact/GOAL-IMPACT-TASK-008.md` [MISSING: not re-opened in this lane; execution-plan trace used instead]
+- System: `docs/04_systems/SYS-001-allegro-marketplace-integration.md` [MISSING: not re-opened in this lane; roadmap/integrations/runtime evidence used instead]
+- Feature: `docs/10_features/FEAT-008-operations-trust-and-scale.md`
+- Task: `docs/11_tasks/TASK-008-plan-operations-trust-and-scale.md`
+- Execution Plan: `docs/21_execution_plans/EP-TASK-008-plan-operations-trust-and-scale.md`
 - Coding Prompt: [MISSING: TASK-008 remains planning-only and is not approved for coding prompt conversion]
 - Code: read-only runtime evidence from `services/allegro-service/src/allegro/**`, `shared/rabbitmq/stock-events.subscriber.ts`, and `shared/resilience/**`
 - Validation: synthetic failure-path cases and sensitive-data sanity scan only; no repo-wide IPS gates run in this lane by design
@@ -19,8 +19,8 @@
 
 ## Source Summary
 
-- `08_roadmap/ROADMAP.md` and `17_governance/PROJECT_INVARIANTS.md` keep `ALG-INV-002` fixed at max `1 request per second per account` unless a newer approved policy exists.
-- `21_execution_plans/EP-TASK-008-plan-operations-trust-and-scale.md` assigns this lane to inspection-only output: control map, metrics, and synthetic failure cases.
+- `docs/08_roadmap/ROADMAP.md` and `docs/17_governance/PROJECT_INVARIANTS.md` keep `ALG-INV-002` fixed at max `1 request per second per account` unless a newer approved policy exists.
+- `docs/21_execution_plans/EP-TASK-008-plan-operations-trust-and-scale.md` assigns this lane to inspection-only output: control map, metrics, and synthetic failure cases.
 - `services/allegro-service/src/allegro/policy/policy-engine.service.ts` records `rate-limit-readiness` only as a policy pass statement; it does not itself enforce pacing.
 - `services/allegro-service/src/allegro/publish-lifecycle/publish-lifecycle.service.ts` is the clearest governed queue surface: `PREPARED -> BLOCKED/PREPARED -> QUEUED -> RUNNING -> SUCCEEDED/FAILED`, with stale detection and monitoring summary counts.
 - `shared/rabbitmq/stock-events.subscriber.ts` is the active inbound queue/backpressure surface for stock changes. It consumes `stock.#`, updates local offer stock, acknowledges on success, and dead-letters by `nack(..., false, false)` on processing errors.
@@ -108,12 +108,12 @@ These are planning-only cases for TASK-008-E or later coding tasks. They use syn
 
 ```bash
 ssh alfares 'cd /home/ssf/Documents/Github/allegro-service && printf "PWD=%s\n" "$PWD" && git status --short --branch && git log -1 --oneline'
-ssh alfares 'cd /home/ssf/Documents/Github/allegro-service && sed -n "1,220p" 21_execution_plans/EP-TASK-008-plan-operations-trust-and-scale.md'
-ssh alfares 'cd /home/ssf/Documents/Github/allegro-service && sed -n "1,220p" 11_tasks/TASK-008-plan-operations-trust-and-scale.md'
-ssh alfares 'cd /home/ssf/Documents/Github/allegro-service && sed -n "1,220p" 10_features/FEAT-008-operations-trust-and-scale.md'
-ssh alfares 'cd /home/ssf/Documents/Github/allegro-service && sed -n "1,220p" 08_roadmap/ROADMAP.md'
-ssh alfares 'cd /home/ssf/Documents/Github/allegro-service && sed -n "1,220p" 17_governance/PROJECT_INVARIANTS.md'
-ssh alfares 'cd /home/ssf/Documents/Github/allegro-service && sed -n "1,260p" 16_operations/INTEGRATIONS.md'
+ssh alfares 'cd /home/ssf/Documents/Github/allegro-service && sed -n "1,220p" docs/21_execution_plans/EP-TASK-008-plan-operations-trust-and-scale.md'
+ssh alfares 'cd /home/ssf/Documents/Github/allegro-service && sed -n "1,220p" docs/11_tasks/TASK-008-plan-operations-trust-and-scale.md'
+ssh alfares 'cd /home/ssf/Documents/Github/allegro-service && sed -n "1,220p" docs/10_features/FEAT-008-operations-trust-and-scale.md'
+ssh alfares 'cd /home/ssf/Documents/Github/allegro-service && sed -n "1,220p" docs/08_roadmap/ROADMAP.md'
+ssh alfares 'cd /home/ssf/Documents/Github/allegro-service && sed -n "1,220p" docs/17_governance/PROJECT_INVARIANTS.md'
+ssh alfares 'cd /home/ssf/Documents/Github/allegro-service && sed -n "1,260p" docs/16_operations/INTEGRATIONS.md'
 ssh alfares 'cd /home/ssf/Documents/Github/allegro-service && rg -n "rate.?limit|thrott|queue|bull|backpressure|retry|429|Too Many|poll|worker|concurrency|p-limit|bottleneck|sleep|delay" services/allegro-service/src shared prisma -g "*.ts" -g "*.js" -g "*.md"'
 ssh alfares 'cd /home/ssf/Documents/Github/allegro-service && sed -n "1,260p" services/allegro-service/src/allegro/policy/policy-engine.service.ts'
 ssh alfares 'cd /home/ssf/Documents/Github/allegro-service && sed -n "1,440p" services/allegro-service/src/allegro/publish-lifecycle/publish-lifecycle.service.ts'

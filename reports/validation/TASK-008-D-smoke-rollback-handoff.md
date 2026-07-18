@@ -27,7 +27,7 @@ Planning-only handoff for deployment smoke and rollback readiness. This artifact
 - Execution Plan: `../21_execution_plans/EP-TASK-008-plan-operations-trust-and-scale.md`
 - Coding Prompt: `[MISSING: TASK-008 approved coding prompt; execution-plan lane is still planning-only]`
 - Code/runtime surfaces inspected: `scripts/deploy.sh`, `scripts/deployment_readiness_gate.py`, `k8s/deployment.yaml`, `k8s/service.yaml`, `k8s/ingress.yaml`, `services/allegro-service/src/health/health.controller.ts`, `shared/health/health.service.ts`, `package.json`
-- Validation evidence inspected: `reports/validation/ips-deployment-readiness-gate.json`, `12_validation/VAL-TASK-007-validation-report.md`, `23_documentation_contracts/OPERATIONAL_GATE_STANDARD.md`, `23_documentation_contracts/SENSITIVE_DATA_POLICY.md`
+- Validation evidence inspected: `reports/validation/ips-deployment-readiness-gate.json`, `docs/12_validation/VAL-TASK-007-validation-report.md`, `docs/23_documentation_contracts/OPERATIONAL_GATE_STANDARD.md`, `docs/23_documentation_contracts/SENSITIVE_DATA_POLICY.md`
 
 ## Source-Backed Operational Facts
 

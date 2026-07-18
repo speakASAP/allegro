@@ -8,12 +8,12 @@ TASK-008-C owns a planning handoff only. It does not approve runtime media uploa
 
 | Node | Reference |
 | --- | --- |
-| Vision | `01_vision/VISION.md` |
-| Goal Impact | `22_goal_impact/GOAL-IMPACT-TASK-008.md` |
+| Vision | `docs/01_vision/VISION.md` |
+| Goal Impact | `docs/22_goal_impact/GOAL-IMPACT-TASK-008.md` |
 | System | `[UNKNOWN: no TASK-008-specific system artifact was cited in EP-TASK-008.]` |
-| Feature | `10_features/FEAT-008-operations-trust-and-scale.md` |
-| Task | `11_tasks/TASK-008-plan-operations-trust-and-scale.md` |
-| Execution Plan | `21_execution_plans/EP-TASK-008-plan-operations-trust-and-scale.md` |
+| Feature | `docs/10_features/FEAT-008-operations-trust-and-scale.md` |
+| Task | `docs/11_tasks/TASK-008-plan-operations-trust-and-scale.md` |
+| Execution Plan | `docs/21_execution_plans/EP-TASK-008-plan-operations-trust-and-scale.md` |
 | Coding Prompt | `[MISSING: TASK-008 remains in planning stage; no approved coding prompt exists for media runtime changes.]` |
 | Code | `[MISSING: TASK-008-C delivers handoff only; no MinIO or media implementation change is approved in this lane.]` |
 | Validation | This handoff plus TASK-008-E integration validation. |
@@ -30,10 +30,10 @@ TASK-008-C owns a planning handoff only. It does not approve runtime media uploa
 
 | Evidence | What it proves | Constraint for TASK-008-C |
 | --- | --- | --- |
-| `08_roadmap/ROADMAP.md` Stage 7 ecosystem table | `minio-microservice` is planned, not implemented, and intended for durable media storage plus image optimization. | Treat MinIO as a future boundary, not an existing runtime dependency. |
-| `10_features/FEAT-008-operations-trust-and-scale.md` | Acceptance requires media/MinIO integration to be contract-approved before runtime dependency. | TASK-008-C must stay contract-first. |
-| `11_tasks/TASK-008-plan-operations-trust-and-scale.md` | Scope includes MinIO/media contract discovery and explicitly forbids media storage implementation before approval. | No implementation or deploy action is allowed here. |
-| `16_operations/INTEGRATIONS.md` planned ecosystem boundaries | `minio-microservice` is outbound only and must avoid secrets and unapproved copyrighted assets. | Contract must define storage safety and ownership before use. |
+| `docs/08_roadmap/ROADMAP.md` Stage 7 ecosystem table | `minio-microservice` is planned, not implemented, and intended for durable media storage plus image optimization. | Treat MinIO as a future boundary, not an existing runtime dependency. |
+| `docs/10_features/FEAT-008-operations-trust-and-scale.md` | Acceptance requires media/MinIO integration to be contract-approved before runtime dependency. | TASK-008-C must stay contract-first. |
+| `docs/11_tasks/TASK-008-plan-operations-trust-and-scale.md` | Scope includes MinIO/media contract discovery and explicitly forbids media storage implementation before approval. | No implementation or deploy action is allowed here. |
+| `docs/16_operations/INTEGRATIONS.md` planned ecosystem boundaries | `minio-microservice` is outbound only and must avoid secrets and unapproved copyrighted assets. | Contract must define storage safety and ownership before use. |
 | `shared/clients/catalog-client.service.ts#getProductMedia()` | Catalog already exposes product media through `/api/media/product/:productId`. | Catalog remains the current upstream media source of truth until a MinIO contract is approved. |
 | `services/allegro-service/src/allegro/catalog-sell-action/catalog-sell-action.service.ts#extractImageUrls()` | Allegro preparation already consumes `catalogProduct.images` and `catalogProduct.media` as URL candidates. | A MinIO contract must preserve backward-compatible URL consumption or define an explicit adapter. |
 | `services/allegro-service/src/allegro/policy/policy-engine.service.ts` media gate | Current policy only checks whether local offer images exist. | There is no storage provenance, optimization status, or asset approval contract yet. |
@@ -47,7 +47,7 @@ TASK-008-C owns a planning handoff only. It does not approve runtime media uploa
 | Allegro draft preparation media intake | `allegro-service` | `extractImageUrls()` reads `images` and `media`, accepts string/url/src values | array of strings normalized to max 16 URLs | `[MISSING: approved image ordering, primary-image semantics, variant semantics, and invalidation rules.]` | Keep current URL intake backward-compatible. |
 | Policy readiness for media | `catalog-microservice` owner in policy gate | `media-readiness` warns when no images exist | image count only | `[MISSING: asset approval state, optimization completeness, copyright review flag, and provenance evidence.]` | Treat current gate as presence-only, not contract-complete. |
 | Local persisted offer media | `allegro-service` | Prisma `images Json?` and offer services | array of image URLs or normalized `{url}` payloads before Allegro calls | `[MISSING: metadata contract for storage source, checksum, size, mime type, transformation lineage, and retention class.]` | Do not expand persistence semantics in this lane. |
-| Planned object storage boundary | `minio-microservice` | `16_operations/INTEGRATIONS.md`, `08_roadmap/ROADMAP.md`, `09_milestones/MS-007-operations-trust-and-scale.md` | none implemented in repo | `[MISSING: endpoint, auth flow, bucket model, object key contract, transform API, and delete/retention rules.]` | Block runtime dependency until approved. |
+| Planned object storage boundary | `minio-microservice` | `docs/16_operations/INTEGRATIONS.md`, `docs/08_roadmap/ROADMAP.md`, `docs/09_milestones/MS-007-operations-trust-and-scale.md` | none implemented in repo | `[MISSING: endpoint, auth flow, bucket model, object key contract, transform API, and delete/retention rules.]` | Block runtime dependency until approved. |
 | Allegro publish/update image usage | `allegro-service` outbound to Allegro API | offer/publish flows require image URLs and reject unsupported PATCH image updates | URL list passed on create; PATCH removes images | `[MISSING: rule for when MinIO-derived URLs are immutable enough for Allegro create/update paths.]` | TASK-008-E must confirm creation/update compatibility before runtime adoption. |
 
 ## Contract Discovery Requirements

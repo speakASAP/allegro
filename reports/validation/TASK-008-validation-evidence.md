@@ -22,7 +22,7 @@ TASK-008 closed as a planning-only operational readiness task on 2026-06-20. The
 ## Shared-file conflict resolution
 
 - `TASK-008-C-minio-media-handoff.md` is the surviving TASK-008-C handoff in the repo and is treated as the authoritative media-contract evidence for this closure step.
-- No merge was attempted into shared operational files such as `16_operations/INTEGRATIONS.md`, deploy scripts, manifests, or gate definitions in this closure step.
+- No merge was attempted into shared operational files such as `docs/16_operations/INTEGRATIONS.md`, deploy scripts, manifests, or gate definitions in this closure step.
 
 ## Remaining blocked runtime facts
 

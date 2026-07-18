@@ -1,287 +1,287 @@
 nodes:
   - id: VISION-ALLEGRO-SERVICE
     type: vision
-    path: 01_vision/VISION.md
+    path: docs/01_vision/VISION.md
     title: allegro-service vision
   - id: VG-004
     type: goal
-    path: 01_vision/VISION.md
+    path: docs/01_vision/VISION.md
     title: Operational production service
   - id: VG-REVENUE
     type: goal
-    path: 08_roadmap/ROADMAP.md
+    path: docs/08_roadmap/ROADMAP.md
     title: Increase Allegro channel earnings
   - id: SYS-001
     type: system
-    path: 04_systems/SYS-001-allegro-marketplace-integration.md
+    path: docs/04_systems/SYS-001-allegro-marketplace-integration.md
     title: Allegro Marketplace Integration
   - id: FEAT-001
     type: feature
-    path: 10_features/FEAT-001-ips-governed-allegro-delivery.md
+    path: docs/10_features/FEAT-001-ips-governed-allegro-delivery.md
     title: IPS-Governed Allegro Delivery
   - id: FEAT-002
     type: feature
-    path: 10_features/FEAT-002-governed-publish-lifecycle.md
+    path: docs/10_features/FEAT-002-governed-publish-lifecycle.md
     title: Governed Publish Lifecycle
   - id: FEAT-003
     type: feature
-    path: 10_features/FEAT-003-marketplace-policy-engine.md
+    path: docs/10_features/FEAT-003-marketplace-policy-engine.md
     title: Marketplace Policy Engine
   - id: FEAT-004
     type: feature
-    path: 10_features/FEAT-004-catalog-sell-on-allegro-action.md
+    path: docs/10_features/FEAT-004-catalog-sell-on-allegro-action.md
     title: Catalog Sell On Allegro Action
   - id: FEAT-005
     type: feature
-    path: 10_features/FEAT-005-ai-assisted-offer-optimization.md
+    path: docs/10_features/FEAT-005-ai-assisted-offer-optimization.md
     title: AI-Assisted Offer Optimization
   - id: FEAT-006
     type: feature
-    path: 10_features/FEAT-006-stock-order-profit-loop.md
+    path: docs/10_features/FEAT-006-stock-order-profit-loop.md
     title: Stock Order Profit Loop
   - id: FEAT-007
     type: feature
-    path: 10_features/FEAT-007-growth-analytics-and-demand-loops.md
+    path: docs/10_features/FEAT-007-growth-analytics-and-demand-loops.md
     title: Growth Analytics And Demand Loops
   - id: FEAT-008
     type: feature
-    path: 10_features/FEAT-008-operations-trust-and-scale.md
+    path: docs/10_features/FEAT-008-operations-trust-and-scale.md
     title: Operations Trust And Scale
   - id: FEAT-009
     type: feature
-    path: 10_features/FEAT-009-public-client-ui.md
+    path: docs/10_features/FEAT-009-public-client-ui.md
     title: Public Client UI
   - id: FEAT-010
     type: feature
-    path: 10_features/FEAT-010-allegro-primary-channel-foundation.md
+    path: docs/10_features/FEAT-010-allegro-primary-channel-foundation.md
     title: Allegro Primary Channel Foundation
   - id: FEAT-011
     type: feature
-    path: 10_features/FEAT-011-catalog-canonical-content-preview-connector.md
+    path: docs/10_features/FEAT-011-catalog-canonical-content-preview-connector.md
     title: Catalog Canonical Content Preview Connector
   - id: TASK-001
     type: task
-    path: 11_tasks/TASK-001-apply-ips-baseline.md
+    path: docs/11_tasks/TASK-001-apply-ips-baseline.md
     title: Apply IPS Baseline
   - id: TASK-002
     type: task
-    path: 11_tasks/TASK-002-design-governed-publish-lifecycle.md
+    path: docs/11_tasks/TASK-002-design-governed-publish-lifecycle.md
     title: Design Governed Publish Lifecycle
   - id: TASK-003
     type: task
-    path: 11_tasks/TASK-003-define-marketplace-policy-engine.md
+    path: docs/11_tasks/TASK-003-define-marketplace-policy-engine.md
     title: Define Marketplace Policy Engine
   - id: TASK-004
     type: task
-    path: 11_tasks/TASK-004-design-catalog-sell-on-allegro-action.md
+    path: docs/11_tasks/TASK-004-design-catalog-sell-on-allegro-action.md
     title: Design Catalog Sell On Allegro Action
   - id: TASK-005
     type: task
-    path: 11_tasks/TASK-005-define-ai-offer-optimization-contract.md
+    path: docs/11_tasks/TASK-005-define-ai-offer-optimization-contract.md
     title: Define AI Offer Optimization Contract
   - id: TASK-006
     type: task
-    path: 11_tasks/TASK-006-plan-stock-order-profit-loop.md
+    path: docs/11_tasks/TASK-006-plan-stock-order-profit-loop.md
     title: Plan Stock Order Profit Loop
   - id: TASK-007
     type: task
-    path: 11_tasks/TASK-007-plan-growth-analytics-and-demand-loops.md
+    path: docs/11_tasks/TASK-007-plan-growth-analytics-and-demand-loops.md
     title: Plan Growth Analytics And Demand Loops
   - id: TASK-008
     type: task
-    path: 11_tasks/TASK-008-plan-operations-trust-and-scale.md
+    path: docs/11_tasks/TASK-008-plan-operations-trust-and-scale.md
     title: Plan Operations Trust And Scale
   - id: TASK-009
     type: task
-    path: 11_tasks/TASK-009-public-client-landing-dashboard.md
+    path: docs/11_tasks/TASK-009-public-client-landing-dashboard.md
     title: Public Client Landing And Dashboard
   - id: TASK-010
     type: task
-    path: 11_tasks/TASK-010-allegro-primary-channel-foundation.md
+    path: docs/11_tasks/TASK-010-allegro-primary-channel-foundation.md
     title: Allegro Primary Channel Foundation
   - id: TASK-011
     type: task
-    path: 11_tasks/TASK-011-catalog-canonical-content-preview-connector.md
+    path: docs/11_tasks/TASK-011-catalog-canonical-content-preview-connector.md
     title: Catalog Canonical Content Preview Connector
   - id: EP-TASK-001
     type: execution_plan
-    path: 21_execution_plans/EP-TASK-001-apply-ips-baseline.md
+    path: docs/21_execution_plans/EP-TASK-001-apply-ips-baseline.md
     title: Apply IPS Baseline
   - id: EP-TASK-002
     type: execution_plan
-    path: 21_execution_plans/EP-TASK-002-design-governed-publish-lifecycle.md
+    path: docs/21_execution_plans/EP-TASK-002-design-governed-publish-lifecycle.md
     title: Governed Publish Lifecycle
   - id: EP-TASK-003
     type: execution_plan
-    path: 21_execution_plans/EP-TASK-003-define-marketplace-policy-engine.md
+    path: docs/21_execution_plans/EP-TASK-003-define-marketplace-policy-engine.md
     title: Marketplace Policy Engine
   - id: EP-TASK-004
     type: execution_plan
-    path: 21_execution_plans/EP-TASK-004-design-catalog-sell-on-allegro-action.md
+    path: docs/21_execution_plans/EP-TASK-004-design-catalog-sell-on-allegro-action.md
     title: Catalog Sell On Allegro Action
   - id: EP-TASK-005
     type: execution_plan
-    path: 21_execution_plans/EP-TASK-005-define-ai-offer-optimization-contract.md
+    path: docs/21_execution_plans/EP-TASK-005-define-ai-offer-optimization-contract.md
     title: AI Offer Optimization Contract
   - id: EP-TASK-006
     type: execution_plan
-    path: 21_execution_plans/EP-TASK-006-plan-stock-order-profit-loop.md
+    path: docs/21_execution_plans/EP-TASK-006-plan-stock-order-profit-loop.md
     title: Stock Order Profit Loop
   - id: EP-TASK-007
     type: execution_plan
-    path: 21_execution_plans/EP-TASK-007-plan-growth-analytics-and-demand-loops.md
+    path: docs/21_execution_plans/EP-TASK-007-plan-growth-analytics-and-demand-loops.md
     title: Growth Analytics And Demand Loops
   - id: EP-TASK-008
     type: execution_plan
-    path: 21_execution_plans/EP-TASK-008-plan-operations-trust-and-scale.md
+    path: docs/21_execution_plans/EP-TASK-008-plan-operations-trust-and-scale.md
     title: Operations Trust And Scale
   - id: EP-TASK-009
     type: execution_plan
-    path: 21_execution_plans/EP-TASK-009-public-client-landing-dashboard.md
+    path: docs/21_execution_plans/EP-TASK-009-public-client-landing-dashboard.md
     title: Public Client Landing And Dashboard
   - id: EP-TASK-010
     type: execution_plan
-    path: 21_execution_plans/EP-TASK-010-allegro-primary-channel-foundation.md
+    path: docs/21_execution_plans/EP-TASK-010-allegro-primary-channel-foundation.md
     title: Allegro Primary Channel Foundation
   - id: EP-TASK-011
     type: execution_plan
-    path: 21_execution_plans/EP-TASK-011-catalog-canonical-content-preview-connector.md
+    path: docs/21_execution_plans/EP-TASK-011-catalog-canonical-content-preview-connector.md
     title: Catalog Canonical Content Preview Connector
   - id: PROMPT-TASK-001-ips-baseline
     type: coding_prompt
-    path: 14_prompts/PROMPT-TASK-001-ips-baseline.md
+    path: docs/14_prompts/PROMPT-TASK-001-ips-baseline.md
     title: Apply IPS Baseline Prompt
   - id: PROMPT-TASK-002-governed-publish-lifecycle
     type: coding_prompt
-    path: 14_prompts/PROMPT-TASK-002-governed-publish-lifecycle.md
+    path: docs/14_prompts/PROMPT-TASK-002-governed-publish-lifecycle.md
     title: Governed Publish Lifecycle Prompt
   - id: PROMPT-TASK-003-marketplace-policy-engine
     type: coding_prompt
-    path: 14_prompts/PROMPT-TASK-003-marketplace-policy-engine.md
+    path: docs/14_prompts/PROMPT-TASK-003-marketplace-policy-engine.md
     title: Marketplace Policy Engine Prompt
   - id: PROMPT-TASK-004-catalog-sell-on-allegro-action
     type: coding_prompt
-    path: 14_prompts/PROMPT-TASK-004-catalog-sell-on-allegro-action.md
+    path: docs/14_prompts/PROMPT-TASK-004-catalog-sell-on-allegro-action.md
     title: Catalog Sell On Allegro Action Prompt
   - id: PROMPT-TASK-005-ai-offer-optimization-contract
     type: coding_prompt
-    path: 14_prompts/PROMPT-TASK-005-ai-offer-optimization-contract.md
+    path: docs/14_prompts/PROMPT-TASK-005-ai-offer-optimization-contract.md
     title: AI Offer Optimization Contract Prompt
   - id: PROMPT-TASK-006-stock-order-profit-loop
     type: coding_prompt
-    path: 14_prompts/PROMPT-TASK-006-stock-order-profit-loop.md
+    path: docs/14_prompts/PROMPT-TASK-006-stock-order-profit-loop.md
     title: Stock Order Profit Loop Prompt
   - id: PROMPT-TASK-007-growth-analytics-and-demand-loops
     type: coding_prompt
-    path: 14_prompts/PROMPT-TASK-007-growth-analytics-and-demand-loops.md
+    path: docs/14_prompts/PROMPT-TASK-007-growth-analytics-and-demand-loops.md
     title: Growth Analytics And Demand Loops Prompt
   - id: PROMPT-TASK-008-operations-trust-and-scale
     type: coding_prompt
-    path: 14_prompts/PROMPT-TASK-008-operations-trust-and-scale.md
+    path: docs/14_prompts/PROMPT-TASK-008-operations-trust-and-scale.md
     title: Operations Trust And Scale Prompt
   - id: PROMPT-TASK-009-public-client-landing-dashboard
     type: coding_prompt
-    path: 14_prompts/PROMPT-TASK-009-public-client-landing-dashboard.md
+    path: docs/14_prompts/PROMPT-TASK-009-public-client-landing-dashboard.md
     title: Public Client Landing And Dashboard Prompt
   - id: PROMPT-TASK-010-allegro-primary-channel-foundation
     type: coding_prompt
-    path: 14_prompts/PROMPT-TASK-010-allegro-primary-channel-foundation.md
+    path: docs/14_prompts/PROMPT-TASK-010-allegro-primary-channel-foundation.md
     title: Allegro Primary Channel Foundation Prompt
   - id: PROMPT-TASK-011-catalog-canonical-content-preview-connector
     type: coding_prompt
-    path: 14_prompts/PROMPT-TASK-011-catalog-canonical-content-preview-connector.md
+    path: docs/14_prompts/PROMPT-TASK-011-catalog-canonical-content-preview-connector.md
     title: Catalog Canonical Content Preview Connector Prompt
   - id: CP-TASK-001
     type: context_package
-    path: 13_context_packages/CP-TASK-001-ips-baseline.md
+    path: docs/13_context_packages/CP-TASK-001-ips-baseline.md
     title: IPS Baseline Context Package
   - id: CP-TASK-002
     type: context_package
-    path: 13_context_packages/CP-TASK-002-governed-publish-lifecycle.md
+    path: docs/13_context_packages/CP-TASK-002-governed-publish-lifecycle.md
     title: Governed Publish Lifecycle Context Package
   - id: CP-TASK-003
     type: context_package
-    path: 13_context_packages/CP-TASK-003-marketplace-policy-engine.md
+    path: docs/13_context_packages/CP-TASK-003-marketplace-policy-engine.md
     title: Marketplace Policy Engine Context Package
   - id: CP-TASK-004
     type: context_package
-    path: 13_context_packages/CP-TASK-004-catalog-sell-on-allegro-action.md
+    path: docs/13_context_packages/CP-TASK-004-catalog-sell-on-allegro-action.md
     title: Catalog Sell On Allegro Action Context Package
   - id: CP-TASK-005
     type: context_package
-    path: 13_context_packages/CP-TASK-005-ai-offer-optimization-contract.md
+    path: docs/13_context_packages/CP-TASK-005-ai-offer-optimization-contract.md
     title: AI Offer Optimization Contract Context Package
   - id: CP-TASK-006
     type: context_package
-    path: 13_context_packages/CP-TASK-006-stock-order-profit-loop.md
+    path: docs/13_context_packages/CP-TASK-006-stock-order-profit-loop.md
     title: Stock Order Profit Loop Context Package
   - id: CP-TASK-007-growth-analytics-and-demand-loops
     type: context_package
-    path: 13_context_packages/CP-TASK-007-growth-analytics-and-demand-loops.md
+    path: docs/13_context_packages/CP-TASK-007-growth-analytics-and-demand-loops.md
     title: Growth Analytics And Demand Loops Context Package
   - id: CP-TASK-008-operations-trust-and-scale
     type: context_package
-    path: 13_context_packages/CP-TASK-008-operations-trust-and-scale.md
+    path: docs/13_context_packages/CP-TASK-008-operations-trust-and-scale.md
     title: Operations Trust And Scale Context Package
   - id: CP-TASK-009-public-client-landing-dashboard
     type: context_package
-    path: 13_context_packages/CP-TASK-009-public-client-landing-dashboard.md
+    path: docs/13_context_packages/CP-TASK-009-public-client-landing-dashboard.md
     title: Public Client Landing And Dashboard Context Package
   - id: CP-TASK-010-allegro-primary-channel-foundation
     type: context_package
-    path: 13_context_packages/CP-TASK-010-allegro-primary-channel-foundation.md
+    path: docs/13_context_packages/CP-TASK-010-allegro-primary-channel-foundation.md
     title: Allegro Primary Channel Foundation Context Package
   - id: CP-TASK-011-catalog-canonical-content-preview-connector
     type: context_package
-    path: 13_context_packages/CP-TASK-011-catalog-canonical-content-preview-connector.md
+    path: docs/13_context_packages/CP-TASK-011-catalog-canonical-content-preview-connector.md
     title: Catalog Canonical Content Preview Connector Context Package
   - id: ADR-001
     type: adr
-    path: 07_decisions/ADR-001-preserve-existing-nestjs-prisma-service-boundary.md
+    path: docs/07_decisions/ADR-001-preserve-existing-nestjs-prisma-service-boundary.md
     title: Preserve Existing NestJS And Prisma Service Boundary
   - id: VAL-TASK-001-ips-baseline
     type: validation_report
-    path: 12_validation/VAL-TASK-001-ips-baseline.md
+    path: docs/12_validation/VAL-TASK-001-ips-baseline.md
     title: IPS Baseline Validation
   - id: VAL-TASK-002-validation-report
     type: validation_report
-    path: 12_validation/VAL-TASK-002-validation-report.md
+    path: docs/12_validation/VAL-TASK-002-validation-report.md
     title: Governed Publish Lifecycle Validation
   - id: VAL-TASK-006-validation-report
     type: validation_report
-    path: 12_validation/VAL-TASK-006-validation-report.md
+    path: docs/12_validation/VAL-TASK-006-validation-report.md
     title: Stock Order Profit Loop Validation
   - id: VAL-TASK-003-validation-report
     type: validation_report
-    path: 12_validation/VAL-TASK-003-validation-report.md
+    path: docs/12_validation/VAL-TASK-003-validation-report.md
     title: Marketplace Policy Engine Validation
   - id: VAL-TASK-004-validation-report
     type: validation_report
-    path: 12_validation/VAL-TASK-004-validation-report.md
+    path: docs/12_validation/VAL-TASK-004-validation-report.md
     title: Catalog Sell On Allegro Action Validation
   - id: VAL-TASK-005-validation-report
     type: validation_report
-    path: 12_validation/VAL-TASK-005-validation-report.md
+    path: docs/12_validation/VAL-TASK-005-validation-report.md
     title: AI Offer Optimization Contract Validation
   - id: VAL-TASK-007-validation-report
     type: validation_report
-    path: 12_validation/VAL-TASK-007-validation-report.md
+    path: docs/12_validation/VAL-TASK-007-validation-report.md
     title: Growth Analytics And Demand Loops Validation
   - id: VAL-TASK-008-validation-report
     type: validation_report
-    path: 12_validation/VAL-TASK-008-validation-report.md
+    path: docs/12_validation/VAL-TASK-008-validation-report.md
     title: Operations Trust And Scale Validation
   - id: VAL-TASK-009-public-client-landing-dashboard
     type: validation_report
-    path: 12_validation/VAL-TASK-009-public-client-landing-dashboard.md
+    path: docs/12_validation/VAL-TASK-009-public-client-landing-dashboard.md
     title: Public Client Landing And Dashboard Validation
   - id: VAL-TASK-010-allegro-primary-channel-foundation
     type: validation_report
-    path: 12_validation/VAL-TASK-010-allegro-primary-channel-foundation.md
+    path: docs/12_validation/VAL-TASK-010-allegro-primary-channel-foundation.md
     title: Allegro Primary Channel Foundation Validation
   - id: VAL-TASK-011-catalog-canonical-content-preview-connector
     type: validation_report
-    path: 12_validation/VAL-TASK-011-catalog-canonical-content-preview-connector.md
+    path: docs/12_validation/VAL-TASK-011-catalog-canonical-content-preview-connector.md
     title: Catalog Canonical Content Preview Connector Validation
 edges:
   - from: VISION-ALLEGRO-SERVICE

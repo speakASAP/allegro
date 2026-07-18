@@ -6,12 +6,12 @@ TASK-007-C owns the notification digest metrics lane for `TASK-007` only. This h
 
 ## Intent Chain References
 
-Vision -> `01_vision/VISION.md` (`VG-002`, `VG-003`, `VG-004`)
-Goal Impact -> `22_goal_impact/GOAL-IMPACT-TASK-007.md`
-System -> `SYSTEM.md`, `04_systems/SYS-001-allegro-marketplace-integration.md`
-Feature -> `10_features/FEAT-007-growth-analytics-and-demand-loops.md`
-Task -> `11_tasks/TASK-007-plan-growth-analytics-and-demand-loops.md`
-Execution Plan -> `21_execution_plans/EP-TASK-007-plan-growth-analytics-and-demand-loops.md`
+Vision -> `docs/01_vision/VISION.md` (`VG-002`, `VG-003`, `VG-004`)
+Goal Impact -> `docs/22_goal_impact/GOAL-IMPACT-TASK-007.md`
+System -> `SYSTEM.md`, `docs/04_systems/SYS-001-allegro-marketplace-integration.md`
+Feature -> `docs/10_features/FEAT-007-growth-analytics-and-demand-loops.md`
+Task -> `docs/11_tasks/TASK-007-plan-growth-analytics-and-demand-loops.md`
+Execution Plan -> `docs/21_execution_plans/EP-TASK-007-plan-growth-analytics-and-demand-loops.md`
 Code -> `prisma/schema.prisma`, `services/allegro-service/src/allegro/publish-lifecycle/publish-lifecycle.service.ts`, `services/allegro-service/src/allegro/orders/orders.service.ts`, `services/allegro-service/src/allegro/inventory/inventory.service.ts`, `services/allegro-service/src/allegro/policy/policy-engine.service.ts`, `services/allegro-service/src/allegro/offers/offers.service.ts`, `services/allegro-service/src/allegro/events/events.service.ts`
 Validation -> synthetic cases in this handoff; final task validation remains owned by TASK-007-E
 

@@ -3,17 +3,17 @@
   "execution_plans": {
     "execution_plan_count": 11,
     "execution_plan_files": [
-      "21_execution_plans/EP-TASK-001-apply-ips-baseline.md",
-      "21_execution_plans/EP-TASK-002-design-governed-publish-lifecycle.md",
-      "21_execution_plans/EP-TASK-003-define-marketplace-policy-engine.md",
-      "21_execution_plans/EP-TASK-004-design-catalog-sell-on-allegro-action.md",
-      "21_execution_plans/EP-TASK-005-define-ai-offer-optimization-contract.md",
-      "21_execution_plans/EP-TASK-006-plan-stock-order-profit-loop.md",
-      "21_execution_plans/EP-TASK-007-plan-growth-analytics-and-demand-loops.md",
-      "21_execution_plans/EP-TASK-008-plan-operations-trust-and-scale.md",
-      "21_execution_plans/EP-TASK-009-public-client-landing-dashboard.md",
-      "21_execution_plans/EP-TASK-010-allegro-primary-channel-foundation.md",
-      "21_execution_plans/EP-TASK-011-catalog-canonical-content-preview-connector.md"
+      "docs/21_execution_plans/EP-TASK-001-apply-ips-baseline.md",
+      "docs/21_execution_plans/EP-TASK-002-design-governed-publish-lifecycle.md",
+      "docs/21_execution_plans/EP-TASK-003-define-marketplace-policy-engine.md",
+      "docs/21_execution_plans/EP-TASK-004-design-catalog-sell-on-allegro-action.md",
+      "docs/21_execution_plans/EP-TASK-005-define-ai-offer-optimization-contract.md",
+      "docs/21_execution_plans/EP-TASK-006-plan-stock-order-profit-loop.md",
+      "docs/21_execution_plans/EP-TASK-007-plan-growth-analytics-and-demand-loops.md",
+      "docs/21_execution_plans/EP-TASK-008-plan-operations-trust-and-scale.md",
+      "docs/21_execution_plans/EP-TASK-009-public-client-landing-dashboard.md",
+      "docs/21_execution_plans/EP-TASK-010-allegro-primary-channel-foundation.md",
+      "docs/21_execution_plans/EP-TASK-011-catalog-canonical-content-preview-connector.md"
     ],
     "missing_validation_plan": []
   },
@@ -21,19 +21,19 @@
   "missing_immutable_files": [],
   "next_step": "start_controlled_coding",
   "project_invariants": {
-    "path": "17_governance/PROJECT_INVARIANTS.md",
+    "path": "docs/17_governance/PROJECT_INVARIANTS.md",
     "status": "pass"
   },
   "required_immutable_files": [
-    "00_constitution/CONSTITUTION.md",
-    "01_vision/VISION.md"
+    "docs/00_constitution/CONSTITUTION.md",
+    "docs/01_vision/VISION.md"
   ],
   "root": "/home/ssf/Documents/Github/allegro",
   "schema_version": "1.0.0",
   "sensitive_data_findings": [],
   "shared_principles_with_dos": {
     "missing_sections": [],
-    "path": "17_governance/SHARED_PRINCIPLES_WITH_DOS.md",
+    "path": "docs/17_governance/SHARED_PRINCIPLES_WITH_DOS.md",
     "reference_boundary_present": true,
     "required_sections": [
       "Purpose",
@@ -49,17 +49,17 @@
     "missing_upstream_traceability": [],
     "task_count": 11,
     "task_files": [
-      "11_tasks/TASK-001-apply-ips-baseline.md",
-      "11_tasks/TASK-002-design-governed-publish-lifecycle.md",
-      "11_tasks/TASK-003-define-marketplace-policy-engine.md",
-      "11_tasks/TASK-004-design-catalog-sell-on-allegro-action.md",
-      "11_tasks/TASK-005-define-ai-offer-optimization-contract.md",
-      "11_tasks/TASK-006-plan-stock-order-profit-loop.md",
-      "11_tasks/TASK-007-plan-growth-analytics-and-demand-loops.md",
-      "11_tasks/TASK-008-plan-operations-trust-and-scale.md",
-      "11_tasks/TASK-009-public-client-landing-dashboard.md",
-      "11_tasks/TASK-010-allegro-primary-channel-foundation.md",
-      "11_tasks/TASK-011-catalog-canonical-content-preview-connector.md"
+      "docs/11_tasks/TASK-001-apply-ips-baseline.md",
+      "docs/11_tasks/TASK-002-design-governed-publish-lifecycle.md",
+      "docs/11_tasks/TASK-003-define-marketplace-policy-engine.md",
+      "docs/11_tasks/TASK-004-design-catalog-sell-on-allegro-action.md",
+      "docs/11_tasks/TASK-005-define-ai-offer-optimization-contract.md",
+      "docs/11_tasks/TASK-006-plan-stock-order-profit-loop.md",
+      "docs/11_tasks/TASK-007-plan-growth-analytics-and-demand-loops.md",
+      "docs/11_tasks/TASK-008-plan-operations-trust-and-scale.md",
+      "docs/11_tasks/TASK-009-public-client-landing-dashboard.md",
+      "docs/11_tasks/TASK-010-allegro-primary-channel-foundation.md",
+      "docs/11_tasks/TASK-011-catalog-canonical-content-preview-connector.md"
     ]
   }
 }

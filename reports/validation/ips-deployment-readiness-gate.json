@@ -24,132 +24,132 @@
     {
       "line": 338,
       "marker": "[MISSING: governed preview-token policy for OffersController import approval routes]",
-      "path": "12_validation/VAL-TASK-010-allegro-primary-channel-foundation.md"
+      "path": "docs/12_validation/VAL-TASK-010-allegro-primary-channel-foundation.md"
     },
     {
       "line": 339,
       "marker": "[MISSING: Catalog owner approval contract for broad active-offer Catalog import]",
-      "path": "12_validation/VAL-TASK-010-allegro-primary-channel-foundation.md"
+      "path": "docs/12_validation/VAL-TASK-010-allegro-primary-channel-foundation.md"
     },
     {
       "line": 340,
       "marker": "[MISSING: governed Allegro quantity command write-back with polling and terminal state checks]",
-      "path": "12_validation/VAL-TASK-010-allegro-primary-channel-foundation.md"
+      "path": "docs/12_validation/VAL-TASK-010-allegro-primary-channel-foundation.md"
     },
     {
       "line": 39,
       "marker": "[MISSING: ai-microservice owner-approved internal auth contract]",
-      "path": "16_operations/AI_OFFER_OPTIMIZATION_CONTRACT.md"
+      "path": "docs/16_operations/AI_OFFER_OPTIMIZATION_CONTRACT.md"
     },
     {
       "line": 161,
       "marker": "[MISSING: provider version metadata]",
-      "path": "16_operations/AI_OFFER_OPTIMIZATION_CONTRACT.md"
+      "path": "docs/16_operations/AI_OFFER_OPTIMIZATION_CONTRACT.md"
     },
     {
       "line": 206,
       "marker": "[MISSING: owner-approved experiment window defaults by category/account]",
-      "path": "16_operations/AI_OFFER_OPTIMIZATION_CONTRACT.md"
+      "path": "docs/16_operations/AI_OFFER_OPTIMIZATION_CONTRACT.md"
     },
     {
       "line": 214,
       "marker": "[MISSING: ai-microservice owner-approved auth handshake]",
-      "path": "16_operations/AI_OFFER_OPTIMIZATION_CONTRACT.md"
+      "path": "docs/16_operations/AI_OFFER_OPTIMIZATION_CONTRACT.md"
     },
     {
       "line": 215,
       "marker": "[MISSING: provider/model registry contract for runtime metadata]",
-      "path": "16_operations/AI_OFFER_OPTIMIZATION_CONTRACT.md"
+      "path": "docs/16_operations/AI_OFFER_OPTIMIZATION_CONTRACT.md"
     },
     {
       "line": 216,
       "marker": "[MISSING: owner-approved experiment window defaults by category/account]",
-      "path": "16_operations/AI_OFFER_OPTIMIZATION_CONTRACT.md"
+      "path": "docs/16_operations/AI_OFFER_OPTIMIZATION_CONTRACT.md"
     },
     {
       "line": 83,
       "marker": "[MISSING: ...]",
-      "path": "16_operations/INTEGRATIONS.md"
+      "path": "docs/16_operations/INTEGRATIONS.md"
     },
     {
       "line": 118,
       "marker": "[MISSING: ...]",
-      "path": "21_execution_plans/EP-TASK-006-plan-stock-order-profit-loop.md"
+      "path": "docs/21_execution_plans/EP-TASK-006-plan-stock-order-profit-loop.md"
     },
     {
       "line": 124,
       "marker": "[MISSING: ...]",
-      "path": "21_execution_plans/EP-TASK-007-plan-growth-analytics-and-demand-loops.md"
+      "path": "docs/21_execution_plans/EP-TASK-007-plan-growth-analytics-and-demand-loops.md"
     },
     {
       "line": 117,
       "marker": "[MISSING: ...]",
-      "path": "21_execution_plans/EP-TASK-008-plan-operations-trust-and-scale.md"
+      "path": "docs/21_execution_plans/EP-TASK-008-plan-operations-trust-and-scale.md"
     },
     {
       "line": 123,
       "marker": "[MISSING: ...]",
-      "path": "21_execution_plans/EP-TASK-008-plan-operations-trust-and-scale.md"
+      "path": "docs/21_execution_plans/EP-TASK-008-plan-operations-trust-and-scale.md"
     },
     {
       "line": 123,
       "marker": "[UNKNOWN: ...]",
-      "path": "21_execution_plans/EP-TASK-008-plan-operations-trust-and-scale.md"
+      "path": "docs/21_execution_plans/EP-TASK-008-plan-operations-trust-and-scale.md"
     },
     {
       "line": 16,
       "marker": "[MISSING: ...]",
-      "path": "23_documentation_contracts/AGENT_GAP_FILLING_RULES.md"
+      "path": "docs/23_documentation_contracts/AGENT_GAP_FILLING_RULES.md"
     },
     {
       "line": 17,
       "marker": "[UNKNOWN: ...]",
-      "path": "23_documentation_contracts/AGENT_GAP_FILLING_RULES.md"
+      "path": "docs/23_documentation_contracts/AGENT_GAP_FILLING_RULES.md"
     },
     {
       "line": 41,
       "marker": "[MISSING: ...]",
-      "path": "23_documentation_contracts/AGENT_GAP_FILLING_RULES.md"
+      "path": "docs/23_documentation_contracts/AGENT_GAP_FILLING_RULES.md"
     },
     {
       "line": 71,
       "marker": "[MISSING: define what this feature explicitly does not include]",
-      "path": "23_documentation_contracts/AGENT_GAP_FILLING_RULES.md"
+      "path": "docs/23_documentation_contracts/AGENT_GAP_FILLING_RULES.md"
     },
     {
       "line": 74,
       "marker": "[MISSING: define measurable acceptance criteria]",
-      "path": "23_documentation_contracts/AGENT_GAP_FILLING_RULES.md"
+      "path": "docs/23_documentation_contracts/AGENT_GAP_FILLING_RULES.md"
     },
     {
       "line": 47,
       "marker": "[MISSING: describe what is missing and who should provide it]",
-      "path": "23_documentation_contracts/DOCUMENTATION_COMPLETENESS_STANDARD.md"
+      "path": "docs/23_documentation_contracts/DOCUMENTATION_COMPLETENESS_STANDARD.md"
     },
     {
       "line": 53,
       "marker": "[MISSING: define measurable acceptance criteria for this feature]",
-      "path": "23_documentation_contracts/DOCUMENTATION_COMPLETENESS_STANDARD.md"
+      "path": "docs/23_documentation_contracts/DOCUMENTATION_COMPLETENESS_STANDARD.md"
     },
     {
       "line": 54,
       "marker": "[MISSING: identify upstream business goal]",
-      "path": "23_documentation_contracts/DOCUMENTATION_COMPLETENESS_STANDARD.md"
+      "path": "docs/23_documentation_contracts/DOCUMENTATION_COMPLETENESS_STANDARD.md"
     },
     {
       "line": 55,
       "marker": "[MISSING: list files that must not be modified]",
-      "path": "23_documentation_contracts/DOCUMENTATION_COMPLETENESS_STANDARD.md"
+      "path": "docs/23_documentation_contracts/DOCUMENTATION_COMPLETENESS_STANDARD.md"
     },
     {
       "line": 63,
       "marker": "[UNKNOWN: describe what is unknown and how to discover it]",
-      "path": "23_documentation_contracts/DOCUMENTATION_COMPLETENESS_STANDARD.md"
+      "path": "docs/23_documentation_contracts/DOCUMENTATION_COMPLETENESS_STANDARD.md"
     },
     {
       "line": 75,
       "marker": "[MISSING: ...]",
-      "path": "23_documentation_contracts/DOCUMENTATION_COMPLETENESS_STANDARD.md"
+      "path": "docs/23_documentation_contracts/DOCUMENTATION_COMPLETENESS_STANDARD.md"
     },
     {
       "line": 60,
@@ -379,19 +379,19 @@
   ],
   "validation_reports": {
     "matching_reports": [
-      "12_validation/VAL-TASK-010-allegro-primary-channel-foundation.md"
+      "docs/12_validation/VAL-TASK-010-allegro-primary-channel-foundation.md"
     ],
     "reports": [
-      "12_validation/VAL-TASK-001-ips-baseline.md",
-      "12_validation/VAL-TASK-002-validation-report.md",
-      "12_validation/VAL-TASK-003-validation-report.md",
-      "12_validation/VAL-TASK-004-validation-report.md",
-      "12_validation/VAL-TASK-005-validation-report.md",
-      "12_validation/VAL-TASK-006-validation-report.md",
-      "12_validation/VAL-TASK-007-validation-report.md",
-      "12_validation/VAL-TASK-008-validation-report.md",
-      "12_validation/VAL-TASK-009-public-client-landing-dashboard.md",
-      "12_validation/VAL-TASK-010-allegro-primary-channel-foundation.md"
+      "docs/12_validation/VAL-TASK-001-ips-baseline.md",
+      "docs/12_validation/VAL-TASK-002-validation-report.md",
+      "docs/12_validation/VAL-TASK-003-validation-report.md",
+      "docs/12_validation/VAL-TASK-004-validation-report.md",
+      "docs/12_validation/VAL-TASK-005-validation-report.md",
+      "docs/12_validation/VAL-TASK-006-validation-report.md",
+      "docs/12_validation/VAL-TASK-007-validation-report.md",
+      "docs/12_validation/VAL-TASK-008-validation-report.md",
+      "docs/12_validation/VAL-TASK-009-public-client-landing-dashboard.md",
+      "docs/12_validation/VAL-TASK-010-allegro-primary-channel-foundation.md"
     ],
     "status": "pass",
     "target": "TASK-010"
