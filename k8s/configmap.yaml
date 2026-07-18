@@ -49,7 +49,6 @@
     "LOGGING_SERVICE_URL": "http://logging-microservice:3367",
     "LOG_LEVEL": "info",
     "LOG_TIMESTAMP_FORMAT": "YYYY-MM-DD HH:mm:ss",
-    "NGINX_NETWORK_NAME": "nginx-network",
     "NODE_ENV": "production",
     "NOTIFICATION_EMAIL_TO": "ssfskype@gmail.com",
     "NOTIFICATION_ORDER_CREATED": "true",
