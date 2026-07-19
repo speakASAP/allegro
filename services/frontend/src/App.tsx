@@ -18,6 +18,7 @@ import ProductsPage from './pages/ProductsPage';
 import AdminUsersPage from './pages/AdminUsersPage';
 import OperationsPage from './pages/OperationsPage';
 import BuyerOrdersPage from './pages/BuyerOrdersPage';
+import ConsentBanner from './components/ConsentBanner';
 
 function App() {
   return (
@@ -60,6 +61,7 @@ function App() {
           </Route>
         </Routes>
       </BrowserRouter>
+      <ConsentBanner />
     </AuthProvider>
   );
 }
