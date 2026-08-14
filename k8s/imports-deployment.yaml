@@ -34,7 +34,7 @@ spec:
             - name: DB_PASSWORD
               valueFrom:
                 secretKeyRef:
-                  name: database-credentials
+                  name: allegro-service-secret
                   key: DB_PASSWORD
             - name: DATABASE_URL_OVERRIDE
               valueFrom:

@@ -32,7 +32,7 @@
     "DB_HOST": "db-server-postgres",
     "DB_NAME": "allegro",
     "DB_PORT": "5432",
-    "DB_USER": "dbadmin",
+    "DB_USER": "allegro",
     "DOMAIN": "allegro.alfares.cz",
     "EVENT_POLLING_INTERVAL": "*/37 * * * *",
     "FRONTEND_API_URL": "https://allegro.alfares.cz/api",
