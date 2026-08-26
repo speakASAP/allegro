@@ -31,7 +31,14 @@ export class WarehouseClientService {
       process.env.INTERNAL_SERVICE_TOKEN;
 
     if (!token) {
-      return {};
+      // Sending the request unauthenticated would surface as a confusing 401
+      // from warehouse rather than as the misconfiguration it actually is.
+      this.logger.error(
+        'No warehouse credential configured (WAREHOUSE_SERVICE_TOKEN / WAREHOUSE_INTERNAL_SERVICE_TOKEN / JWT_TOKEN / INTERNAL_SERVICE_TOKEN); refusing to call warehouse-microservice unauthenticated',
+        undefined,
+        'WarehouseClient',
+      );
+      throw new Error('[MISSING: warehouse runtime credential]');
     }
 
     return {
@@ -81,9 +88,21 @@ export class WarehouseClientService {
       );
       return response.data.data || [];
     } catch (error: unknown) {
+      const status = (error as { response?: { status?: number } })?.response?.status;
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      this.logger.warn(`Stock not found for product ${productId}: ${errorMessage}`, 'WarehouseClient');
-      return [];
+      // A 404 is genuinely "no stock rows for this product". Anything else --
+      // above all 401/403 -- is a failed lookup, and returning [] for it makes
+      // an outage indistinguishable from zero stock.
+      if (status === 404) {
+        this.logger.warn(`No stock rows for product ${productId}`, 'WarehouseClient');
+        return [];
+      }
+      this.logger.error(
+        `Stock lookup failed for product ${productId} (status ${status ?? 'none'}): ${errorMessage}`,
+        error instanceof Error ? error.stack : undefined,
+        'WarehouseClient',
+      );
+      throw error;
     }
   }
 
@@ -97,9 +116,20 @@ export class WarehouseClientService {
       );
       return response.data.data?.totalAvailable || 0;
     } catch (error: unknown) {
+      const status = (error as { response?: { status?: number } })?.response?.status;
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      this.logger.warn(`Failed to get total stock for product ${productId}: ${errorMessage}`, 'WarehouseClient');
-      return 0;
+      // Returning 0 for a failed lookup reads as "out of stock" and silently
+      // suppresses listings; only a real 404 means there is no such stock row.
+      if (status === 404) {
+        this.logger.warn(`No stock row for product ${productId}`, 'WarehouseClient');
+        return 0;
+      }
+      this.logger.error(
+        `Total stock lookup failed for product ${productId} (status ${status ?? 'none'}): ${errorMessage}`,
+        error instanceof Error ? error.stack : undefined,
+        'WarehouseClient',
+      );
+      throw error;
     }
   }
 
@@ -203,9 +233,14 @@ export class WarehouseClientService {
       );
       return response.data.data || [];
     } catch (error: unknown) {
+      const status = (error as { response?: { status?: number } })?.response?.status;
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      this.logger.warn(`Failed to get warehouses: ${errorMessage}`, 'WarehouseClient');
-      return [];
+      this.logger.error(
+        `Warehouse list lookup failed (status ${status ?? 'none'}): ${errorMessage}`,
+        error instanceof Error ? error.stack : undefined,
+        'WarehouseClient',
+      );
+      throw error;
     }
   }
 
@@ -227,9 +262,15 @@ export class WarehouseClientService {
       }
     } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      this.logger.warn(`Failed to get default warehouse: ${errorMessage}`, 'WarehouseClient');
+      this.logger.error(
+        `Default warehouse lookup failed: ${errorMessage}`,
+        error instanceof Error ? error.stack : undefined,
+        'WarehouseClient',
+      );
+      throw error;
     }
 
+    // Reached only when warehouse genuinely reports zero warehouses.
     return null;
   }
 }
