@@ -3,6 +3,7 @@ import { of } from 'rxjs';
 import { ORDERS_LIFECYCLE_READ_UNAVAILABLE, OrderClientService } from './order-client.service';
 
 type EnvKeys =
+  | 'ORDERS_SERVICE_TOKEN'
   | 'ALLEGRO_INTERNAL_SERVICE_TOKEN'
   | 'ORDERS_INTERNAL_SERVICE_TOKEN'
   | 'ORDER_SERVICE_INTERNAL_TOKEN'
@@ -11,6 +12,7 @@ type EnvKeys =
   | 'ALLEGRO_CALLER_SERVICE_NAME';
 
 const ENV_KEYS: EnvKeys[] = [
+  'ORDERS_SERVICE_TOKEN',
   'ALLEGRO_INTERNAL_SERVICE_TOKEN',
   'ORDERS_INTERNAL_SERVICE_TOKEN',
   'ORDER_SERVICE_INTERNAL_TOKEN',
@@ -162,8 +164,46 @@ async function testGetOrderLifecycleReturnsUnavailableWhenReadFails() {
   });
 }
 
+async function testCreateOrderPrefersPerPairBearerToken() {
+  await withCleanOrderEnv({
+    ORDERS_SERVICE_TOKEN: 'synthetic-per-pair-jwt',
+    ALLEGRO_INTERNAL_SERVICE_TOKEN: 'synthetic-orders-token',
+  }, async () => {
+    const fixture = createFixture();
+
+    await fixture.service.createOrder(syntheticOrderPayload() as any);
+
+    const headers = fixture.postCalls[0][2].headers;
+    // The per-pair principal wins even when the shared static token is also present.
+    assert.equal(headers.authorization, 'Bearer synthetic-per-pair-jwt');
+    assert.equal(headers['x-service-name'], 'allegro-service');
+    // The shared credential must not be sent alongside it.
+    assert.equal(headers['x-internal-service-token'], undefined);
+    // Preferring the per-pair token is not a fallback, so it must not warn.
+    assert.equal(fixture.warnings.length, 0);
+  });
+}
+
+async function testStaticTokenFallbackWarns() {
+  await withCleanOrderEnv({
+    ALLEGRO_INTERNAL_SERVICE_TOKEN: 'synthetic-orders-token',
+  }, async () => {
+    const fixture = createFixture();
+
+    await fixture.service.createOrder(syntheticOrderPayload() as any);
+
+    assert.equal(fixture.postCalls[0][2].headers['x-internal-service-token'], 'synthetic-orders-token');
+    assert.equal(fixture.postCalls[0][2].headers.authorization, undefined);
+    // Falling back to the shared credential must be visible, never silent.
+    assert.equal(fixture.warnings.length, 1);
+    assert.match(String(fixture.warnings[0][0]), /ORDERS_SERVICE_TOKEN is not set/);
+  });
+}
+
 export async function runOrderClientServiceSpec(): Promise<void> {
   await testCreateOrderSendsMachineAuthHeaders();
+  await testCreateOrderPrefersPerPairBearerToken();
+  await testStaticTokenFallbackWarns();
   await testCreateOrderFailsClosedWithoutMachineCredential();
   await testGetOrderLifecycleReadsCentralOrderById();
   await testGetOrderLifecycleReturnsUnavailableWhenReadFails();

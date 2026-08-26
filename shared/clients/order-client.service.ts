@@ -188,39 +188,6 @@ export class OrderClientService {
     }
   }
 
-  async updateOrderStatus(orderId: string, status: string): Promise<any> {
-    try {
-      const response = await firstValueFrom(
-        this.httpService.put(this.baseUrl + '/api/orders/' + orderId + '/status', { status }, this.requestOptions() || {}),
-      );
-      return response.data.data;
-    } catch (error: unknown) {
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      const errorStack = error instanceof Error ? error.stack : undefined;
-      this.logger.error('Failed to update order status: ' + errorMessage, errorStack, 'OrderClient');
-      throw new HttpException('Failed to update order status: ' + errorMessage, HttpStatus.BAD_REQUEST);
-    }
-  }
-
-  async findByExternalId(externalOrderId: string, channel: string, channelAccountId?: string): Promise<any | null> {
-    const params = {
-      channel,
-      externalOrderId,
-      channelAccountId: channelAccountId ? this.normalizeChannelAccountId(channelAccountId) : undefined,
-    };
-
-    try {
-      const response = await firstValueFrom(
-        this.httpService.get(this.baseUrl + '/api/orders', this.requestOptions({ params }) || { params }),
-      );
-      const orders = response.data.data || [];
-      return orders.find((order: any) => order.externalOrderId === externalOrderId) || null;
-    } catch (error: unknown) {
-      this.logger.warn('Order not found: ' + externalOrderId, 'OrderClient');
-      return null;
-    }
-  }
-
   private normalizeChannelAccountId(channelAccountId?: string): string {
     const normalized = channelAccountId?.trim();
     return normalized || DEFAULT_CHANNEL_ACCOUNT_ID;
