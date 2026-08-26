@@ -82,6 +82,13 @@ spec:
                 secretKeyRef:
                   name: orders-microservice-secret
                   key: ALLEGRO_INTERNAL_SERVICE_TOKEN
+            # Per-pair RS256 principal for this lane; preferred over the shared
+            # static token above, which is kept only as a cutover fallback.
+            - name: ORDERS_SERVICE_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: allegro-service-secret
+                  key: ORDERS_SERVICE_TOKEN
             - name: ALLEGRO_ORDER_FORWARDING_WAREHOUSE_ID
               value: "c0de0000-0000-4000-8000-000000000013"
             - name: ALLEGRO_SHIPMENT_DEAD_LETTER_DIR

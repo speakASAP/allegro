@@ -61,6 +61,23 @@ export class OrderClientService {
     this.baseUrl = process.env.ORDER_SERVICE_URL || 'http://orders-microservice:3203';
   }
 
+  /**
+   * Per-pair RS256 principal for allegro-service -> orders-microservice, sent as
+   * `Authorization: Bearer`. orders verifies it via /auth/validate and reads the
+   * roles from the token, so a leak is revoked by deactivating one principal in
+   * the auth DB rather than by editing env vars in four repos at once.
+   */
+  private resolveOrdersBearerToken(): string | null {
+    return process.env.ORDERS_SERVICE_TOKEN?.trim() || null;
+  }
+
+  /**
+   * Legacy shared static secret, compared byte-for-byte by orders'
+   * `resolveInternalServiceActor`. The same value is held by allegro-imports,
+   * orders and marketing, so it cannot be rotated for one caller alone. Retained
+   * only as a cutover fallback; remove once ORDERS_SERVICE_TOKEN is mounted
+   * everywhere and the lane is confirmed green.
+   */
   private resolveInternalServiceToken(): string | null {
     const token =
       process.env.ALLEGRO_INTERNAL_SERVICE_TOKEN ||
@@ -72,10 +89,29 @@ export class OrderClientService {
   }
 
   private requestOptions(extra: Record<string, any> = {}): Record<string, any> | null {
+    const bearer = this.resolveOrdersBearerToken();
+    if (bearer) {
+      return {
+        ...extra,
+        headers: {
+          ...(extra.headers || {}),
+          authorization: `Bearer ${bearer}`,
+          'x-service-name': this.serviceName,
+        },
+      };
+    }
+
     const token = this.resolveInternalServiceToken();
     if (!token) {
       return null;
     }
+
+    this.logger.warn(
+      'ORDERS_SERVICE_TOKEN is not set; falling back to the shared static ' +
+        'x-internal-service-token for orders-microservice. This credential is shared ' +
+        'with three other pods and cannot be revoked per caller.',
+      'OrderClient',
+    );
 
     return {
       ...extra,
