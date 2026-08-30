@@ -1,0 +1,269 @@
+{
+  "schema_version": "1.0",
+  "repository": "allegro",
+  "generated_at": "2026-08-30T21:45:54Z",
+  "artifacts": [
+    {
+      "id": "DECISION-PROJECT-COMPLETION-2026-07-02",
+      "type": "decision",
+      "status": "done",
+      "title": "Project completion marker maintained in TASKS ledger",
+      "path": "TASKS.md",
+      "parent_ids": [],
+      "updated_at": "2026-07-02T22:41:08+02:00"
+    },
+    {
+      "id": "TASK-001",
+      "type": "task",
+      "status": "done",
+      "title": "Apply IPS Baseline",
+      "path": "docs/11_tasks/TASK-001-apply-ips-baseline.md",
+      "parent_ids": [],
+      "runlayer_task_id": null,
+      "updated_at": "2026-07-18T17:53:19+02:00"
+    },
+    {
+      "id": "TASK-002",
+      "type": "task",
+      "status": "done",
+      "title": "Design Governed Publish Lifecycle",
+      "path": "docs/11_tasks/TASK-002-design-governed-publish-lifecycle.md",
+      "parent_ids": [],
+      "runlayer_task_id": null,
+      "updated_at": "2026-07-18T17:53:19+02:00"
+    },
+    {
+      "id": "TASK-003",
+      "type": "task",
+      "status": "done",
+      "title": "Define Marketplace Policy Engine",
+      "path": "docs/11_tasks/TASK-003-define-marketplace-policy-engine.md",
+      "parent_ids": [],
+      "runlayer_task_id": null,
+      "updated_at": "2026-07-18T17:53:19+02:00"
+    },
+    {
+      "id": "TASK-004",
+      "type": "task",
+      "status": "done",
+      "title": "Design Catalog Sell On Allegro Action",
+      "path": "docs/11_tasks/TASK-004-design-catalog-sell-on-allegro-action.md",
+      "parent_ids": [],
+      "runlayer_task_id": null,
+      "updated_at": "2026-07-18T17:53:19+02:00"
+    },
+    {
+      "id": "TASK-005",
+      "type": "task",
+      "status": "done",
+      "title": "Define AI Offer Optimization Contract",
+      "path": "docs/11_tasks/TASK-005-define-ai-offer-optimization-contract.md",
+      "parent_ids": [],
+      "runlayer_task_id": null,
+      "updated_at": "2026-07-18T17:53:19+02:00"
+    },
+    {
+      "id": "TASK-006",
+      "type": "task",
+      "status": "done",
+      "title": "Plan Stock Order Profit Loop",
+      "path": "docs/11_tasks/TASK-006-plan-stock-order-profit-loop.md",
+      "parent_ids": [],
+      "runlayer_task_id": null,
+      "updated_at": "2026-07-18T17:53:19+02:00"
+    },
+    {
+      "id": "TASK-007",
+      "type": "task",
+      "status": "done",
+      "title": "Plan Growth Analytics And Demand Loops",
+      "path": "docs/11_tasks/TASK-007-plan-growth-analytics-and-demand-loops.md",
+      "parent_ids": [],
+      "runlayer_task_id": null,
+      "updated_at": "2026-07-18T17:53:19+02:00"
+    },
+    {
+      "id": "TASK-008",
+      "type": "task",
+      "status": "done",
+      "title": "Plan Operations Trust And Scale",
+      "path": "docs/11_tasks/TASK-008-plan-operations-trust-and-scale.md",
+      "parent_ids": [],
+      "runlayer_task_id": null,
+      "updated_at": "2026-07-18T17:53:19+02:00"
+    },
+    {
+      "id": "TASK-009",
+      "type": "task",
+      "status": "done",
+      "title": "Public Client Landing And Dashboard",
+      "path": "docs/11_tasks/TASK-009-public-client-landing-dashboard.md",
+      "parent_ids": [],
+      "runlayer_task_id": null,
+      "updated_at": "2026-07-18T17:53:19+02:00"
+    },
+    {
+      "id": "TASK-010",
+      "type": "task",
+      "status": "done",
+      "title": "Allegro Primary Channel Foundation",
+      "path": "docs/11_tasks/TASK-010-allegro-primary-channel-foundation.md",
+      "parent_ids": [],
+      "runlayer_task_id": null,
+      "updated_at": "2026-07-18T17:53:19+02:00"
+    },
+    {
+      "id": "TASK-011",
+      "type": "task",
+      "status": "done",
+      "title": "Catalog Canonical Content Preview Connector",
+      "path": "docs/11_tasks/TASK-011-catalog-canonical-content-preview-connector.md",
+      "parent_ids": [],
+      "runlayer_task_id": null,
+      "updated_at": "2026-07-18T17:53:19+02:00"
+    },
+    {
+      "id": "VAL-TASK-001",
+      "type": "validation",
+      "status": "validated",
+      "title": "IPS Baseline",
+      "path": "docs/12_validation/VAL-TASK-001-ips-baseline.md",
+      "parent_ids": [
+        "TASK-001"
+      ],
+      "updated_at": "2026-07-18T17:53:19+02:00"
+    },
+    {
+      "id": "VAL-TASK-002",
+      "type": "validation",
+      "status": "validated",
+      "title": "Governed Publish Lifecycle Validation",
+      "path": "docs/12_validation/VAL-TASK-002-validation-report.md",
+      "parent_ids": [
+        "TASK-002"
+      ],
+      "updated_at": "2026-07-18T17:53:19+02:00"
+    },
+    {
+      "id": "VAL-TASK-003",
+      "type": "validation",
+      "status": "validated",
+      "title": "Marketplace Policy Engine Validation Report",
+      "path": "docs/12_validation/VAL-TASK-003-validation-report.md",
+      "parent_ids": [
+        "TASK-003"
+      ],
+      "updated_at": "2026-07-18T17:53:19+02:00"
+    },
+    {
+      "id": "VAL-TASK-004",
+      "type": "validation",
+      "status": "validated",
+      "title": "Catalog Sell On Allegro Action Validation Report",
+      "path": "docs/12_validation/VAL-TASK-004-validation-report.md",
+      "parent_ids": [
+        "TASK-004"
+      ],
+      "updated_at": "2026-07-18T17:53:19+02:00"
+    },
+    {
+      "id": "VAL-TASK-005",
+      "type": "validation",
+      "status": "validated",
+      "title": "AI Offer Optimization Contract Validation Report",
+      "path": "docs/12_validation/VAL-TASK-005-validation-report.md",
+      "parent_ids": [
+        "TASK-005"
+      ],
+      "updated_at": "2026-07-18T17:53:19+02:00"
+    },
+    {
+      "id": "VAL-TASK-006",
+      "type": "validation",
+      "status": "validated",
+      "title": "Stock Order Profit Loop Validation Report",
+      "path": "docs/12_validation/VAL-TASK-006-validation-report.md",
+      "parent_ids": [
+        "TASK-006"
+      ],
+      "updated_at": "2026-07-18T17:53:19+02:00"
+    },
+    {
+      "id": "VAL-TASK-007",
+      "type": "validation",
+      "status": "validated",
+      "title": "Growth Analytics And Demand Loops Validation Report",
+      "path": "docs/12_validation/VAL-TASK-007-validation-report.md",
+      "parent_ids": [
+        "TASK-007"
+      ],
+      "updated_at": "2026-07-18T17:53:19+02:00"
+    },
+    {
+      "id": "VAL-TASK-008",
+      "type": "validation",
+      "status": "validated",
+      "title": "Operations Trust And Scale Validation Report",
+      "path": "docs/12_validation/VAL-TASK-008-validation-report.md",
+      "parent_ids": [
+        "TASK-008"
+      ],
+      "updated_at": "2026-07-18T17:53:19+02:00"
+    },
+    {
+      "id": "VAL-TASK-009",
+      "type": "validation",
+      "status": "validated",
+      "title": "Public Client Landing And Dashboard Validation Report",
+      "path": "docs/12_validation/VAL-TASK-009-public-client-landing-dashboard.md",
+      "parent_ids": [
+        "TASK-009"
+      ],
+      "updated_at": "2026-07-18T17:53:19+02:00"
+    },
+    {
+      "id": "VAL-TASK-010",
+      "type": "validation",
+      "status": "validated",
+      "title": "Allegro Primary Channel Foundation Validation Report",
+      "path": "docs/12_validation/VAL-TASK-010-allegro-primary-channel-foundation.md",
+      "parent_ids": [
+        "TASK-010"
+      ],
+      "updated_at": "2026-07-18T17:53:19+02:00"
+    },
+    {
+      "id": "VAL-TASK-011",
+      "type": "validation",
+      "status": "validated",
+      "title": "Catalog Canonical Content Preview Connector Validation Report",
+      "path": "docs/12_validation/VAL-TASK-011-catalog-canonical-content-preview-connector.md",
+      "parent_ids": [
+        "TASK-011"
+      ],
+      "updated_at": "2026-07-18T17:53:19+02:00"
+    },
+    {
+      "id": "VAL-WAVE0-V1-PLANNING-REGISTRY-2026-08-30",
+      "type": "validation",
+      "status": "validated",
+      "title": "Wave 0 v1 planning registry adoption validation",
+      "path": "docs/validation/2026-08-30-wave0-v1-planning-registry-adoption.md",
+      "parent_ids": [],
+      "updated_at": "2026-08-30T21:45:54Z"
+    },
+    {
+      "id": "VALIDATION-DEBT-LEDGER",
+      "type": "validation_debt",
+      "status": "draft",
+      "title": "Validation debt ledger template",
+      "path": "docs/orchestrator/VALIDATION_DEBT.md",
+      "parent_ids": [],
+      "updated_at": "2026-06-15T07:24:58+02:00"
+    }
+  ],
+  "warnings": [
+    "RunLayer project mapping is not documented in allegro repository artifacts; project_registration remains unlinked and runlayer_* IDs are null.",
+    "TASK and VAL artifact statuses follow TASKS.md completion history and validation reports; several legacy YAML metadata blocks inside individual docs still say draft."
+  ]
+}
