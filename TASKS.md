@@ -33,3 +33,23 @@ Owner created TASK-009 runtime/UI implementation goal on 2026-06-27.
 - 2026-06-21: Project marked completed/frozen after TASK-006 validation.
 - 2026-06-27: TASK-009 live validated and project returned to completed state after deploying the public Allegro landing and registered-client dashboard.
 - 2026-06-30: TASK-011 implemented as a no-deploy connector lane for Catalog canonical content previews in draft preparation.
+
+# Tasks
+
+## Active
+- complete IPS adoption profile for allegro-service
+
+## Ready next
+- review marketplace integration drift and event-handling follow-ups
+- confirm operational health evidence for the next governance review
+
+## Blocked
+- no active blockers beyond requiring truthful project-owner approval evidence for onboarding
+
+## Completed
+- real repository intent documented in README, BUSINESS.md, and SYSTEM.md
+- central adoption profile created and validated against the IPS planning gate
+- architecture, invariants, and validation-debt artifacts aligned to the repo reality
+
+## Handoff
+- keep the final validation evidence and repo state in STATE.json and project validation artifacts

@@ -1,39 +1,42 @@
-# GOAL-IMPACT-TASK-001: Apply IPS Baseline
 
-```yaml
+# GOAL-IMPACT-TASK-001: Apply IPS adoption baseline
+
 id: GOAL-IMPACT-TASK-001
 artifact_type: task
 artifact_id: TASK-001
-artifact_path: ../11_tasks/TASK-001-apply-ips-baseline.md
-primary_goal: VG-004 Operational production service
+artifact_path: ../11_tasks/TASK-001-bootstrap-service.md
+primary_goal: Keep the Allegro integration truthful, validated, and reviewable.
 secondary_goals:
-  - VG-001 Multi-account marketplace operations
-  - VG-002 Safe offer and stock synchronization
-  - VG-003 Order forwarding without local ownership
+  - preserve marketplace integration intent
+  - document the real event and dependency boundary
+  - maintain governance evidence for the production service
 impact_level: high
-impact_description: Adds traceability and validation controls for future production service changes without changing runtime behavior.
-success_metric: IPS gates execute and future tasks have required traceability before coding.
+impact_description: Adds project-level traceability and validates the real service boundaries for the Allegro integration without changing runtime behavior.
+success_metric: the IPS validator passes and the repo retains truthful capability decisions.
 upstream_links:
-  - docs/01_vision/VISION.md
-  - docs/10_features/FEAT-001-ips-governed-allegro-delivery.md
+  - ../01_vision/VISION.md
+  - ../06_architecture/INTEGRATION_CONTRACT.md
 downstream_links:
-  - docs/21_execution_plans/EP-TASK-001-apply-ips-baseline.md
-  - docs/12_validation/VAL-TASK-001-ips-baseline.md
-validation_method: Strict documentation audit, pre-coding gate, deployment-readiness gate.
-status: draft
-```
+  - ../21_execution_plans/EP-TASK-001-bootstrap-service.md
+  - ../12_validation/VAL-TASK-001-bootstrap-service.md
+validation_method: The repository's planning gate and project traceability checks validate the adoption profile and required sections.
+status: approved
 
-## Explanation
+## Goal
+Create a truthful IPS onboarding profile that aligns with the real Allegro marketplace integration scope and keeps business, system, and runtime intent documented.
 
-TASK-001 exists to make `allegro-service` compliant with the company Intent Preservation System. The work protects operational service intent by requiring future implementation tasks to carry upstream traceability, invariant impact, data classification, execution plans, and validation evidence.
+## Contribution
+This task contributes the required project adoption evidence and preserves the actual service responsibilities without inflating non-owned domains.
 
-## Evidence
+## Success metric
+The repo passes the IPS validation gate and contains complete, non-placeholder onboarding evidence.
 
-- Vision goals: `../01_vision/VISION.md`
-- Feature: `../10_features/FEAT-001-ips-governed-allegro-delivery.md`
-- Execution plan: `../21_execution_plans/EP-TASK-001-apply-ips-baseline.md`
-- Validation report: `../12_validation/VAL-TASK-001-ips-baseline.md`
+## Invariant compatibility
+This work preserves the repo's real boundaries and the shared governance rules without inventing unsupported runtime claims.
 
-## Validation
+## Upstream and downstream links
+- Upstream: ../11_tasks/TASK-001-bootstrap-service.md and ../01_vision/VISION.md
+- Downstream: ../21_execution_plans/EP-TASK-001-bootstrap-service.md and ../12_validation/VAL-TASK-001-bootstrap-service.md
 
-The impact is validated when the IPS gate scripts run against the repository and the resulting reports show traceability, invariants, sensitive-data handling, and validation evidence.
+## Validation method
+The validation method is the repository planning gate from ../intent-preservation-system/scripts/validate_adoption_profile.py plus project doc checks. The record remains traceable to ../11_tasks/TASK-001-bootstrap-service.md and ../21_execution_plans/EP-TASK-001-bootstrap-service.md.

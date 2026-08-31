@@ -64,3 +64,31 @@ Validation debt does not excuse current-task failures. If a failure touches curr
 Report files changed, documents created, validation evidence, validation debt used or added, blockers, deviations, and the next concrete action.
 
 Next step: Follow the repository-specific `AGENTS.md` and planning files for the current task.
+
+# AGENT_OPERATIONS.md
+
+## Roles
+- project owner for business approval and runtime intent
+- integration owner for marketplace and event contracts
+- validation owner for planning verification and evidence review
+
+## Before work
+- read the real repo docs and runtime contract before changing the onboarding profile
+- confirm whether the task affects the marketplace integration boundary or an ecosystem dependency
+- preserve real operational constraints like rate limits and order-forwarding rules
+
+## Parallel work
+- documentation and contract review may proceed in parallel with validation checks when no shared code path is affected
+- integration and deployment work should remain serialized behind validated contract and policy changes
+
+## Validation debt
+- record only repo-local or scope-specific debt in the project validation file
+- do not invent debt for unrelated ecosystem failures
+
+## Handoff
+- preserve the project state, validation evidence, and outstanding follow-ups in STATE.json and TASKS.md
+- keep any unresolved approval or runtime-boundary questions explicit rather than silently assuming them
+
+## Project-specific operations
+- preserve the real Allegro marketplace scope and event contract without inventing other domain ownership
+- keep stock.updated, catalog validation, and order forwarding as the authoritative integration pattern

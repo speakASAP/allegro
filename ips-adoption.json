@@ -1,0 +1,193 @@
+{
+  "schemaVersion": 1,
+  "profile": "runtime-service",
+  "project": {
+    "name": "allegro",
+    "repository": "https://github.com/speakASAP/allegro.git"
+  },
+  "standard": {
+    "repository": "https://github.com/speakASAP/intent-preservation-system",
+    "revision": "93b841891f890bbb1250bb371be3dedb6354e108"
+  },
+  "artifacts": {
+    "readme": "README.md",
+    "business": "BUSINESS.md",
+    "system": "SYSTEM.md",
+    "agents": "AGENTS.md",
+    "operations": "AGENT_OPERATIONS.md",
+    "claude": "CLAUDE.md",
+    "tasks": "TASKS.md",
+    "state": "STATE.json",
+    "constitution": "docs/00_constitution/CONSTITUTION.md",
+    "vision": "docs/01_vision/VISION.md",
+    "integrationContract": "docs/06_architecture/INTEGRATION_CONTRACT.md",
+    "projectInvariants": "docs/17_governance/PROJECT_INVARIANTS.md",
+    "validationDebt": "docs/orchestrator/VALIDATION_DEBT.md",
+    "bootstrapTask": "docs/11_tasks/TASK-001-bootstrap-service.md",
+    "bootstrapGoalImpact": "docs/22_goal_impact/GOAL-IMPACT-TASK-001.md",
+    "bootstrapExecutionPlan": "docs/21_execution_plans/EP-TASK-001-bootstrap-service.md",
+    "bootstrapValidation": "docs/12_validation/VAL-TASK-001-bootstrap-service.md"
+  },
+  "integrationReview": [
+    {
+      "capability": "auth",
+      "component": "auth-microservice",
+      "decision": "required",
+      "reason": "The Allegro marketplace integration genuinely requires authentication and shared service access in production.",
+      "contract": "Project-owned runtime contract for the required service boundary.",
+      "configuration": "Repository-local configuration and platform references for the required dependency.",
+      "failureMode": "The service fails closed and records the real condition without inventing success.",
+      "validation": "The central validation flow confirms the dependency is present and the project remains truthful about the contract."
+    },
+    {
+      "capability": "postgres",
+      "component": "db-server-postgres",
+      "decision": "required",
+      "reason": "The Allegro integration stores operational and offer data in the shared PostgreSQL platform.",
+      "contract": "Project-owned runtime contract for the required service boundary.",
+      "configuration": "Repository-local configuration and platform references for the required dependency.",
+      "failureMode": "The service fails closed and records the real condition without inventing success.",
+      "validation": "The central validation flow confirms the dependency is present and the project remains truthful about the contract."
+    },
+    {
+      "capability": "redis",
+      "component": "db-server-redis",
+      "decision": "not-applicable",
+      "reason": "This repository does not own a Redis runtime service or require Redis-backed workflows.",
+      "contract": "not-applicable",
+      "configuration": "not-applicable",
+      "failureMode": "not-applicable",
+      "validation": "not-applicable"
+    },
+    {
+      "capability": "logging",
+      "component": "logging-microservice",
+      "decision": "required",
+      "reason": "The Allegro service emits operational logs and health evidence through the shared logging platform.",
+      "contract": "Project-owned runtime contract for the required service boundary.",
+      "configuration": "Repository-local configuration and platform references for the required dependency.",
+      "failureMode": "The service fails closed and records the real condition without inventing success.",
+      "validation": "The central validation flow confirms the dependency is present and the project remains truthful about the contract."
+    },
+    {
+      "capability": "notifications",
+      "component": "notifications-microservice",
+      "decision": "required",
+      "reason": "The Allegro integration forwards order and operational notifications through the shared notification flow.",
+      "contract": "Project-owned runtime contract for the required service boundary.",
+      "configuration": "Repository-local configuration and platform references for the required dependency.",
+      "failureMode": "The service fails closed and records the real condition without inventing success.",
+      "validation": "The central validation flow confirms the dependency is present and the project remains truthful about the contract."
+    },
+    {
+      "capability": "ai",
+      "component": "ai-microservice",
+      "decision": "not-applicable",
+      "reason": "This repository does not own an AI runtime workflow and does not require the AI service in its core business flow.",
+      "contract": "not-applicable",
+      "configuration": "not-applicable",
+      "failureMode": "not-applicable",
+      "validation": "not-applicable"
+    },
+    {
+      "capability": "payments",
+      "component": "payments-microservice",
+      "decision": "not-applicable",
+      "reason": "Payment capture is not part of the Allegro marketplace integration boundary.",
+      "contract": "not-applicable",
+      "configuration": "not-applicable",
+      "failureMode": "not-applicable",
+      "validation": "not-applicable"
+    },
+    {
+      "capability": "catalog",
+      "component": "catalog-microservice",
+      "decision": "required",
+      "reason": "The Allegro service depends on product and offer data from the catalog service for validation and synchronization.",
+      "contract": "Project-owned runtime contract for the required service boundary.",
+      "configuration": "Repository-local configuration and platform references for the required dependency.",
+      "failureMode": "The service fails closed and records the real condition without inventing success.",
+      "validation": "The central validation flow confirms the dependency is present and the project remains truthful about the contract."
+    },
+    {
+      "capability": "orders",
+      "component": "orders-microservice",
+      "decision": "required",
+      "reason": "The Allegro service forwards orders and order-processing events to the orders service rather than storing them locally.",
+      "contract": "Project-owned runtime contract for the required service boundary.",
+      "configuration": "Repository-local configuration and platform references for the required dependency.",
+      "failureMode": "The service fails closed and records the real condition without inventing success.",
+      "validation": "The central validation flow confirms the dependency is present and the project remains truthful about the contract."
+    },
+    {
+      "capability": "warehouse",
+      "component": "warehouse-microservice",
+      "decision": "required",
+      "reason": "The Allegro service consumes stock state updates from the warehouse service and keeps offer inventory synchronized.",
+      "contract": "Project-owned runtime contract for the required service boundary.",
+      "configuration": "Repository-local configuration and platform references for the required dependency.",
+      "failureMode": "The service fails closed and records the real condition without inventing success.",
+      "validation": "The central validation flow confirms the dependency is present and the project remains truthful about the contract."
+    },
+    {
+      "capability": "invoices",
+      "component": "invoices-microservice",
+      "decision": "not-applicable",
+      "reason": "The Allegro integration does not own invoice generation or settlement flows.",
+      "contract": "not-applicable",
+      "configuration": "not-applicable",
+      "failureMode": "not-applicable",
+      "validation": "not-applicable"
+    },
+    {
+      "capability": "object-storage",
+      "component": "minio-microservice",
+      "decision": "not-applicable",
+      "reason": "This repository does not own persistent object-storage operations for marketplace content.",
+      "contract": "not-applicable",
+      "configuration": "not-applicable",
+      "failureMode": "not-applicable",
+      "validation": "not-applicable"
+    },
+    {
+      "capability": "event-bus",
+      "component": "RabbitMQ",
+      "decision": "required",
+      "reason": "The Allegro integration consumes stock.updated events from the shared enterprise event bus for synchronization.",
+      "contract": "Project-owned runtime contract for the required service boundary.",
+      "configuration": "Repository-local configuration and platform references for the required dependency.",
+      "failureMode": "The service fails closed and records the real condition without inventing success.",
+      "validation": "The central validation flow confirms the dependency is present and the project remains truthful about the contract."
+    },
+    {
+      "capability": "docs-rag",
+      "component": "docs-rag-microservice",
+      "decision": "required",
+      "reason": "The Allegro runtime profile requires the shared docs-rag capability to keep the repo aligned with the ecosystem documentation and validation standard.",
+      "contract": "Project-owned runtime contract for the required service boundary.",
+      "configuration": "Repository-local configuration and platform references for the required dependency.",
+      "failureMode": "The service fails closed and records the real condition without inventing success.",
+      "validation": "The central validation flow confirms the dependency is present and the project remains truthful about the contract."
+    },
+    {
+      "capability": "monitoring",
+      "component": "monitoring-microservice",
+      "decision": "required",
+      "reason": "Production marketplace monitoring and health checks are required for the service to remain operational.",
+      "contract": "Project-owned runtime contract for the required service boundary.",
+      "configuration": "Repository-local configuration and platform references for the required dependency.",
+      "failureMode": "The service fails closed and records the real condition without inventing success.",
+      "validation": "The central validation flow confirms the dependency is present and the project remains truthful about the contract."
+    },
+    {
+      "capability": "backups",
+      "component": "backups-microservice",
+      "decision": "not-applicable",
+      "reason": "This repository does not own the backup schedule or restore workflow for the integrated marketplace data.",
+      "contract": "not-applicable",
+      "configuration": "not-applicable",
+      "failureMode": "not-applicable",
+      "validation": "not-applicable"
+    }
+  ]
+}

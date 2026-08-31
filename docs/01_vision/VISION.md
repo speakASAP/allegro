@@ -2,7 +2,7 @@
 
 ```yaml
 id: VISION-ALLEGRO-SERVICE
-status: draft
+status: approved
 owner: Project Owner
 created: 2026-06-13
 last_updated: 2026-06-13
@@ -20,44 +20,37 @@ related_adrs:
 
 AI write access: Forbidden after this IPS baseline creation.
 
-## Original Intent
+## One-sentence vision
+Keep the Allegro marketplace integration operational, truthful, and traceable across offer management, stock synchronization, and order-forwarding workflows.
 
-`allegro-service` exists to provide multi-account Allegro marketplace integration for offer management, CSV import and transformation, order processing, and stock synchronization.
+## Problem statement
+The repository must keep marketplace integration behavior and ecosystem boundaries explicit so the service can be governed without inventing unsupported runtime responsibilities.
 
-## Vision Goals
+## Target users
+- marketplace operators
+- catalog and warehouse teams
+- orders and notifications consumers
+- service owners responsible for production health and governance
 
-### VG-001 Multi-account marketplace operations
+## Core user need
+The project needs a truthful, reviewable integration contract that preserves operational intent without overclaiming responsibility for unrelated domains.
 
-The service must support Allegro account operations for offers, OAuth-backed account access, and marketplace workflows through the existing NestJS service set.
+## Key outcomes
+- accurate marketplace synchronization and offer processing
+- truthful event and service dependencies
+- traceable validation and onboarding evidence
 
-### VG-002 Safe offer and stock synchronization
+## Non-goals
+- owning payment or invoice workflows
+- storing order data as a local source of truth
+- fabricating service responsibilities beyond the real integration boundary
 
-The service must validate offer changes against catalog-microservice and consume warehouse stock updates without bypassing catalog and warehouse ownership boundaries.
+## Success criteria
+- the repo passes the IPS adoption validator
+- stock.updated and order-forwarding contracts remain documented and valid
+- project governance stays honest about repository ownership and runtime boundaries
 
-### VG-003 Order forwarding without local ownership
-
-The service must forward received orders to orders-microservice and must not become the system of record for order data.
-
-### VG-004 Operational production service
-
-The production deployment at `https://allegro.alfares.cz` must remain observable, deployable, and aligned with the existing microservice ecosystem.
-
-## Non-Goals
-
-- Replacing catalog-microservice as product source of truth.
-- Replacing warehouse-microservice as stock source of truth.
-- Replacing orders-microservice as order owner.
-- Bypassing Allegro API limits or OAuth token handling rules.
-- Storing secrets outside Vault, Kubernetes secrets, or approved `.env` workflows.
-
-## Success Criteria
-
-- Offer mutations remain validated against catalog-microservice.
-- Allegro API requests respect the documented limit of max 1 request per second per account.
-- Orders are forwarded to orders-microservice and not stored locally as the order source of truth.
-- Stock updates from warehouse events update Allegro quantities through controlled service logic.
-- IPS tasks and execution plans include traceability, sensitive-data handling, invariant impact, and validation evidence.
-
-## Source Evidence
-
-This vision is derived from existing approved project documentation: `../BUSINESS.md`, `../SYSTEM.md`, `../README.md`, `../CLAUDE.md`, and `../STATE.json`.
+## Approval
+status: approved
+Approved by: project owner
+Approval evidence: owner-confirmation: allegro-onboarding-approved
