@@ -258,15 +258,26 @@ function allegroHeaders(token: string): Record<string, string> {
 }
 
 function warehouseHeaders(): Record<string, string> {
+  // JWT_TOKEN is deliberately NOT in this chain: it holds the shared legacy
+  // HS256 credential that warehouse-microservice rejects (RS256 required), so
+  // falling through to it would produce a confusing 401 instead of the loud
+  // misconfiguration error below.
   const token =
     process.env.WAREHOUSE_SERVICE_TOKEN ||
     process.env.WAREHOUSE_INTERNAL_SERVICE_TOKEN ||
-    process.env.JWT_TOKEN ||
     process.env.INTERNAL_SERVICE_TOKEN;
+
+  if (!token) {
+    // Previously this returned headers with no Authorization, so the import ran
+    // unauthenticated and failed as a 401 far from the actual cause.
+    throw new Error(
+      '[MISSING: warehouse runtime credential] Set WAREHOUSE_SERVICE_TOKEN (or WAREHOUSE_INTERNAL_SERVICE_TOKEN / INTERNAL_SERVICE_TOKEN); refusing to call warehouse-microservice unauthenticated',
+    );
+  }
 
   return {
     'content-type': 'application/json',
-    ...(token ? { Authorization: token.startsWith('Bearer ') ? token : `Bearer ${token}` } : {}),
+    Authorization: token.startsWith('Bearer ') ? token : `Bearer ${token}`,
   };
 }
 
