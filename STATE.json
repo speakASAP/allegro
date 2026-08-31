@@ -40,5 +40,6 @@
   "blockers": [],
   "followUps": [
     "Confirm the repo status during the next governance review."
-  ]
+  ],
+  "status": "active"
 }
