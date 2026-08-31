@@ -6,7 +6,9 @@
 <!-- Human-managed -->
 Owner created TASK-009 runtime/UI implementation goal on 2026-06-27.
 
-## Active<!-- Coordinator-maintained -->
+## Active
+
+<!-- Coordinator-maintained -->
 
 ## Completed
 <!-- Coordinator-append-only -->
@@ -35,12 +37,18 @@ Owner created TASK-009 runtime/UI implementation goal on 2026-06-27.
 
 # Tasks
 
-## Active- complete IPS adoption profile for allegro-service
+## Active
 
-## Ready Next- review marketplace integration drift and event-handling follow-ups
+- complete IPS adoption profile for allegro-service
+
+## Ready Next
+
+- review marketplace integration drift and event-handling follow-ups
 - confirm operational health evidence for the next governance review
 
-## Blocked- no active blockers beyond requiring truthful project-owner approval evidence for onboarding
+## Blocked
+
+- no active blockers beyond requiring truthful project-owner approval evidence for onboarding
 
 ## Completed
 - real repository intent documented in README, BUSINESS.md, and SYSTEM.md
