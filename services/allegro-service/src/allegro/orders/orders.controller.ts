@@ -13,6 +13,7 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { timingSafeEqual } from 'crypto';
 import { OrdersService } from './orders.service';
 import { JwtAuthGuard } from '@allegro/shared';
 
@@ -100,8 +101,22 @@ export class InternalOrderAffinityController {
       || ''
     ).trim();
     const supplied = String(token || '').replace(/^Bearer\s+/i, '').trim();
-    if (!expected || !supplied || supplied !== expected || serviceName !== 'marketing-microservice') {
+    if (!expected || !supplied || !safeEqual(supplied, expected) || serviceName !== 'marketing-microservice') {
       throw new UnauthorizedException('internal_service_auth_required');
     }
   }
+}
+
+/**
+ * Constant-time shared-secret comparison. A plain `!==` leaks the length of the
+ * matching prefix through timing, which matters here because this secret is the
+ * only thing guarding the marketing replay endpoint.
+ */
+function safeEqual(supplied: string, expected: string): boolean {
+  const a = Buffer.from(supplied);
+  const b = Buffer.from(expected);
+  if (a.length !== b.length) {
+    return false;
+  }
+  return timingSafeEqual(a, b);
 }

@@ -1,5 +1,6 @@
 import { Controller, Get, Headers, Query, UnauthorizedException } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
+import { timingSafeEqual } from "crypto";
 import { Injectable } from "@nestjs/common";
 import { PrismaService } from "@allegro/shared";
 import { AllegroAuthService } from "../allegro-auth.service";
@@ -191,7 +192,7 @@ export class InternalShipmentStatusController {
       || "orders-microservice,warehouse-microservice,allegro-service",
     ).split(",").map((value) => value.trim()).filter(Boolean);
 
-    if (!expected || !supplied || supplied !== expected || !serviceName || !allowedServices.includes(serviceName)) {
+    if (!expected || !supplied || !safeEqual(supplied, expected) || !serviceName || !allowedServices.includes(serviceName)) {
       throw new UnauthorizedException("internal_service_auth_required");
     }
   }
@@ -254,4 +255,18 @@ function normalizeOptionalString(value: unknown): string | null {
   if (value === undefined || value === null) return null;
   const normalized = String(value).trim();
   return normalized || null;
+}
+
+/**
+ * Constant-time shared-secret comparison. A plain `!==` leaks the length of the
+ * matching prefix through timing; this secret is the only guard on the redacted
+ * shipment-status scan endpoint.
+ */
+function safeEqual(supplied: string, expected: string): boolean {
+  const a = Buffer.from(supplied);
+  const b = Buffer.from(expected);
+  if (a.length !== b.length) {
+    return false;
+  }
+  return timingSafeEqual(a, b);
 }
