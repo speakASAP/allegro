@@ -25,20 +25,5 @@
     "profile": "ips-full",
     "artifact_index": "docs/registry/ARTIFACT_INDEX.json",
     "status_source": "TASKS.md active/ready and completion sections plus docs/validation/2026-08-30-wave0-v1-planning-registry-adoption.md; RunLayer mapping remains unverified per docs/registry/REPOSITORY_PROFILE.json."
-  },
-  "schemaVersion": 1,
-  "project": "allegro",
-  "lifecycle": "production",
-  "health": "active",
-  "activeTask": "bootstrap-service",
-  "lastUpdated": "2026-08-30T22:50:25Z",
-  "deployment": {
-    "status": "production",
-    "environment": "kubernetes",
-    "lastUpdated": "2026-08-30T22:50:25Z"
-  },
-  "blockers": [],
-  "followUps": [
-    "Confirm the repo status during the next governance review."
-  ]
+  }
 }

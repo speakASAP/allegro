@@ -45,6 +45,7 @@ Owner created TASK-009 runtime/UI implementation goal on 2026-06-27.
 
 - review marketplace integration drift and event-handling follow-ups
 - confirm operational health evidence for the next governance review
+- Confirm the repo status during the next governance review.
 
 ## Blocked
 
