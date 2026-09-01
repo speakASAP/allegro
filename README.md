@@ -45,11 +45,7 @@ All vars defined in `.env.example`. Key groups:
 
 ## Deployment
 
-```bash
-# On production server
-cd ~/nginx-microservice
-./scripts/blue-green/deploy-smart.sh allegro-service
-```
+Deployment is automatic: a commit to `main` is processed by the serialized deploy queue (see `shared/scripts/deploy.sh`). Traefik automatically routes the service through its Kubernetes `Ingress` resource; no manual nginx registration step exists.
 
 See [docs/OPS.md](docs/OPS.md) for log commands and known fixes.
 
