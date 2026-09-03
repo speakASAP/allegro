@@ -24,7 +24,9 @@
     "verify:shipment-status-replay": "ts-node src/scripts/replay-shipment-status-handoff.spec.ts",
     "replay:shipment-status-handoff": "ts-node src/scripts/replay-shipment-status-handoff.ts",
     "verify:shipment-status-snapshot-export": "ts-node src/scripts/export-shipment-status-snapshots.spec.ts",
-    "export:shipment-status-snapshots": "ts-node src/scripts/export-shipment-status-snapshots.ts"
+    "export:shipment-status-snapshots": "ts-node src/scripts/export-shipment-status-snapshots.ts",
+    "postbuild": "mkdir -p dist/health/vendor && cp src/health/vendor/credential-reporter.js dist/health/vendor/",
+    "verify:credential-self-report": "node scripts/verify-credential-self-report.js"
   },
   "dependencies": {
     "@allegro/shared": "file:../../shared",
@@ -33,6 +35,7 @@
     "@nestjs/config": "^3.0.0",
     "@nestjs/core": "^10.0.0",
     "@nestjs/platform-express": "^10.0.0",
+    "@nestjs/schedule": "^4.1.2",
     "@prisma/client": "^5.7.1",
     "amqplib": "^0.10.9",
     "class-transformer": "^0.5.1",
