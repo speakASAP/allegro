@@ -1,7 +1,7 @@
 {
-  "created_at": "2026-06-30T10:46:39Z",
+  "created_at": "2026-09-03T12:41:22Z",
   "gate": "deployment_readiness",
-  "next_step": "ready_for_deployment_review",
+  "next_step": "fix_deployment_readiness_findings",
   "pre_coding_gate": {
     "report_path": "reports/validation/ips-pre-coding-gate.json",
     "status": "pass"
@@ -11,16 +11,41 @@
     "status": "pass",
     "stderr": ""
   },
-  "root": "/home/ssf/Documents/Github/allegro-service",
+  "root": "/home/ssf/Documents/Github/allegro",
   "schema_version": "1.0.0",
-  "status": "pass",
+  "status": "fail",
   "strict_doc_audit": {
-    "findings_count": 0,
-    "score": 100,
-    "status": "PASS"
+    "findings_count": 78,
+    "score": 0,
+    "status": "FAIL"
   },
-  "target": "TASK-010",
+  "target": null,
   "unresolved_markers": [
+    {
+      "line": 96,
+      "marker": "[MISSING: ...]",
+      "path": ".github/skills/register-new-app/SKILL.md"
+    },
+    {
+      "line": 127,
+      "marker": "[MISSING: ...]",
+      "path": ".github/skills/register-new-app/SKILL.md"
+    },
+    {
+      "line": 127,
+      "marker": "[UNKNOWN: ...]",
+      "path": ".github/skills/register-new-app/SKILL.md"
+    },
+    {
+      "line": 60,
+      "marker": "[MISSING: ...]",
+      "path": "AGENT_OPERATIONS.md"
+    },
+    {
+      "line": 60,
+      "marker": "[UNKNOWN: ...]",
+      "path": "AGENT_OPERATIONS.md"
+    },
     {
       "line": 338,
       "marker": "[MISSING: governed preview-token policy for OffersController import approval routes]",
@@ -152,14 +177,469 @@
       "path": "docs/23_documentation_contracts/DOCUMENTATION_COMPLETENESS_STANDARD.md"
     },
     {
-      "line": 60,
+      "line": 43,
+      "marker": "[MISSING: whether Allegro channel has direct customer checkout surface for this pilot]",
+      "path": "docs/business-process-control-plane/HOLIDAY_DISCOUNT_ADOPTION.md"
+    },
+    {
+      "line": 13,
+      "marker": "[UNKNOWN: complete active order ingestion path and whether every order stores central Orders id.]",
+      "path": "docs/orchestrator/2026-07-02-central-orders-status-read-model-plan.md"
+    },
+    {
+      "line": 34,
+      "marker": "[MISSING: central Orders id mapping]",
+      "path": "docs/orchestrator/2026-07-02-central-orders-status-read-model-plan.md"
+    },
+    {
+      "line": 66,
+      "marker": "[MISSING: Orders lifecycle read contract/client method]",
+      "path": "docs/orchestrator/2026-07-02-central-orders-status-read-model-plan.md"
+    },
+    {
+      "line": 110,
+      "marker": "[UNKNOWN: exact runtime Auth token for authorized end-to-end smoke in every dashboard]",
+      "path": "docs/orchestrator/2026-07-02-dashboard-catalog-source-options-plan.md"
+    },
+    {
+      "line": 111,
+      "marker": "[UNKNOWN: final localized dashboard copy for every language]",
+      "path": "docs/orchestrator/2026-07-02-dashboard-catalog-source-options-plan.md"
+    },
+    {
+      "line": 112,
+      "marker": "[UNKNOWN: whether shop-assistant, chytrakoupe, and rent-a-box have personal-account product-source obligations in this first wave]",
+      "path": "docs/orchestrator/2026-07-02-dashboard-catalog-source-options-plan.md"
+    },
+    {
+      "line": 113,
+      "marker": "[MISSING: sub-agent audit results for each channel dashboard]",
+      "path": "docs/orchestrator/2026-07-02-dashboard-catalog-source-options-plan.md"
+    },
+    {
+      "line": 62,
       "marker": "[MISSING: ...]",
-      "path": "AGENT_OPERATIONS.md"
+      "path": "docs/orchestrator/2026-07-02-local-resale-toggle-and-flipflop-seller-plan.md"
+    },
+    {
+      "line": 68,
+      "marker": "[MISSING: ...]",
+      "path": "docs/orchestrator/2026-07-02-local-resale-toggle-and-flipflop-seller-plan.md"
+    },
+    {
+      "line": 68,
+      "marker": "[UNKNOWN: ...]",
+      "path": "docs/orchestrator/2026-07-02-local-resale-toggle-and-flipflop-seller-plan.md"
+    },
+    {
+      "line": 143,
+      "marker": "[MISSING: approved files]",
+      "path": "docs/orchestrator/2026-07-02-related-products-order-affinity-plan.md"
+    },
+    {
+      "line": 172,
+      "marker": "[MISSING: approved durable ownership for automated affinity scorer]",
+      "path": "docs/orchestrator/2026-07-02-related-products-order-affinity-plan.md"
+    },
+    {
+      "line": 173,
+      "marker": "[MISSING: Catalog bundle ownership decision: standalone aggregate vs product-like SKU]",
+      "path": "docs/orchestrator/2026-07-02-related-products-order-affinity-plan.md"
+    },
+    {
+      "line": 174,
+      "marker": "[MISSING: Warehouse bundle reservation contract]",
+      "path": "docs/orchestrator/2026-07-02-related-products-order-affinity-plan.md"
+    },
+    {
+      "line": 175,
+      "marker": "[MISSING: Orders bundle create-order contract]",
+      "path": "docs/orchestrator/2026-07-02-related-products-order-affinity-plan.md"
+    },
+    {
+      "line": 176,
+      "marker": "[MISSING: Payments/free-shipping/discount total contract]",
+      "path": "docs/orchestrator/2026-07-02-related-products-order-affinity-plan.md"
+    },
+    {
+      "line": 177,
+      "marker": "[MISSING: channel-specific external marketplace bundle publication policies]",
+      "path": "docs/orchestrator/2026-07-02-related-products-order-affinity-plan.md"
+    },
+    {
+      "line": 178,
+      "marker": "[UNKNOWN: live DB migration state for each service unless separately verified]",
+      "path": "docs/orchestrator/2026-07-02-related-products-order-affinity-plan.md"
+    },
+    {
+      "line": 182,
+      "marker": "[MISSING: ...]",
+      "path": "docs/orchestrator/2026-07-02-related-products-order-affinity-plan.md"
+    },
+    {
+      "line": 182,
+      "marker": "[UNKNOWN: ...]",
+      "path": "docs/orchestrator/2026-07-02-related-products-order-affinity-plan.md"
+    },
+    {
+      "line": 113,
+      "marker": "[MISSING: owner acceptance of email-match account-takeover/privacy risk]",
+      "path": "docs/orchestrator/2026-07-03-allegro-buyer-auth-contract-proposal.md"
+    },
+    {
+      "line": 114,
+      "marker": "[MISSING: policy for changed Allegro buyer email, guest checkout, aliases, shared inboxes, and marketplace-masked emails]",
+      "path": "docs/orchestrator/2026-07-03-allegro-buyer-auth-contract-proposal.md"
+    },
+    {
+      "line": 151,
+      "marker": "[MISSING: approved DB migration/deploy]",
+      "path": "docs/orchestrator/2026-07-03-allegro-buyer-auth-contract-proposal.md"
+    },
+    {
+      "line": 152,
+      "marker": "[MISSING: migration/backfill decision for historical Allegro rows; default is no backfill and no buyer visibility without Auth subject binding]",
+      "path": "docs/orchestrator/2026-07-03-allegro-buyer-auth-contract-proposal.md"
+    },
+    {
+      "line": 153,
+      "marker": "[MISSING: live authenticated buyer smoke after deploy]",
+      "path": "docs/orchestrator/2026-07-03-allegro-buyer-auth-contract-proposal.md"
+    },
+    {
+      "line": 128,
+      "marker": "[MISSING: Orders source-reference preservation evidence; sampled local projection has zero forwarded central Orders ids.]",
+      "path": "docs/orchestrator/2026-07-03-allegro-checkout-form-fulfillment-fixtures.md"
+    },
+    {
+      "line": 129,
+      "marker": "[MISSING: approved Warehouse durable adapter ledger for checkout-form status observations.]",
+      "path": "docs/orchestrator/2026-07-03-allegro-checkout-form-fulfillment-fixtures.md"
+    },
+    {
+      "line": 130,
+      "marker": "[MISSING: approved timestamp ordering/replay semantics across Allegro updatedAt, local observation time, and Warehouse transition occurredAt.]",
+      "path": "docs/orchestrator/2026-07-03-allegro-checkout-form-fulfillment-fixtures.md"
+    },
+    {
+      "line": 131,
+      "marker": "[MISSING: owner approval before Warehouse runtime adapter, Allegro projection migration, deployment, or production fulfillment-row mutation.]",
+      "path": "docs/orchestrator/2026-07-03-allegro-checkout-form-fulfillment-fixtures.md"
+    },
+    {
+      "line": 63,
+      "marker": "[MISSING: owner approval to create a synthetic subject-bound Allegro fixture row.]",
+      "path": "docs/orchestrator/2026-07-03-allegro-real-buyer-fixture-harness.md"
+    },
+    {
+      "line": 64,
+      "marker": "[MISSING: safe runtime database URL source and Auth subject file/env path for approved execution.]",
+      "path": "docs/orchestrator/2026-07-03-allegro-real-buyer-fixture-harness.md"
+    },
+    {
+      "line": 65,
+      "marker": "[MISSING: approved Auth-valid buyer bearer for the paired buyer smoke harness.]",
+      "path": "docs/orchestrator/2026-07-03-allegro-real-buyer-fixture-harness.md"
+    },
+    {
+      "line": 66,
+      "marker": "[MISSING: real forwarded Orders lifecycle display smoke if the synthetic row is not forwarded to central Orders.]",
+      "path": "docs/orchestrator/2026-07-03-allegro-real-buyer-fixture-harness.md"
+    },
+    {
+      "line": 58,
+      "marker": "[MISSING: approved subject-bound Allegro order row for the real buyer smoke.]",
+      "path": "docs/orchestrator/2026-07-03-allegro-real-buyer-smoke-harness.md"
+    },
+    {
+      "line": 59,
+      "marker": "[MISSING: approved Auth-valid buyer bearer acquisition path that does not print token values.]",
+      "path": "docs/orchestrator/2026-07-03-allegro-real-buyer-smoke-harness.md"
     },
     {
       "line": 60,
+      "marker": "[MISSING: real forwarded Orders lifecycle display smoke if the approved row has no central Orders forwarding.]",
+      "path": "docs/orchestrator/2026-07-03-allegro-real-buyer-smoke-harness.md"
+    },
+    {
+      "line": 11,
+      "marker": "[MISSING: durable projection schema/client]",
+      "path": "docs/orchestrator/2026-07-03-allegro-shipment-projection-design.md"
+    },
+    {
+      "line": 167,
+      "marker": "[UNKNOWN: whether Prisma relation names are needed to avoid ambiguity after adding multiple AllegroAccount and AllegroOrder relations]",
+      "path": "docs/orchestrator/2026-07-03-allegro-shipment-projection-design.md"
+    },
+    {
+      "line": 168,
+      "marker": "[MISSING: owner decision whether `AllegroRawPayload` may store any shipment endpoint response after redaction, or whether shipment raw payloads remain completely forbidden]",
+      "path": "docs/orchestrator/2026-07-03-allegro-shipment-projection-design.md"
+    },
+    {
+      "line": 169,
+      "marker": "[MISSING: Warehouse decision whether per-waybill snapshots, per-order rollups, or both are consumed]",
+      "path": "docs/orchestrator/2026-07-03-allegro-shipment-projection-design.md"
+    },
+    {
+      "line": 170,
+      "marker": "[UNKNOWN: whether `allegroShipmentIdHash` is always present for checkout-form shipment reads or only for Ship with Allegro-created shipments]",
+      "path": "docs/orchestrator/2026-07-03-allegro-shipment-projection-design.md"
+    },
+    {
+      "line": 209,
+      "marker": "[MISSING: Warehouse consumer contract/runtime adapter for read-only shipment snapshots]",
+      "path": "docs/orchestrator/2026-07-03-allegro-shipment-projection-design.md"
+    },
+    {
+      "line": 268,
+      "marker": "[MISSING: ...]",
+      "path": "docs/orchestrator/2026-07-03-allegro-shipment-projection-design.md"
+    },
+    {
+      "line": 268,
       "marker": "[UNKNOWN: ...]",
-      "path": "AGENT_OPERATIONS.md"
+      "path": "docs/orchestrator/2026-07-03-allegro-shipment-projection-design.md"
+    },
+    {
+      "line": 292,
+      "marker": "[MISSING: sanitized live OAuth capability proof for /order/checkout-forms/{id}/shipments and /order/carriers/{carrierId}/tracking]",
+      "path": "docs/orchestrator/2026-07-03-allegro-shipment-projection-design.md"
+    },
+    {
+      "line": 293,
+      "marker": "[MISSING: owner approval for Prisma migration adding shipment projection tables]",
+      "path": "docs/orchestrator/2026-07-03-allegro-shipment-projection-design.md"
+    },
+    {
+      "line": 294,
+      "marker": "[MISSING: raw shipment payload storage decision; default remains no raw provider payload persistence]",
+      "path": "docs/orchestrator/2026-07-03-allegro-shipment-projection-design.md"
+    },
+    {
+      "line": 295,
+      "marker": "[MISSING: Warehouse consumer contract/runtime adapter for read-only shipment snapshots]",
+      "path": "docs/orchestrator/2026-07-03-allegro-shipment-projection-design.md"
+    },
+    {
+      "line": 296,
+      "marker": "[MISSING: deploy approval and sanitized runtime smoke]",
+      "path": "docs/orchestrator/2026-07-03-allegro-shipment-projection-design.md"
+    },
+    {
+      "line": 16,
+      "marker": "[MISSING: ...]",
+      "path": "docs/orchestrator/2026-07-03-allegro-shipment-status-source-contract.md"
+    },
+    {
+      "line": 16,
+      "marker": "[UNKNOWN: ...]",
+      "path": "docs/orchestrator/2026-07-03-allegro-shipment-status-source-contract.md"
+    },
+    {
+      "line": 128,
+      "marker": "[UNKNOWN: carrier tracking details absent or older than provider retention]",
+      "path": "docs/orchestrator/2026-07-03-allegro-shipment-status-source-contract.md"
+    },
+    {
+      "line": 152,
+      "marker": "[MISSING: OAuth scope or account permission for shipment tracking read]",
+      "path": "docs/orchestrator/2026-07-03-allegro-shipment-status-source-contract.md"
+    },
+    {
+      "line": 158,
+      "marker": "[UNKNOWN: current production OAuth scopes/accounts for order shipment reads and carrier tracking endpoints]",
+      "path": "docs/orchestrator/2026-07-03-allegro-shipment-status-source-contract.md"
+    },
+    {
+      "line": 159,
+      "marker": "[MISSING: explicit ALLEGRO_OAUTH_SCOPES setting or documented decision to omit scope for shipment reads]",
+      "path": "docs/orchestrator/2026-07-03-allegro-shipment-status-source-contract.md"
+    },
+    {
+      "line": 160,
+      "marker": "[UNKNOWN: whether active seller account has Wysylam z Allegro activated and visible through API settings]",
+      "path": "docs/orchestrator/2026-07-03-allegro-shipment-status-source-contract.md"
+    },
+    {
+      "line": 161,
+      "marker": "[UNKNOWN: whether carrier tracking endpoint returns all statuses for shipments not created through Ship with Allegro]",
+      "path": "docs/orchestrator/2026-07-03-allegro-shipment-status-source-contract.md"
+    },
+    {
+      "line": 162,
+      "marker": "[MISSING: durable proof that current token grants `/order/checkout-forms/{id}/shipments`, `/order/carriers/{carrierId}/tracking`, and optional `/shipment-management/shipments/{shipmentId}` reads]",
+      "path": "docs/orchestrator/2026-07-03-allegro-shipment-status-source-contract.md"
+    },
+    {
+      "line": 231,
+      "marker": "[UNKNOWN: shipment-management detail read unavailable for live-listed shipment]",
+      "path": "docs/orchestrator/2026-07-03-allegro-shipment-status-source-contract.md"
+    },
+    {
+      "line": 301,
+      "marker": "[MISSING: Warehouse consumer contract for read-only shipment status snapshots]",
+      "path": "docs/orchestrator/2026-07-03-allegro-shipment-status-source-contract.md"
+    },
+    {
+      "line": 302,
+      "marker": "[MISSING: central Orders id mapping for every Allegro-origin order that Warehouse wants to correlate]",
+      "path": "docs/orchestrator/2026-07-03-allegro-shipment-status-source-contract.md"
+    },
+    {
+      "line": 304,
+      "marker": "[UNKNOWN: whether Warehouse wants per-waybill status, per-order rolled-up status, or both]",
+      "path": "docs/orchestrator/2026-07-03-allegro-shipment-status-source-contract.md"
+    },
+    {
+      "line": 335,
+      "marker": "[UNKNOWN: carrier tracking details absent or older than provider retention]",
+      "path": "docs/orchestrator/2026-07-03-allegro-shipment-status-source-contract.md"
+    },
+    {
+      "line": 131,
+      "marker": "[MISSING: buyer-facing Allegro personal cabinet product requirement.]",
+      "path": "docs/orchestrator/2026-07-03-buyer-auth-ownership-contract-audit.md"
+    },
+    {
+      "line": 132,
+      "marker": "[MISSING: approved Auth-to-Allegro-buyer ownership rule.]",
+      "path": "docs/orchestrator/2026-07-03-buyer-auth-ownership-contract-audit.md"
+    },
+    {
+      "line": 133,
+      "marker": "[MISSING: stable persisted ownership field or verified buyer-link mapping.]",
+      "path": "docs/orchestrator/2026-07-03-buyer-auth-ownership-contract-audit.md"
+    },
+    {
+      "line": 134,
+      "marker": "[MISSING: buyer-safe API response contract.]",
+      "path": "docs/orchestrator/2026-07-03-buyer-auth-ownership-contract-audit.md"
+    },
+    {
+      "line": 135,
+      "marker": "[MISSING: tests proving buyer A cannot see buyer B orders and seller workspace remains unchanged.]",
+      "path": "docs/orchestrator/2026-07-03-buyer-auth-ownership-contract-audit.md"
+    },
+    {
+      "line": 21,
+      "marker": "[MISSING: ...]",
+      "path": "docs/orchestrator/2026-07-03-buyer-order-cabinet-gap-plan.md"
+    },
+    {
+      "line": 21,
+      "marker": "[UNKNOWN: ...]",
+      "path": "docs/orchestrator/2026-07-03-buyer-order-cabinet-gap-plan.md"
+    },
+    {
+      "line": 74,
+      "marker": "[MISSING: buyer-facing Allegro personal cabinet product requirement]",
+      "path": "docs/orchestrator/2026-07-03-buyer-order-cabinet-gap-plan.md"
+    },
+    {
+      "line": 75,
+      "marker": "[MISSING: buyer Auth/session contract]",
+      "path": "docs/orchestrator/2026-07-03-buyer-order-cabinet-gap-plan.md"
+    },
+    {
+      "line": 76,
+      "marker": "[MISSING: buyer order ownership filter]",
+      "path": "docs/orchestrator/2026-07-03-buyer-order-cabinet-gap-plan.md"
+    },
+    {
+      "line": 77,
+      "marker": "[MISSING: buyer-safe order API response contract]",
+      "path": "docs/orchestrator/2026-07-03-buyer-order-cabinet-gap-plan.md"
+    },
+    {
+      "line": 78,
+      "marker": "[MISSING: route and navigation contract]",
+      "path": "docs/orchestrator/2026-07-03-buyer-order-cabinet-gap-plan.md"
+    },
+    {
+      "line": 79,
+      "marker": "[MISSING: central Orders public lifecycle projection contract]",
+      "path": "docs/orchestrator/2026-07-03-buyer-order-cabinet-gap-plan.md"
+    },
+    {
+      "line": 80,
+      "marker": "[MISSING: tests with two buyers and one seller/admin]",
+      "path": "docs/orchestrator/2026-07-03-buyer-order-cabinet-gap-plan.md"
+    },
+    {
+      "line": 144,
+      "marker": "[UNKNOWN: buyer-facing cabinet versus operator-only dashboard surface]",
+      "path": "docs/orchestrator/2026-07-03-buyer-order-cabinet-gap-plan.md"
+    },
+    {
+      "line": 144,
+      "marker": "[MISSING: provider-backed customer/admin order UI requirements beyond the bounded synthetic/internal read model]",
+      "path": "docs/orchestrator/2026-07-03-buyer-order-cabinet-gap-plan.md"
+    },
+    {
+      "line": 66,
+      "marker": "[MISSING: owner approval to deploy Allegro source with ALLEGRO_WAREHOUSE_SHIPMENT_CORRELATION_ENABLED=true]",
+      "path": "docs/orchestrator/2026-07-03-warehouse-shipment-correlation-producer.md"
+    },
+    {
+      "line": 67,
+      "marker": "[MISSING: Warehouse migration/deploy approval for fulfillment_provider_shipment_correlations]",
+      "path": "docs/orchestrator/2026-07-03-warehouse-shipment-correlation-producer.md"
+    },
+    {
+      "line": 68,
+      "marker": "[MISSING: approved Allegro shipment projection/replay runtime caller that invokes the disabled-by-default client]",
+      "path": "docs/orchestrator/2026-07-03-warehouse-shipment-correlation-producer.md"
+    },
+    {
+      "line": 69,
+      "marker": "[MISSING: retention/retry/DLQ policy for failed correlation posts]",
+      "path": "docs/orchestrator/2026-07-03-warehouse-shipment-correlation-producer.md"
+    },
+    {
+      "line": 13,
+      "marker": "[MISSING: ...]",
+      "path": "docs/orchestrator/2026-07-05-error-free-orders-lifecycle-handoff.md"
+    },
+    {
+      "line": 22,
+      "marker": "[MISSING: ...]",
+      "path": "docs/orchestrator/2026-07-05-runtime-gate-packet-handoff.md"
+    },
+    {
+      "line": 22,
+      "marker": "[UNKNOWN: ...]",
+      "path": "docs/orchestrator/2026-07-05-runtime-gate-packet-handoff.md"
+    },
+    {
+      "line": 36,
+      "marker": "[MISSING: approved buyer/admin bearer/session packets]",
+      "path": "docs/orchestrator/2026-07-05-runtime-gate-packet-handoff.md"
+    },
+    {
+      "line": 112,
+      "marker": "[MISSING: live subject-bound buyer order row with forwarded central Orders lifecycle visible to the approved buyer bearer from real traffic.]",
+      "path": "docs/orchestrator/2026-07-05-w3-allegro-orders-cabinet-proof.md"
+    },
+    {
+      "line": 62,
+      "marker": "[MISSING: approved live Allegro readback packet]",
+      "path": "docs/orchestrator/2026-07-06-allegro-business-health-handoff.md"
+    },
+    {
+      "line": 63,
+      "marker": "[MISSING: target product/offer/account for Allegro channel readback proof]",
+      "path": "docs/orchestrator/2026-07-06-allegro-business-health-handoff.md"
+    },
+    {
+      "line": 64,
+      "marker": "[MISSING: Allegro provider/rate-limit/reconciliation policy for live readback cadence and account scope]",
+      "path": "docs/orchestrator/2026-07-06-allegro-business-health-handoff.md"
+    },
+    {
+      "line": 65,
+      "marker": "[MISSING: approved reconciliation rule that maps Warehouse/Catalog availability to Allegro sellable quantity without provider mutation side effects]",
+      "path": "docs/orchestrator/2026-07-06-allegro-business-health-handoff.md"
     },
     {
       "line": 77,
@@ -375,13 +855,796 @@
       "line": 2241,
       "marker": "[UNKNOWN: ...]",
       "path": "docs/orchestrator/ALLEGRO_PRIMARY_CHANNEL_IMPLEMENTATION_PLAN.md"
+    },
+    {
+      "line": 13,
+      "marker": "[MISSING: future real-traffic buyer row with forwarded central Orders lifecycle, beyond synthetic buyer-safe projection smoke.]",
+      "path": "docs/orchestrator/STATUS.md"
+    },
+    {
+      "line": 27,
+      "marker": "[MISSING: live admin bearer/session packet for `/api/allegro/orders` and `/api/allegro/orders/statistics` smoke without printing token values.]",
+      "path": "docs/orchestrator/STATUS.md"
+    },
+    {
+      "line": 28,
+      "marker": "[MISSING: live subject-bound buyer order row with forwarded central Orders lifecycle from real traffic, beyond the synthetic buyer-safe projection smoke.]",
+      "path": "docs/orchestrator/STATUS.md"
+    },
+    {
+      "line": 40,
+      "marker": "[MISSING: optional future audited full-tracking reveal contract if product/security approves raw tracking visibility.]",
+      "path": "docs/orchestrator/STATUS.md"
+    },
+    {
+      "line": 44,
+      "marker": "[MISSING: Allegro provider sample with carrier tracking status other than UNKNOWN]",
+      "path": "docs/orchestrator/STATUS.md"
+    },
+    {
+      "line": 54,
+      "marker": "[MISSING: future real Allegro.cz customer-provider sample with carrier tracking status other than UNKNOWN if product requires production-data proof beyond approved fixture.]",
+      "path": "docs/orchestrator/STATUS.md"
+    },
+    {
+      "line": 60,
+      "marker": "[MISSING: ...]",
+      "path": "docs/orchestrator/STATUS.md"
+    },
+    {
+      "line": 69,
+      "marker": "[MISSING: deployment and live endpoint smoke on `allegro-service` runtime.]",
+      "path": "docs/orchestrator/STATUS.md"
+    },
+    {
+      "line": 70,
+      "marker": "[MISSING: real Allegro customer-provider tracking event if product requires production-data proof beyond approved fixture.]",
+      "path": "docs/orchestrator/STATUS.md"
+    },
+    {
+      "line": 85,
+      "marker": "[MISSING: optional future audited full-tracking reveal contract if product/security approves raw tracking visibility.]",
+      "path": "docs/orchestrator/STATUS.md"
+    },
+    {
+      "line": 99,
+      "marker": "[MISSING: service-native approved live scan path that can use Allegro OAuth without moving encrypted token material through temporary files.]",
+      "path": "docs/orchestrator/STATUS.md"
+    },
+    {
+      "line": 100,
+      "marker": "[MISSING: future real Allegro.cz customer-provider sample with carrier tracking status other than UNKNOWN if product requires production-data evidence beyond approved fixture.]",
+      "path": "docs/orchestrator/STATUS.md"
+    },
+    {
+      "line": 101,
+      "marker": "[MISSING: future audited full-tracking reveal contract if product/security approves raw tracking visibility.]",
+      "path": "docs/orchestrator/STATUS.md"
+    },
+    {
+      "line": 115,
+      "marker": "[MISSING: optional future audited full-tracking reveal contract if product/security approves raw tracking visibility.]",
+      "path": "docs/orchestrator/STATUS.md"
+    },
+    {
+      "line": 123,
+      "marker": "[MISSING: Allegro provider sample with carrier tracking status other than UNKNOWN]",
+      "path": "docs/orchestrator/STATUS.md"
+    },
+    {
+      "line": 136,
+      "marker": "[MISSING: future audited full-tracking reveal contract if product/security approves raw tracking visibility.]",
+      "path": "docs/orchestrator/STATUS.md"
+    },
+    {
+      "line": 142,
+      "marker": "[MISSING: Allegro-owned catalog.bundle.v1 external publication policy handoff]",
+      "path": "docs/orchestrator/STATUS.md"
+    },
+    {
+      "line": 147,
+      "marker": "[MISSING: future owner-approved Allegro one-listing bundle representation contract for catalog.bundle.v1]",
+      "path": "docs/orchestrator/STATUS.md"
+    },
+    {
+      "line": 148,
+      "marker": "[MISSING: Warehouse bundle reservation/stock allocation contract]",
+      "path": "docs/orchestrator/STATUS.md"
+    },
+    {
+      "line": 149,
+      "marker": "[MISSING: Orders bundle create-order and line-item decomposition contract]",
+      "path": "docs/orchestrator/STATUS.md"
+    },
+    {
+      "line": 150,
+      "marker": "[MISSING: Payments/free-shipping/discount total contract]",
+      "path": "docs/orchestrator/STATUS.md"
+    },
+    {
+      "line": 151,
+      "marker": "[MISSING: owner-approved shipping policy semantics for external marketplace bundles]",
+      "path": "docs/orchestrator/STATUS.md"
+    },
+    {
+      "line": 179,
+      "marker": "[MISSING: product-approved tracking visibility policy for customer/admin UI display beyond bounded lifecycle stage.]",
+      "path": "docs/orchestrator/STATUS.md"
+    },
+    {
+      "line": 180,
+      "marker": "[MISSING: provider sample with carrier tracking status other than UNKNOWN if product requires live status mutation evidence beyond bounded fixture.]",
+      "path": "docs/orchestrator/STATUS.md"
+    },
+    {
+      "line": 185,
+      "marker": "[UNKNOWN: carrier tracking details absent or older than provider retention]",
+      "path": "docs/orchestrator/STATUS.md"
+    },
+    {
+      "line": 194,
+      "marker": "[MISSING: deploy/cutover of hardened dedicated Warehouse service token projection, replacing broad runtime token fallback.]",
+      "path": "docs/orchestrator/STATUS.md"
+    },
+    {
+      "line": 195,
+      "marker": "[MISSING: product-approved tracking visibility policy for customer/admin UI display beyond bounded lifecycle stage.]",
+      "path": "docs/orchestrator/STATUS.md"
+    },
+    {
+      "line": 196,
+      "marker": "[MISSING: provider sample with carrier tracking status other than UNKNOWN if product requires live status mutation evidence beyond the earlier sanitized IN_TRANSIT fixture.]",
+      "path": "docs/orchestrator/STATUS.md"
+    },
+    {
+      "line": 205,
+      "marker": "[MISSING: optional real provider live-read selection using raw Allegro account/order ids if product requires provider API evidence beyond sanitized existing-correlation smoke.]",
+      "path": "docs/orchestrator/STATUS.md"
+    },
+    {
+      "line": 206,
+      "marker": "[MISSING: product-approved tracking visibility policy for customer/admin UI display beyond bounded lifecycle stage.]",
+      "path": "docs/orchestrator/STATUS.md"
+    },
+    {
+      "line": 217,
+      "marker": "[MISSING: owner approval to set `ALLEGRO_WAREHOUSE_SHIPMENT_CORRELATION_ENABLED=true` for one bounded live smoke.]",
+      "path": "docs/orchestrator/STATUS.md"
+    },
+    {
+      "line": 218,
+      "marker": "[MISSING: approved safe order selection file and real token-source smoke boundaries.]",
+      "path": "docs/orchestrator/STATUS.md"
+    },
+    {
+      "line": 219,
+      "marker": "[MISSING: end-to-end readback proving Warehouse correlation registration and no raw snapshot fields enter Orders events.]",
+      "path": "docs/orchestrator/STATUS.md"
+    },
+    {
+      "line": 230,
+      "marker": "[MISSING: owner approval to set `ALLEGRO_WAREHOUSE_SHIPMENT_CORRELATION_ENABLED=true` for one bounded live smoke.]",
+      "path": "docs/orchestrator/STATUS.md"
+    },
+    {
+      "line": 231,
+      "marker": "[MISSING: approved safe order selection file and real token-source smoke boundaries.]",
+      "path": "docs/orchestrator/STATUS.md"
+    },
+    {
+      "line": 232,
+      "marker": "[MISSING: end-to-end readback proving Warehouse correlation registration and no raw snapshot fields enter Orders events.]",
+      "path": "docs/orchestrator/STATUS.md"
+    },
+    {
+      "line": 245,
+      "marker": "[MISSING: owner-approved live runtime smoke using safe order selection file and real token source through the Nest client/projection service]",
+      "path": "docs/orchestrator/STATUS.md"
+    },
+    {
+      "line": 246,
+      "marker": "[MISSING: Warehouse migration/deploy approval for fulfillment_provider_shipment_correlations]",
+      "path": "docs/orchestrator/STATUS.md"
+    },
+    {
+      "line": 247,
+      "marker": "[MISSING: owner approval to enable ALLEGRO_WAREHOUSE_SHIPMENT_CORRELATION_ENABLED=true]",
+      "path": "docs/orchestrator/STATUS.md"
+    },
+    {
+      "line": 248,
+      "marker": "[MISSING: deploy approval before the runtime pod receives shipment source/projection code and dead-letter PVC mount/env]",
+      "path": "docs/orchestrator/STATUS.md"
+    },
+    {
+      "line": 259,
+      "marker": "[MISSING: deploy approval before the runtime pod receives the PVC mount/env]",
+      "path": "docs/orchestrator/STATUS.md"
+    },
+    {
+      "line": 260,
+      "marker": "[MISSING: owner-approved live runtime smoke with a safe order selection file and real token source]",
+      "path": "docs/orchestrator/STATUS.md"
+    },
+    {
+      "line": 261,
+      "marker": "[MISSING: Warehouse migration/deploy approval for fulfillment_provider_shipment_correlations]",
+      "path": "docs/orchestrator/STATUS.md"
+    },
+    {
+      "line": 262,
+      "marker": "[MISSING: owner approval to enable ALLEGRO_WAREHOUSE_SHIPMENT_CORRELATION_ENABLED=true]",
+      "path": "docs/orchestrator/STATUS.md"
+    },
+    {
+      "line": 272,
+      "marker": "[MISSING: owner-approved live runtime smoke with a safe order selection file and real token source]",
+      "path": "docs/orchestrator/STATUS.md"
+    },
+    {
+      "line": 273,
+      "marker": "[MISSING: Warehouse migration/deploy approval for fulfillment_provider_shipment_correlations]",
+      "path": "docs/orchestrator/STATUS.md"
+    },
+    {
+      "line": 274,
+      "marker": "[MISSING: owner approval to enable ALLEGRO_WAREHOUSE_SHIPMENT_CORRELATION_ENABLED=true]",
+      "path": "docs/orchestrator/STATUS.md"
+    },
+    {
+      "line": 285,
+      "marker": "[MISSING: owner-approved live runtime smoke with a safe order selection file and real token source]",
+      "path": "docs/orchestrator/STATUS.md"
+    },
+    {
+      "line": 286,
+      "marker": "[MISSING: Warehouse migration/deploy approval for fulfillment_provider_shipment_correlations]",
+      "path": "docs/orchestrator/STATUS.md"
+    },
+    {
+      "line": 287,
+      "marker": "[MISSING: owner approval to enable ALLEGRO_WAREHOUSE_SHIPMENT_CORRELATION_ENABLED=true]",
+      "path": "docs/orchestrator/STATUS.md"
+    },
+    {
+      "line": 288,
+      "marker": "[MISSING: owner-approved operational retention location for generated dead-letter report artifacts]",
+      "path": "docs/orchestrator/STATUS.md"
+    },
+    {
+      "line": 298,
+      "marker": "[MISSING: owner-approved live runtime smoke with a safe order selection file and real token source]",
+      "path": "docs/orchestrator/STATUS.md"
+    },
+    {
+      "line": 299,
+      "marker": "[MISSING: Warehouse migration/deploy approval for fulfillment_provider_shipment_correlations]",
+      "path": "docs/orchestrator/STATUS.md"
+    },
+    {
+      "line": 300,
+      "marker": "[MISSING: owner approval to enable ALLEGRO_WAREHOUSE_SHIPMENT_CORRELATION_ENABLED=true]",
+      "path": "docs/orchestrator/STATUS.md"
+    },
+    {
+      "line": 301,
+      "marker": "[MISSING: retention/retry/DLQ policy for failed correlation posts]",
+      "path": "docs/orchestrator/STATUS.md"
+    },
+    {
+      "line": 311,
+      "marker": "[MISSING: approved live shipment read implementation with account/order selection, token handling, rate limits, and sanitized smoke]",
+      "path": "docs/orchestrator/STATUS.md"
+    },
+    {
+      "line": 312,
+      "marker": "[MISSING: Warehouse migration/deploy approval for fulfillment_provider_shipment_correlations]",
+      "path": "docs/orchestrator/STATUS.md"
+    },
+    {
+      "line": 313,
+      "marker": "[MISSING: owner approval to enable ALLEGRO_WAREHOUSE_SHIPMENT_CORRELATION_ENABLED=true]",
+      "path": "docs/orchestrator/STATUS.md"
+    },
+    {
+      "line": 314,
+      "marker": "[MISSING: retention/retry/DLQ policy for failed correlation posts]",
+      "path": "docs/orchestrator/STATUS.md"
+    },
+    {
+      "line": 324,
+      "marker": "[MISSING: approved producer that creates sanitized replay snapshot files from live Allegro shipment projection reads]",
+      "path": "docs/orchestrator/STATUS.md"
+    },
+    {
+      "line": 325,
+      "marker": "[MISSING: Warehouse migration/deploy approval for fulfillment_provider_shipment_correlations]",
+      "path": "docs/orchestrator/STATUS.md"
+    },
+    {
+      "line": 326,
+      "marker": "[MISSING: owner approval to enable ALLEGRO_WAREHOUSE_SHIPMENT_CORRELATION_ENABLED=true]",
+      "path": "docs/orchestrator/STATUS.md"
+    },
+    {
+      "line": 327,
+      "marker": "[MISSING: retention/retry/DLQ policy for failed correlation posts]",
+      "path": "docs/orchestrator/STATUS.md"
+    },
+    {
+      "line": 337,
+      "marker": "[MISSING: approved durable Allegro shipment projection/replay runtime caller that feeds sanitized snapshots into ShipmentStatusHandoffService]",
+      "path": "docs/orchestrator/STATUS.md"
+    },
+    {
+      "line": 338,
+      "marker": "[MISSING: Warehouse migration/deploy approval for fulfillment_provider_shipment_correlations]",
+      "path": "docs/orchestrator/STATUS.md"
+    },
+    {
+      "line": 339,
+      "marker": "[MISSING: owner approval to enable ALLEGRO_WAREHOUSE_SHIPMENT_CORRELATION_ENABLED=true]",
+      "path": "docs/orchestrator/STATUS.md"
+    },
+    {
+      "line": 340,
+      "marker": "[MISSING: retention/retry/DLQ policy for failed correlation posts]",
+      "path": "docs/orchestrator/STATUS.md"
+    },
+    {
+      "line": 350,
+      "marker": "[MISSING: owner approval to deploy Allegro source with ALLEGRO_WAREHOUSE_SHIPMENT_CORRELATION_ENABLED=true]",
+      "path": "docs/orchestrator/STATUS.md"
+    },
+    {
+      "line": 351,
+      "marker": "[MISSING: Warehouse migration/deploy approval for fulfillment_provider_shipment_correlations]",
+      "path": "docs/orchestrator/STATUS.md"
+    },
+    {
+      "line": 352,
+      "marker": "[MISSING: approved Allegro shipment projection/replay runtime caller]",
+      "path": "docs/orchestrator/STATUS.md"
+    },
+    {
+      "line": 353,
+      "marker": "[MISSING: retention/retry/DLQ policy for failed correlation posts]",
+      "path": "docs/orchestrator/STATUS.md"
+    },
+    {
+      "line": 363,
+      "marker": "[MISSING: Marketing parser support for marketplace-owned replay source envelopes]",
+      "path": "docs/orchestrator/STATUS.md"
+    },
+    {
+      "line": 364,
+      "marker": "[MISSING: Marketing runtime token mapping for ORDER_AFFINITY_MARKETPLACE_REPLAY_TOKEN or ALLEGRO_INTERNAL_SERVICE_TOKEN]",
+      "path": "docs/orchestrator/STATUS.md"
+    },
+    {
+      "line": 365,
+      "marker": "[MISSING: durable Marketing backfill run ledger and idempotency key registry]",
+      "path": "docs/orchestrator/STATUS.md"
+    },
+    {
+      "line": 366,
+      "marker": "[MISSING: owner-approved retention/decay policy for stale affinity rows]",
+      "path": "docs/orchestrator/STATUS.md"
+    },
+    {
+      "line": 385,
+      "marker": "[MISSING: Orders source-reference preservation evidence; sampled local projection has zero forwarded central Orders ids.]",
+      "path": "docs/orchestrator/STATUS.md"
+    },
+    {
+      "line": 386,
+      "marker": "[MISSING: approved Warehouse durable adapter ledger for checkout-form status observations.]",
+      "path": "docs/orchestrator/STATUS.md"
+    },
+    {
+      "line": 387,
+      "marker": "[MISSING: approved timestamp ordering/replay semantics across Allegro updatedAt, local observation time, and Warehouse transition occurredAt.]",
+      "path": "docs/orchestrator/STATUS.md"
+    },
+    {
+      "line": 388,
+      "marker": "[MISSING: owner approval before Warehouse runtime adapter, Allegro projection migration, deployment, or production fulfillment-row mutation.]",
+      "path": "docs/orchestrator/STATUS.md"
+    },
+    {
+      "line": 401,
+      "marker": "[MISSING: owner approval to create a synthetic subject-bound Allegro fixture row.]",
+      "path": "docs/orchestrator/STATUS.md"
+    },
+    {
+      "line": 402,
+      "marker": "[MISSING: safe runtime DB URL source and Auth subject file/env path for approved execution.]",
+      "path": "docs/orchestrator/STATUS.md"
+    },
+    {
+      "line": 403,
+      "marker": "[MISSING: approved Auth-valid buyer bearer for paired buyer smoke harness.]",
+      "path": "docs/orchestrator/STATUS.md"
+    },
+    {
+      "line": 404,
+      "marker": "[MISSING: cleanup execution evidence after any approved fixture smoke.]",
+      "path": "docs/orchestrator/STATUS.md"
+    },
+    {
+      "line": 416,
+      "marker": "[MISSING: approved subject-bound Allegro order row for the real buyer smoke.]",
+      "path": "docs/orchestrator/STATUS.md"
+    },
+    {
+      "line": 417,
+      "marker": "[MISSING: approved Auth-valid buyer bearer acquisition path that does not print token values.]",
+      "path": "docs/orchestrator/STATUS.md"
+    },
+    {
+      "line": 418,
+      "marker": "[MISSING: real forwarded Orders lifecycle display smoke if the approved row has no central Orders forwarding.]",
+      "path": "docs/orchestrator/STATUS.md"
+    },
+    {
+      "line": 438,
+      "marker": "[MISSING: live authenticated buyer smoke with a real buyer Auth bearer and an approved subject-bound order row.]",
+      "path": "docs/orchestrator/STATUS.md"
+    },
+    {
+      "line": 439,
+      "marker": "[MISSING: approved historical binding/backfill source, if product wants old imported marketplace rows visible in buyer cabinet.]",
+      "path": "docs/orchestrator/STATUS.md"
+    },
+    {
+      "line": 440,
+      "marker": "[MISSING: central Orders lifecycle display smoke with a real forwarded Allegro order visible to the bound buyer.]",
+      "path": "docs/orchestrator/STATUS.md"
+    },
+    {
+      "line": 454,
+      "marker": "[MISSING: durable Allegro shipment projection schema/client implementation before runtime handoff]",
+      "path": "docs/orchestrator/STATUS.md"
+    },
+    {
+      "line": 455,
+      "marker": "[MISSING: Warehouse consumer contract/runtime adapter for read-only shipment snapshots]",
+      "path": "docs/orchestrator/STATUS.md"
+    },
+    {
+      "line": 456,
+      "marker": "[UNKNOWN: shipment-management detail read for sampled shipment returned 404]",
+      "path": "docs/orchestrator/STATUS.md"
+    },
+    {
+      "line": 457,
+      "marker": "[UNKNOWN: carrier tracking returned 200 with zero tracking events for sampled waybill]",
+      "path": "docs/orchestrator/STATUS.md"
+    },
+    {
+      "line": 458,
+      "marker": "[UNKNOWN: whether Warehouse wants per-waybill status, per-order rolled-up status, or both]",
+      "path": "docs/orchestrator/STATUS.md"
+    },
+    {
+      "line": 479,
+      "marker": "[MISSING: owner approval for Prisma migration adding shipment projection tables]",
+      "path": "docs/orchestrator/STATUS.md"
+    },
+    {
+      "line": 480,
+      "marker": "[MISSING: Warehouse consumer contract/runtime adapter for read-only shipment snapshots]",
+      "path": "docs/orchestrator/STATUS.md"
+    },
+    {
+      "line": 481,
+      "marker": "[MISSING: deploy approval and sanitized runtime smoke]",
+      "path": "docs/orchestrator/STATUS.md"
+    },
+    {
+      "line": 498,
+      "marker": "[MISSING: OAuth scope or account permission for shipment tracking read]",
+      "path": "docs/orchestrator/STATUS.md"
+    },
+    {
+      "line": 515,
+      "marker": "[UNKNOWN: /shipment-management/shipments/{shipmentId} returned 404 for sampled shipment id; keep optional/fail-soft]",
+      "path": "docs/orchestrator/STATUS.md"
+    },
+    {
+      "line": 517,
+      "marker": "[MISSING: Warehouse consumer contract/runtime adapter for read-only shipment snapshots]",
+      "path": "docs/orchestrator/STATUS.md"
+    },
+    {
+      "line": 518,
+      "marker": "[UNKNOWN: whether Warehouse wants per-waybill status, per-order rolled-up status, or both]",
+      "path": "docs/orchestrator/STATUS.md"
+    },
+    {
+      "line": 539,
+      "marker": "[MISSING: approved historical binding/backfill source, if product wants old imported rows visible in buyer cabinet.]",
+      "path": "docs/orchestrator/STATUS.md"
+    },
+    {
+      "line": 540,
+      "marker": "[MISSING: product decision whether to create a durable non-production buyer smoke fixture or keep using ephemeral synthetic fixtures.]",
+      "path": "docs/orchestrator/STATUS.md"
+    },
+    {
+      "line": 550,
+      "marker": "[MISSING: Marketing runtime token mapping for ORDER_AFFINITY_MARKETPLACE_REPLAY_TOKEN or ALLEGRO_INTERNAL_SERVICE_TOKEN]",
+      "path": "docs/orchestrator/STATUS.md"
+    },
+    {
+      "line": 570,
+      "marker": "[MISSING: approved DB migration/deploy]",
+      "path": "docs/orchestrator/STATUS.md"
+    },
+    {
+      "line": 571,
+      "marker": "[MISSING: migration/backfill decision for historical Allegro rows; default is no backfill and no buyer visibility without Auth subject binding.]",
+      "path": "docs/orchestrator/STATUS.md"
+    },
+    {
+      "line": 572,
+      "marker": "[MISSING: live authenticated buyer smoke after deploy]",
+      "path": "docs/orchestrator/STATUS.md"
+    },
+    {
+      "line": 573,
+      "marker": "[MISSING: deploy approval after source validation.]",
+      "path": "docs/orchestrator/STATUS.md"
+    },
+    {
+      "line": 585,
+      "marker": "[MISSING: shipment-management implementation]",
+      "path": "docs/orchestrator/STATUS.md"
+    },
+    {
+      "line": 586,
+      "marker": "[UNKNOWN: deployed Orders lifecycle field naming]",
+      "path": "docs/orchestrator/STATUS.md"
+    },
+    {
+      "line": 606,
+      "marker": "[MISSING: Orders lifecycle read contract/client method]",
+      "path": "docs/orchestrator/STATUS.md"
+    },
+    {
+      "line": 607,
+      "marker": "[UNKNOWN: deployed Orders lifecycle field naming]",
+      "path": "docs/orchestrator/STATUS.md"
+    },
+    {
+      "line": 647,
+      "marker": "[MISSING: Orders runtime credential]",
+      "path": "docs/orchestrator/STATUS.md"
+    },
+    {
+      "line": 654,
+      "marker": "[MISSING: warehouseId]",
+      "path": "docs/orchestrator/STATUS.md"
+    },
+    {
+      "line": 764,
+      "marker": "[MISSING: Allegro live offer deactivate endpoint/policy confirmation]",
+      "path": "docs/orchestrator/STATUS.md"
+    },
+    {
+      "line": 799,
+      "marker": "[MISSING: Catalog event exchange/routing configuration confirmation]",
+      "path": "docs/orchestrator/STATUS.md"
+    },
+    {
+      "line": 800,
+      "marker": "[MISSING: Allegro live offer deactivate endpoint/policy confirmation]",
+      "path": "docs/orchestrator/STATUS.md"
+    },
+    {
+      "line": 801,
+      "marker": "[MISSING: Allegro safe catalog-event refresh policy]",
+      "path": "docs/orchestrator/STATUS.md"
+    },
+    {
+      "line": 51,
+      "marker": "[MISSING: Allegro live offer deactivate endpoint/policy confirmation]",
+      "path": "docs/orchestrator/W5B_AVAILABILITY_RECONCILIATION.md"
+    },
+    {
+      "line": 15,
+      "marker": "[MISSING: ...]",
+      "path": "docs/validation/2026-07-02-allegro-catalog-source-options.md"
+    },
+    {
+      "line": 15,
+      "marker": "[UNKNOWN: ...]",
+      "path": "docs/validation/2026-07-02-allegro-catalog-source-options.md"
+    },
+    {
+      "line": 27,
+      "marker": "[UNKNOWN: Catalog runtime owner-only enforcement not smoke-tested in this worker]",
+      "path": "docs/validation/2026-07-02-allegro-catalog-source-options.md"
+    },
+    {
+      "line": 32,
+      "marker": "[UNKNOWN: Catalog runtime owner-only enforcement not smoke-tested in this worker]",
+      "path": "docs/validation/2026-07-02-allegro-catalog-source-options.md"
+    },
+    {
+      "line": 33,
+      "marker": "[MISSING: catalog sell-action human-scope enforcement]",
+      "path": "docs/validation/2026-07-02-allegro-catalog-source-options.md"
+    },
+    {
+      "line": 34,
+      "marker": "[UNKNOWN: authorized end-to-end runtime token]",
+      "path": "docs/validation/2026-07-02-allegro-catalog-source-options.md"
+    },
+    {
+      "line": 34,
+      "marker": "[MISSING: service-native approved live scan path that can use Allegro OAuth without moving encrypted token material through temporary files.]",
+      "path": "docs/validation/2026-07-03-allegro-delivered-shipment-evidence.md"
+    },
+    {
+      "line": 35,
+      "marker": "[MISSING: future real Allegro.cz customer-provider sample with carrier tracking status other than UNKNOWN if product requires production-data evidence beyond approved fixture.]",
+      "path": "docs/validation/2026-07-03-allegro-delivered-shipment-evidence.md"
+    },
+    {
+      "line": 36,
+      "marker": "[MISSING: future audited full-tracking reveal contract if product/security approves raw tracking visibility.]",
+      "path": "docs/validation/2026-07-03-allegro-delivered-shipment-evidence.md"
+    },
+    {
+      "line": 33,
+      "marker": "[UNKNOWN: live authenticated runtime token]",
+      "path": "docs/validation/2026-07-03-allegro-goal25-catalog-quality-blockers.md"
+    },
+    {
+      "line": 34,
+      "marker": "[UNKNOWN: Catalog production readiness payload drift after this commit]",
+      "path": "docs/validation/2026-07-03-allegro-goal25-catalog-quality-blockers.md"
+    },
+    {
+      "line": 16,
+      "marker": "[MISSING: ...]",
+      "path": "docs/validation/2026-07-03-goal24-allegro-affinity-replay-producer.md"
+    },
+    {
+      "line": 63,
+      "marker": "[MISSING: Allegro-owned protected replay endpoint so future runs do not require a temporary SQL export]",
+      "path": "docs/validation/2026-07-03-goal24-allegro-affinity-replay-producer.md"
+    },
+    {
+      "line": 64,
+      "marker": "[MISSING: marketplace producer guarantee that replay window is complete and repeatable]",
+      "path": "docs/validation/2026-07-03-goal24-allegro-affinity-replay-producer.md"
+    },
+    {
+      "line": 68,
+      "marker": "[MISSING: Marketing parser support for marketplace-owned replay source envelopes]",
+      "path": "docs/validation/2026-07-03-goal24-allegro-affinity-replay-producer.md"
+    },
+    {
+      "line": 69,
+      "marker": "[MISSING: Marketing runtime token mapping for ORDER_AFFINITY_MARKETPLACE_REPLAY_TOKEN or ALLEGRO_INTERNAL_SERVICE_TOKEN]",
+      "path": "docs/validation/2026-07-03-goal24-allegro-affinity-replay-producer.md"
+    },
+    {
+      "line": 70,
+      "marker": "[MISSING: durable Marketing backfill run ledger and idempotency key registry]",
+      "path": "docs/validation/2026-07-03-goal24-allegro-affinity-replay-producer.md"
+    },
+    {
+      "line": 71,
+      "marker": "[MISSING: owner-approved retention/decay policy for stale affinity rows]",
+      "path": "docs/validation/2026-07-03-goal24-allegro-affinity-replay-producer.md"
+    },
+    {
+      "line": 72,
+      "marker": "[MISSING: scheduled dry-run matrix across Allegro, Aukro, Bazos, FlipFlop, and central Orders]",
+      "path": "docs/validation/2026-07-03-goal24-allegro-affinity-replay-producer.md"
+    },
+    {
+      "line": 73,
+      "marker": "[UNKNOWN: whether marketplace services other than Allegro currently have paid multi-product orders mapped to Catalog product ids]",
+      "path": "docs/validation/2026-07-03-goal24-allegro-affinity-replay-producer.md"
+    },
+    {
+      "line": 80,
+      "marker": "[MISSING: Bazos persisted order item replay source]",
+      "path": "docs/validation/2026-07-03-goal24-allegro-affinity-replay-producer.md"
+    },
+    {
+      "line": 80,
+      "marker": "[MISSING: Bazos order item ingestion contract]",
+      "path": "docs/validation/2026-07-03-goal24-allegro-affinity-replay-producer.md"
+    },
+    {
+      "line": 80,
+      "marker": "[MISSING: Bazos runtime internal replay token env accepted by /internal/bazos/order-affinity/replay-candidates]",
+      "path": "docs/validation/2026-07-03-goal24-allegro-affinity-replay-producer.md"
+    },
+    {
+      "line": 81,
+      "marker": "[MISSING: Marketing marketplace replay URL path selection for aukro-service /internal/aukro/order-affinity/replay-candidates]",
+      "path": "docs/validation/2026-07-03-goal24-allegro-affinity-replay-producer.md"
+    },
+    {
+      "line": 82,
+      "marker": "[MISSING: FlipFlop protected marketplace replay auth boundary]",
+      "path": "docs/validation/2026-07-03-goal24-allegro-affinity-replay-producer.md"
+    },
+    {
+      "line": 82,
+      "marker": "[MISSING: FlipFlop repeatable replay window/cursor contract]",
+      "path": "docs/validation/2026-07-03-goal24-allegro-affinity-replay-producer.md"
+    },
+    {
+      "line": 82,
+      "marker": "[MISSING: FlipFlop order line to Catalog product replay mapping contract for marketplace producer]",
+      "path": "docs/validation/2026-07-03-goal24-allegro-affinity-replay-producer.md"
+    },
+    {
+      "line": 82,
+      "marker": "[MISSING: FlipFlop forbidden-field replay redaction contract]",
+      "path": "docs/validation/2026-07-03-goal24-allegro-affinity-replay-producer.md"
+    },
+    {
+      "line": 83,
+      "marker": "[MISSING: Heureka protected marketplace replay auth boundary]",
+      "path": "docs/validation/2026-07-03-goal24-allegro-affinity-replay-producer.md"
+    },
+    {
+      "line": 83,
+      "marker": "[MISSING: Heureka repeatable replay window/cursor contract]",
+      "path": "docs/validation/2026-07-03-goal24-allegro-affinity-replay-producer.md"
+    },
+    {
+      "line": 83,
+      "marker": "[MISSING: Heureka forbidden-field replay redaction contract]",
+      "path": "docs/validation/2026-07-03-goal24-allegro-affinity-replay-producer.md"
+    },
+    {
+      "line": 13,
+      "marker": "[MISSING: Allegro-owned catalog.bundle.v1 external publication policy handoff]",
+      "path": "docs/validation/2026-07-03-goal24-allegro-bundle-publication-policy.md"
+    },
+    {
+      "line": 54,
+      "marker": "[MISSING: Allegro one-listing bundle representation contract for catalog.bundle.v1]",
+      "path": "docs/validation/2026-07-03-goal24-allegro-bundle-publication-policy.md"
+    },
+    {
+      "line": 55,
+      "marker": "[MISSING: Warehouse bundle reservation/stock allocation contract]",
+      "path": "docs/validation/2026-07-03-goal24-allegro-bundle-publication-policy.md"
+    },
+    {
+      "line": 56,
+      "marker": "[MISSING: Orders bundle create-order and line-item decomposition contract]",
+      "path": "docs/validation/2026-07-03-goal24-allegro-bundle-publication-policy.md"
+    },
+    {
+      "line": 57,
+      "marker": "[MISSING: Payments/free-shipping/discount total contract]",
+      "path": "docs/validation/2026-07-03-goal24-allegro-bundle-publication-policy.md"
+    },
+    {
+      "line": 58,
+      "marker": "[MISSING: owner-approved shipping policy semantics for external marketplace bundles]",
+      "path": "docs/validation/2026-07-03-goal24-allegro-bundle-publication-policy.md"
+    },
+    {
+      "line": 84,
+      "marker": "[MISSING: Allegro-owned catalog.bundle.v1 external publication policy handoff]",
+      "path": "docs/validation/2026-07-03-goal24-allegro-bundle-publication-policy.md"
     }
   ],
   "validation_reports": {
-    "matching_reports": [
-      "docs/12_validation/VAL-TASK-010-allegro-primary-channel-foundation.md"
-    ],
     "reports": [
+      "docs/12_validation/VAL-TASK-001-bootstrap-service.md",
       "docs/12_validation/VAL-TASK-001-ips-baseline.md",
       "docs/12_validation/VAL-TASK-002-validation-report.md",
       "docs/12_validation/VAL-TASK-003-validation-report.md",
@@ -391,9 +1654,10 @@
       "docs/12_validation/VAL-TASK-007-validation-report.md",
       "docs/12_validation/VAL-TASK-008-validation-report.md",
       "docs/12_validation/VAL-TASK-009-public-client-landing-dashboard.md",
-      "docs/12_validation/VAL-TASK-010-allegro-primary-channel-foundation.md"
+      "docs/12_validation/VAL-TASK-010-allegro-primary-channel-foundation.md",
+      "docs/12_validation/VAL-TASK-011-catalog-canonical-content-preview-connector.md"
     ],
     "status": "pass",
-    "target": "TASK-010"
+    "target": null
   }
 }
