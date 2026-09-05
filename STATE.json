@@ -4,7 +4,7 @@
   "service": {
     "name": "allegro-service",
     "kind": "service",
-    "lifecycle": "production",
+    "lifecycle": "active",
     "deployment": "kubernetes"
   },
   "planning": {
