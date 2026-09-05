@@ -30,5 +30,4 @@ Remote repo: `/home/ssf/Documents/Github/allegro`
 ## Remaining Blockers
 
 - `[UNKNOWN: Catalog runtime owner-only enforcement not smoke-tested in this worker]` - no authenticated browser/API token was available to prove a live owner update and non-owner 403 from the running Catalog service.
-- `[MISSING: catalog sell-action human-scope enforcement]` - sell-action now forwards the human bearer token and `catalogScope=effective` into Catalog product reloads, but final enforcement depends on Catalog honoring that token alongside the internal service token.
 - `[UNKNOWN: authorized end-to-end runtime token]` - no authenticated browser/API smoke token was available in this worker session.

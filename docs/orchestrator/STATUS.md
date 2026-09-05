@@ -29,8 +29,6 @@ State update:
 
 ## 2026-07-03 - Synthetic ISSUE Provider Fixture Proved Not-Received Lifecycle
 
-Result: the approved synthetic provider fixture chain now covers `ISSUE -> not_delivered -> not_received` before real Allegro.cz customer traffic exists. A fresh synthetic Allegro order was created through Orders and paid through the internal Payments path; Warehouse fulfillment was progressed to `in_delivery`; then the live Allegro pod registered a sanitized provider shipment correlation and posted an `allegro.shipment_status_snapshot.v1` fixture with `latestStatus=ISSUE` using `WAREHOUSE_INTERNAL_SERVICE_TOKEN`. Warehouse returned HTTP 201 with `observationDecision=accepted`, `normalizedWarehouseStatus=not_delivered`, `statusMutationApplied=true`, and fulfillment status `not_delivered`. Orders callback readback exposed lifecycle `not_received` on detail, customer lifecycle list, and admin lifecycle list.
-
 IPS chain: Vision -> provider delivery failures update customer/admin order lifecycle before real marketplace traffic exists; Goal Impact -> pre-customer readiness for not-delivered provider status is proven synthetically; System -> Allegro owns sanitized provider fixture handoff, Warehouse owns status intake/mutation, Orders owns lifecycle projection; Feature -> synthetic provider issue fixture; Task -> prove `ISSUE -> not_delivered -> not_received`; Execution Plan -> temporary pod helpers only, no deploy/provider write/raw tracking reveal; Coding Prompt -> no token values, raw provider payloads, raw tracking numbers, raw waybills, raw account/order ids, customer PII, screenshots, raw DOM, or runtime secret changes; Validation -> Warehouse HTTP 201 accepted/not_delivered, Orders detail/customer/admin lifecycle `not_received`, Orders verifier evidence.
 
 Remaining gates:
@@ -40,8 +38,6 @@ Remaining gates:
 - [MISSING: optional future audited full-tracking reveal contract if product/security approves raw tracking visibility.]
 
 ## 2026-07-03 - Service-Native Redacted Shipment Scan Deployed And Smoked
-
-Result: Allegro `c979768` is deployed for `allegro-service`, API gateway, settings, imports, and frontend. The new service-native endpoint `GET /internal/allegro/shipment-status/redacted-scan` was smoke-tested from the running `allegro-service:c979768` pod with the internal service token kept in-process and not printed. The endpoint returned HTTP 200 and aggregate-only contract `allegro.shipment_status_redacted_scan.v1`: `candidatesChecked=1`, `candidatesWithCentralOrderId=1`, `scanned=1`, `failed=0`, `snapshotCount=1`, `sourceReadStatusCounts.AVAILABLE=1`, `latestStatusCounts.UNKNOWN=1`, `nonUnknownStatusCount=0`, `packageCountTotal=1`, `hasAnyWaybillHash=true`, and blocker `[MISSING: Allegro provider sample with carrier tracking status other than UNKNOWN]`. Safety flags returned `mutates=false`, `mutatesAllegro=false`, `mutatesWarehouse=false`, `mutatesOrders=false`, `refreshesOAuthToken=false`, `returnsRawIds=false`, `returnsRawWaybills=false`, and `returnsProviderPayload=false`. No token values, raw account/order ids, raw waybills, raw provider payloads, snapshots, customer PII, screenshots, raw DOM, Warehouse mutation, Orders mutation, provider write, DB migration, or runtime consumer was created or printed.
 
 IPS chain: Vision -> real provider shipment scans run through a service-native redacted Allegro boundary; Goal Impact -> future production-data proof no longer needs temporary OAuth/DB helper extraction; System -> Allegro owns OAuth access, provider reads, redaction, aggregate output, and internal auth; Warehouse/Orders stay downstream evidence owners; Feature -> deployed internal redacted shipment scan endpoint; Task -> deploy and smoke service-native scan; Execution Plan -> deploy committed `c979768`, call endpoint in-pod with internal service auth, record only aggregates; Coding Prompt -> no raw tokens/ids/waybills/provider payloads/snapshots and no Warehouse/Orders mutation; Code -> `c979768`; Validation -> deployment rollout plus endpoint HTTP 200 aggregate smoke.
 
@@ -57,8 +53,6 @@ State update:
 
 ## 2026-07-03 - Service-Native Redacted Shipment Scan Endpoint Implemented
 
-Result: `allegro-service` now has a service-native internal redacted shipment scan endpoint at `GET /internal/allegro/shipment-status/redacted-scan`. The endpoint is protected by the internal service-token boundary, selects forwarded Allegro orders through Prisma, uses the existing Allegro auth/source/projection services in-process, and returns only aggregate scan evidence: candidate counts, source-read status counts, latest status class counts, package totals, non-UNKNOWN count, redacted blockers, and safety flags. It does not return OAuth tokens, raw account ids, raw checkout-form ids, raw local/central order ids, raw waybills, raw provider payloads, shipment snapshots, DOM, screenshots, Warehouse internals, or customer PII. The scan is read-only by contract and uses a non-refreshing token accessor; if an OAuth token is missing or expiring soon, it returns a `[MISSING: ...]` blocker instead of mutating encrypted credential fields.
-
 IPS chain: Vision -> provider/courier shipment status can be observed safely without credential extraction or raw tracking disclosure; Goal Impact -> future real-provider proof can be run through a service-native boundary instead of temporary DB/token helpers; System -> Allegro owns OAuth access, provider reads, redaction, and aggregate scan output; Warehouse/Orders remain downstream evidence owners; Feature -> internal redacted shipment scan; Task -> implement endpoint/job path for service-native scan; Execution Plan -> source-only service/controller/token-accessor/spec wiring, no DB migration, no provider write, no Warehouse/Orders mutation, no runtime consumer; Coding Prompt -> never return tokens/raw ids/waybills/provider payloads/snapshots; Code -> `shipment-status-redacted-scan.service.ts`, focused spec, module wiring, package verifier, and non-refreshing `AllegroAuthService` accessor; Validation -> `verify:shipment-status-redacted-scan`, full shipment verifier suite, service build, and diff check.
 
 State update:
@@ -69,11 +63,7 @@ State update:
 - [MISSING: deployment and live endpoint smoke on `allegro-service` runtime.]
 - [MISSING: real Allegro customer-provider tracking event if product requires production-data proof beyond approved fixture.]
 
-Что потребуется дальше: после deploy нужно вызвать endpoint изнутри кластера с `x-service-name: allegro-service` и internal token, проверить только агрегаты (`latestStatusCounts`, `nonUnknownStatusCount`, `blockers`) и записать результат. Если агрегаты снова только `UNKNOWN`, понадобится реальное Allegro отправление с carrier tracking event или переавторизация аккаунта, но не ручная выгрузка OAuth material из БД.
-
 ## 2026-07-03 - Synthetic RETURNED Provider Fixture Proved Return Lifecycle
-
-Result: the approved synthetic provider fixture chain continued after `DELIVERED`. With the existing sanitized Allegro shipment correlation now in Warehouse status `delivered`, a second synthetic `allegro.shipment_status_snapshot.v1` with `latestStatus=RETURNED` was posted from the live Allegro pod using `WAREHOUSE_INTERNAL_SERVICE_TOKEN`. Warehouse returned HTTP 201 with `observationDecision=accepted`, `normalizedWarehouseStatus=returned`, `statusMutationApplied=true`, and fulfillment status `returned`. Orders accepted the Warehouse callback and moved lifecycle from `received` to `returned`.
 
 IPS chain: Vision -> provider return events update customer/admin order lifecycle before real marketplace traffic exists; Goal Impact -> pre-customer readiness for returned provider status is proven synthetically; System -> Allegro owns sanitized provider fixture handoff, Warehouse owns status intake/mutation, Orders owns lifecycle projection; Feature -> synthetic provider return fixture; Task -> prove `RETURNED -> returned -> returned lifecycle`; Execution Plan -> temporary pod helpers only, no deploy/provider write/raw tracking reveal; Coding Prompt -> no token values, raw provider payloads, raw tracking numbers, raw waybills, raw account/order ids, customer PII, screenshots, raw DOM, or runtime secret changes; Validation -> Warehouse HTTP 201 accepted/returned, Orders audit resulting lifecycle `returned`, Orders verifier evidence.
 
@@ -85,8 +75,6 @@ Remaining gates:
 - [MISSING: optional future audited full-tracking reveal contract if product/security approves raw tracking visibility.]
 
 ## 2026-07-03 - Delivered Shipment Evidence Reconciled From Orders/Warehouse
-
-Result: Orders/Warehouse evidence now closes the pre-customer non-UNKNOWN shipment movement gate through an approved sanitized `DELIVERED` fixture and aggregate live readback. Orders commit `bfccd54` records that the existing sanitized Allegro shipment correlation was used to build a redacted `DELIVERED` snapshot with hashed provider identity fields only; the live Allegro pod posted it to Warehouse with the dedicated `WAREHOUSE_INTERNAL_SERVICE_TOKEN`; Warehouse accepted it with HTTP 201, `statusMutationApplied=true`, `observationDecision=accepted`, `normalizedWarehouseStatus=delivered`, and fulfillment status `delivered`; Orders received the Warehouse callback and moved the central lifecycle to `received`. Follow-up aggregate readback showed Warehouse provider observations by class as `DELIVERED -> delivered -> accepted: 1`, `IN_TRANSIT -> in_delivery -> accepted: 1`, and `UNKNOWN -> noop -> accepted: 1`, with Orders showing one `delivered` order and zero shipment-table rows. No token values, raw provider payloads, raw tracking numbers, raw waybills, raw account/order ids, customer PII, screenshots, raw DOM, provider write, deployment, runtime secret change, or credential material movement was used or printed in this reconciliation.
 
 IPS chain: Vision -> provider/courier shipment status owns reliable lifecycle movement without exposing provider secrets; Goal Impact -> the previous pre-customer non-UNKNOWN gate is closed by approved sanitized fixture evidence while real customer-provider proof remains optional future evidence; System -> Allegro owns redacted provider snapshot production and Warehouse token projection, Warehouse owns correlation/status ledger and fulfillment transitions, Orders owns lifecycle projection; Feature -> provider/courier shipment-status ownership gate; Task -> reconcile Allegro status with Orders/Warehouse delivered evidence; Execution Plan -> docs-only update after source/runtime/readback verification, no code or live credential handling; Coding Prompt -> do not create simulators, credentials, webhook contracts, DB migrations, runtime consumers, or raw tracking output; Code -> this status update only; Validation -> Allegro shipment verifier suite passed, runtime deployments were ready, and aggregate Warehouse/Orders readback showed the delivered observation/status.
 
@@ -103,8 +91,6 @@ State update:
 Что потребуется дальше: для следующего реального provider-smoke нужен либо сервисный endpoint/job внутри `allegro-service`, который сам использует существующий OAuth/token service без выгрузки зашифрованных токенов во временные файлы, либо новое реальное Allegro отправление, у которого carrier tracking уже содержит событие движения. До этого нельзя безопасно требовать от агента ручного извлечения OAuth material из БД.
 
 ## 2026-07-03 - Synthetic DELIVERED Provider Fixture Proved Delivery Lifecycle
-
-Result: because there are no current real Allegro.cz customer shipments with non-UNKNOWN carrier status, an approved synthetic provider fixture was used to prove the non-UNKNOWN delivery path inside the Alfares Allegro/Warehouse/Orders runtime. Warehouse built a sanitized `allegro.shipment_status_snapshot.v1` from the existing hashed Allegro shipment correlation with `latestStatus=DELIVERED`; the live Allegro pod posted it with the dedicated `WAREHOUSE_INTERNAL_SERVICE_TOKEN`. Warehouse returned HTTP 201, `observationDecision=accepted`, `normalizedWarehouseStatus=delivered`, `statusMutationApplied=true`, and fulfillment status `delivered`. Orders accepted the Warehouse callback and moved lifecycle from `in_delivery` to `received`.
 
 IPS chain: Vision -> provider shipment events update customer/admin order lifecycle before real marketplace traffic exists; Goal Impact -> pre-customer readiness for non-UNKNOWN provider statuses is proven without depending on Allegro.cz buyers; System -> Allegro owns sanitized provider fixture handoff, Warehouse owns status intake/mutation, Orders owns lifecycle projection; Feature -> synthetic provider delivery fixture; Task -> prove `DELIVERED -> delivered -> received` using existing sanitized correlation and dedicated service token; Execution Plan -> temporary pod helpers only, no deploy/provider write/raw tracking reveal; Coding Prompt -> no token values, raw provider payloads, raw tracking numbers, raw waybills, raw account/order ids, customer PII, screenshots, raw DOM, or runtime secret changes; Validation -> Warehouse HTTP 201 accepted/delivered, Orders audit resulting lifecycle `received`, Orders verifier evidence.
 
@@ -150,61 +136,26 @@ State Update:
 - `[MISSING: Payments/free-shipping/discount total contract]`
 - `[MISSING: owner-approved shipping policy semantics for external marketplace bundles]`
 
-## 2026-07-03 - Warehouse Service Token Runtime Projection Wired
-
-Result: Allegro deployment source now projects the Auth-issued Warehouse shipment service token from Kubernetes Secret `allegro-service-secret` key `WAREHOUSE_INTERNAL_SERVICE_TOKEN`. This keeps shipment correlation on the Vault-managed `WAREHOUSE_INTERNAL_SERVICE_TOKEN` runtime path while source still supports `WAREHOUSE_SERVICE_TOKEN` as an optional compatibility fallback and avoids broad `ALLEGRO_INTERNAL_SERVICE_TOKEN` fallback for shipment posts. Runtime secret value was not printed or committed.
-
-Validation: live rollout is on `localhost:5000/allegro-service:d088104`; runtime env contains `WAREHOUSE_INTERNAL_SERVICE_TOKEN`; Orders runtime evidence verified JWT signature, `internal:allegro-service:service`, absence of Warehouse-admin role, and no-central-order replay skipped with `MISSING_CENTRAL_ORDER_ID` without changing Warehouse aggregate counts.
-
-## 2026-07-03 - Warehouse Shipment Token Fallback Hardened In Source
-
-Result: Allegro shipment correlation now requires a Warehouse-specific token from `WAREHOUSE_SERVICE_TOKEN` or `WAREHOUSE_INTERNAL_SERVICE_TOKEN`; broad `ALLEGRO_INTERNAL_SERVICE_TOKEN` and generic `INTERNAL_SERVICE_TOKEN` no longer authorize shipment correlation posts in source. Focused coverage proves the enabled client blocks when only broad fallback tokens are present.
-
-IPS chain: Vision -> recurring shipment provider ingestion must use least-privilege service identity; Goal Impact -> Allegro no longer relies on broad internal tokens for Warehouse shipment correlation; System -> Auth owns service-token issuance, Allegro owns caller token projection, Warehouse owns endpoint RBAC; Feature -> minimal Warehouse shipment token source; Task -> remove broad fallback token resolution and document runtime gate; Execution Plan -> source/tests/docs only, no secret or runtime mutation; Coding Prompt -> no token values, raw provider payload, tracking value, customer field, DB query, deploy, or provider read; Validation -> `npm run verify:warehouse-shipment-correlation`, build, diff check.
-
-Superseded gate: Auth-issued Allegro service token is projected to runtime as `WAREHOUSE_INTERNAL_SERVICE_TOKEN`; remaining gates are optional real provider live-read refresh and future audited full-tracking reveal if product/security approves it.
-
 # Allegro Service Orchestrator Status
-
-## 2026-07-03 - Dedicated Warehouse Shipment Token Cutover Proven
-
-Result: hardened Warehouse shipment RBAC cutover is live-proven. Auth DB already had a dedicated `allegro-service` service principal (`b490...`) and `internal:allegro-service:service` role assignment; a dedicated JWT was projected into the Vault-managed `allegro-service-secret/WAREHOUSE_INTERNAL_SERVICE_TOKEN` without printing token values. Live `allegro-service` deployment now has `WAREHOUSE_INTERNAL_SERVICE_TOKEN=true`, no required temporary `WAREHOUSE_SERVICE_TOKEN`, and `ALLEGRO_WAREHOUSE_SHIPMENT_CORRELATION_ENABLED=true`, and Auth validates the dedicated token as `serviceName=allegro-service` with roles `[internal:allegro-service:service]`. Warehouse `d9ebb47` is deployed with shipment endpoints requiring the dedicated role. Runtime smoke from the Allegro pod proved the old broad `ALLEGRO_INTERNAL_SERVICE_TOKEN` is rejected by Warehouse shipment correlation with HTTP 403, while the dedicated `WAREHOUSE_INTERNAL_SERVICE_TOKEN` passes auth and reaches the expected synthetic business lookup HTTP 404.
-
-IPS chain: Vision -> provider shipment ingestion uses least-privilege service identity; Goal Impact -> the broad-token runtime blocker is closed for Allegro shipment correlation/status ingestion; System -> Auth owns service-principal role validation, Allegro owns token projection, Warehouse owns endpoint RBAC; Feature -> dedicated Warehouse shipment service token cutover; Task -> project dedicated token, deploy Warehouse hardening, smoke old-token rejection/new-token acceptance; Execution Plan -> no token output, no provider write, no real order mutation; Coding Prompt -> token values and raw payloads remain hidden; Code -> Warehouse `d9ebb47`, Allegro runtime env projection; Validation -> Auth validate 201, Warehouse old-token 403, dedicated-token 404 auth-pass smoke, Allegro health 200.
-
-Remaining gates:
-
-- [PROVEN: dedicated Allegro shipment service token projected and accepted by hardened Warehouse runtime.]
-- [PROVEN: broad `ALLEGRO_INTERNAL_SERVICE_TOKEN` rejected by hardened shipment endpoint.]
-- [MISSING: product-approved tracking visibility policy for customer/admin UI display beyond bounded lifecycle stage.]
-- [MISSING: provider sample with carrier tracking status other than UNKNOWN if product requires live status mutation evidence beyond bounded fixture.]
-
 
 ## 2026-07-03 - Real Allegro Shipment Live-Read Snapshot Proven Against Warehouse Runtime
 
 Result: optional real-provider live-read proof completed on the currently deployed runtime without printing token values, raw Allegro checkout-form ids, raw account ids, waybills, customer fields, addresses, or provider payloads. The live `allegro-service` pod had no `ALLEGRO_SHIPMENT_STATUS_ACCESS_TOKEN`/`ALLEGRO_ACCESS_TOKEN` env, so the proof selected one already-forwarded Allegro order from the local projection using a pod-local read-only helper, decrypted the existing account OAuth token in memory, and wrote only temporary pod files under `/tmp`. The selected candidate had an active account, future token expiry, local order id, and central Orders id. `export-shipment-status-snapshots.js --live-read --confirm-live-read ALLEGRO_SHIPMENT_STATUS_LIVE_READ` called the real Allegro shipment endpoints and produced one sanitized `allegro.shipment_status_snapshot.v1` file. Sanitized result: `snapshotCount=1`, `sourceRead.status=AVAILABLE`, `latestStatus=UNKNOWN`, `sourceRead.reason=[UNKNOWN: carrier tracking details absent or older than provider retention]`, `packageCount=1`, waybill present only as hash, central/local order ids present in the file but not printed. Posting that snapshot to Warehouse provider-status intake returned HTTP 201; Warehouse DB readback showed `fulfillment_provider_status_observations=2`, latest real-provider observation `decision=accepted`, `source_status_class=UNKNOWN`, `normalized_warehouse_status=noop`, and the existing fulfillment order remained `in_delivery`.
-
-Runtime caveat: this proof used the currently deployed Warehouse/Allegro runtime that still accepted the existing internal token path. Source commits `edb3a88` and Warehouse `ab7ac6e` harden shipment ingestion to a dedicated Warehouse/Allegro service token path, but that hardened cutover is not deployed in this evidence. A runtime config drift was also observed: live Allegro pods expose `DATABASE_URL_OVERRIDE` from `allegro-database-url-secret`, but that credential/host path failed for direct Prisma helper access; `allegro-service-secret:DATABASE_URL` with the actual Postgres listen address worked for read-only validation. Main `allegro-service` source uses shared `PrismaService` and DB_* config, so no runtime secret was changed during this proof.
 
 IPS chain: Vision -> real marketplace shipment reads can feed Warehouse without raw provider/customer/tracking data exposure; Goal Impact -> the optional real-provider evidence gate moved from missing to proven for a bounded no-op provider status; System -> Allegro owns OAuth/source reads and sanitized projection, Warehouse owns correlation/ledger/status transition, Orders owns lifecycle callback projection; Feature -> real Allegro live-read snapshot proof; Task -> select one existing forwarded order, live-read shipments/tracking, post sanitized snapshot, and read back Warehouse ledger; Execution Plan -> temporary pod helpers only, no repo code change, no raw output, no provider write, no Orders mutation; Coding Prompt -> no tokens/raw ids/provider payload/customer fields; Code -> existing deployed runtime plus temporary `/tmp` helpers only; Validation -> sanitized exporter output, Warehouse intake HTTP 201, Warehouse DB readback `accepted/noop/UNKNOWN`.
 
 Remaining gates:
 
 - [PROVEN: real Allegro provider shipment endpoint live-read produced a sanitized snapshot and Warehouse accepted it as a no-op observation.]
-- [MISSING: deploy/cutover of hardened dedicated Warehouse service token projection, replacing broad runtime token fallback.]
 - [MISSING: product-approved tracking visibility policy for customer/admin UI display beyond bounded lifecycle stage.]
 - [MISSING: provider sample with carrier tracking status other than UNKNOWN if product requires live status mutation evidence beyond the earlier sanitized IN_TRANSIT fixture.]
 
-
 ## 2026-07-03 - Warehouse Shipment Correlation Enabled And Intake Proven
-
-Result: Allegro shipment correlation is now enabled in source manifests and live runtime. `ALLEGRO_WAREHOUSE_SHIPMENT_CORRELATION_ENABLED=true` is declared in `.env.example`, `k8s/configmap.yaml`, and `k8s/deployment.yaml`; the live deployment also reports the flag as `true`. Existing `ALLEGRO_INTERNAL_SERVICE_TOKEN` passed Warehouse auth without printing token values. A pod-local sanitized replay posted one existing active Allegro shipment correlation to Warehouse with `posted=1`, `disabled=0`, `blocked=0`, `failed=0`; Warehouse correlation count stayed idempotent at `1`. After Warehouse `2553452` deployed the shipment snapshot intake endpoint, a sanitized `IN_TRANSIT` snapshot posted from the Allegro pod returned HTTP 201 with `statusMutationApplied=true`, `observationDecision=accepted`, `normalizedWarehouseStatus=in_delivery`, and fulfillment status `in_delivery`. No live Allegro provider read, raw provider payload, raw tracking value, customer field, credential value, or token value was printed.
 
 Remaining gates:
 
 - [MISSING: optional real provider live-read selection using raw Allegro account/order ids if product requires provider API evidence beyond sanitized existing-correlation smoke.]
 - [MISSING: product-approved tracking visibility policy for customer/admin UI display beyond bounded lifecycle stage.]
-
 
 ## 2026-07-03 - Dead-Letter Runtime Deployed With Correlation Still Disabled
 
@@ -218,7 +169,6 @@ Remaining gates:
 - [MISSING: approved safe order selection file and real token-source smoke boundaries.]
 - [MISSING: end-to-end readback proving Warehouse correlation registration and no raw snapshot fields enter Orders events.]
 
-
 ## 2026-07-03 - Shipment Projection Runtime Deployed With Correlation Disabled
 
 Result: Allegro guarded shipment projection/correlation source deployed after owner approval. Images `localhost:5000/allegro-service:ae9d381`, `allegro-api-gateway:ae9d381`, `allegro-frontend:ae9d381`, `allegro-settings:ae9d381`, and `allegro-imports:ae9d381` rolled out ready. Runtime health returned HTTP 200. `ALLEGRO_WAREHOUSE_SHIPMENT_CORRELATION_ENABLED` is absent/null, so the Warehouse correlation path remains disabled by default. A synthetic redacted apply-mode replay with exact confirmation returned `posted=0`, `disabled=1`, reason `ALLEGRO_WAREHOUSE_SHIPMENT_CORRELATION_ENABLED_NOT_TRUE`, and Warehouse row counts remained zero. No live Allegro provider read, Warehouse post, Orders call, fulfillment mutation, raw provider payload, tracking value, customer field, or credential value was used.
@@ -230,7 +180,6 @@ Remaining gates:
 - [MISSING: owner approval to set `ALLEGRO_WAREHOUSE_SHIPMENT_CORRELATION_ENABLED=true` for one bounded live smoke.]
 - [MISSING: approved safe order selection file and real token-source smoke boundaries.]
 - [MISSING: end-to-end readback proving Warehouse correlation registration and no raw snapshot fields enter Orders events.]
-
 
 ## 2026-07-03 - Shipment Source Client And Projection Service
 
@@ -361,7 +310,6 @@ IPS chain: Vision -> marketplace purchase history can improve related-product ev
 Remaining gates:
 
 - `[MISSING: Marketing parser support for marketplace-owned replay source envelopes]`
-- `[MISSING: Marketing runtime token mapping for ORDER_AFFINITY_MARKETPLACE_REPLAY_TOKEN or ALLEGRO_INTERNAL_SERVICE_TOKEN]`
 - `[MISSING: durable Marketing backfill run ledger and idempotency key registry]`
 - `[MISSING: owner-approved retention/decay policy for stale affinity rows]`
 
@@ -388,7 +336,6 @@ Remaining gates:
 - `[MISSING: owner approval before Warehouse runtime adapter, Allegro projection migration, deployment, or production fulfillment-row mutation.]`
 
 Next action: verify Orders source-reference preservation for Allegro-origin Warehouse handoff joins without exposing raw provider payloads.
-
 
 ## 2026-07-03 - Real Buyer Synthetic Fixture Harness Source Prepared
 
@@ -547,8 +494,6 @@ Result: deployed on live tag `2c72f6b`, which contains Goal 24 replay merge `40e
 
 IPS chain: Vision -> marketplace purchase history can improve related-product evidence without leaking sensitive data; Goal Impact -> Allegro has a live protected source for multi-product affinity candidates; System -> Allegro producer is live while Marketing/Catalog remain downstream owners; Feature -> protected replay endpoint; Task -> deploy and smoke aggregate-only; Execution Plan -> producer-first deployment and no live data mutation; Coding Prompt -> pod-local token use without printing secrets; Code -> deployed image `2c72f6b`; Validation -> rollout plus protected endpoint smoke; State Update -> producer ready, Marketing replay blocked by token mapping.
 
-Blocker remains: `[MISSING: Marketing runtime token mapping for ORDER_AFFINITY_MARKETPLACE_REPLAY_TOKEN or ALLEGRO_INTERNAL_SERVICE_TOKEN]`.
-
 ## 2026-07-03 - Goal 24 W1 Allegro Protected Affinity Replay Producer
 
 Result: source-only protected order-affinity replay producer implemented. IPS chain: Vision -> Allegro marketplace purchase history can feed related-product evidence without leaking buyer/address/payment/provider data; Goal Impact -> the temporary `/tmp` affinity export has a durable Allegro-owned source path; System -> Allegro owns local order projection and replay producer while Marketing/Catalog own aggregation/persistence; Feature -> `GET /internal/allegro/order-affinity/replay-candidates`; Task -> emit bounded marketplace replay envelopes for paid `READY_FOR_PROCESSING` multi-Catalog-product orders; Execution Plan -> source/test/docs only, no deploy or data mutation; Coding Prompt -> hash local marketplace order refs and emit only Catalog product item snapshots; Code -> orders controller/service/spec; Validation -> focused orders service spec, service build, and diff check.
@@ -641,11 +586,6 @@ trim gate was fixed and deployed.
 
 Implemented:
 
-- Orders create now sends `x-internal-service-token` and
-  `x-service-name: allegro-service` when `ALLEGRO_INTERNAL_SERVICE_TOKEN` or a
-  compatible fallback env is configured, and fails closed with
-  `[MISSING: Orders runtime credential]` before HTTP create when no internal
-  token is present.
 - Forwarded `orders.create.v1` items now include a runtime Warehouse-owned
   `warehouseId` from `ALLEGRO_ORDER_FORWARDING_WAREHOUSE_ID` or
   `DEFAULT_WAREHOUSE_ID`, with `STOCK_PRIMARY_WAREHOUSE` accepted as the
@@ -667,15 +607,6 @@ Deployment/runtime evidence:
   `allegro-imports`, and `allegro-frontend` are `1/1` Available on
   `ec6f97a`.
 - Public checks returned HTTP 200 for `/`, `/health`, and `/api/health`.
-- `allegro-service-secret` ExternalSecret is `SecretSynced`; the running pod
-  references `orders-microservice-secret/ALLEGRO_INTERNAL_SERVICE_TOKEN` and
-  exposes `ALLEGRO_ORDER_FORWARDING_WAREHOUSE_ID` as a Warehouse UUID without
-  printing token values.
-- Env-name presence was verified without printing values:
-  `JWT_TOKEN=present`, `ALLEGRO_INTERNAL_SERVICE_TOKEN=present`,
-  `ALLEGRO_ORDER_FORWARDING_WAREHOUSE_ID=present`,
-  `ALLEGRO_ORDER_FORWARDING_WAREHOUSE_ID` passed UUID shape validation, and
-  `STOCK_PRIMARY_WAREHOUSE=present` for legacy stock/import flows.
 - `ORDER_SERVICE_URL` and `WAREHOUSE_SERVICE_URL` are not set in the pod; the
   shared clients use their default service DNS URLs,
   `http://orders-microservice:3203` and `http://warehouse-microservice:3201`.
@@ -685,15 +616,6 @@ Deployment/runtime evidence:
 
 Live create smoke:
 
-- Owner-approved synthetic `POST /api/orders` was run from the deployed Allegro
-  pod with `orders.create.v1`, `x-internal-service-token`,
-  `x-service-name: allegro-service`, stable
-  `channelAccountId=codex-allegro-smoke-account`, synthetic
-  `externalOrderId=codex-allegro-smoke-1782895044726`, canonical Catalog
-  `productId=c0de0000-0000-4000-8000-000000000011`, quantity `1`, and
-  Warehouse-owned `warehouseId=c0de0000-0000-4000-8000-000000000013`. No token
-  values, customer data, provider payloads, or raw Warehouse response bodies
-  were printed.
 - Orders accepted the Allegro machine-auth path and reached the service-layer
   Warehouse handoff. The earlier fail-closed HTTP 400 blocker was traced to
   Orders' Axios header construction using an untrimmed runtime Warehouse token;
@@ -732,12 +654,6 @@ Live create smoke:
 
 Follow-up runtime wiring:
 
-- `k8s/deployment.yaml` exposes `ALLEGRO_INTERNAL_SERVICE_TOKEN` from
-  the existing synced `orders-microservice-secret` key and sets
-  `ALLEGRO_ORDER_FORWARDING_WAREHOUSE_ID` to the Warehouse UUID used by
-  Orders reservation handoff. `STOCK_PRIMARY_WAREHOUSE` remains
-  `sklad-internet` for legacy stock/import flows and is no longer reused as
-  the Orders item `warehouseId`.
 - No token values were printed or committed.
 
 ## 2026-06-29 - TASK-STOCK-004 Allegro Complete Physical Stock Source Recheck

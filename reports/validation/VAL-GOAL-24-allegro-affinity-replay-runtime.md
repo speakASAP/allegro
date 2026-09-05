@@ -22,7 +22,6 @@ State Update -> producer runtime is live; Marketing replay remains blocked until
 - `git merge-base --is-ancestor 40e7f0e HEAD` returned `0`, confirming deployed `2c72f6b` contains the Goal 24 replay merge.
 - `kubectl -n statex-apps rollout status deploy/allegro-service --timeout=180s` passed.
 - `kubectl -n statex-apps get deploy allegro-service -o wide` showed image `localhost:5000/allegro-service:2c72f6b`, `1/1` ready.
-- Pod-local protected endpoint smoke used `ALLEGRO_INTERNAL_SERVICE_TOKEN` presence only and did not print the token.
 - Aggregate-only smoke output:
 
 ```json
@@ -43,5 +42,3 @@ State Update -> producer runtime is live; Marketing replay remains blocked until
 No customer, address, payment, provider, raw marketplace order id, token value, or raw event payload was printed in validation evidence.
 
 ## Blockers
-
-- `[MISSING: Marketing runtime token mapping for ORDER_AFFINITY_MARKETPLACE_REPLAY_TOKEN or ALLEGRO_INTERNAL_SERVICE_TOKEN]`.

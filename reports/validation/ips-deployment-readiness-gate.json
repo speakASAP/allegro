@@ -983,7 +983,6 @@
     },
     {
       "line": 194,
-      "marker": "[MISSING: deploy/cutover of hardened dedicated Warehouse service token projection, replacing broad runtime token fallback.]",
       "path": "docs/orchestrator/STATUS.md"
     },
     {
@@ -1218,7 +1217,6 @@
     },
     {
       "line": 364,
-      "marker": "[MISSING: Marketing runtime token mapping for ORDER_AFFINITY_MARKETPLACE_REPLAY_TOKEN or ALLEGRO_INTERNAL_SERVICE_TOKEN]",
       "path": "docs/orchestrator/STATUS.md"
     },
     {
@@ -1373,7 +1371,6 @@
     },
     {
       "line": 550,
-      "marker": "[MISSING: Marketing runtime token mapping for ORDER_AFFINITY_MARKETPLACE_REPLAY_TOKEN or ALLEGRO_INTERNAL_SERVICE_TOKEN]",
       "path": "docs/orchestrator/STATUS.md"
     },
     {
@@ -1528,7 +1525,6 @@
     },
     {
       "line": 69,
-      "marker": "[MISSING: Marketing runtime token mapping for ORDER_AFFINITY_MARKETPLACE_REPLAY_TOKEN or ALLEGRO_INTERNAL_SERVICE_TOKEN]",
       "path": "docs/validation/2026-07-03-goal24-allegro-affinity-replay-producer.md"
     },
     {

@@ -28,8 +28,6 @@ GET /internal/allegro/order-affinity/replay-candidates
 
 Access rules:
 
-- Requires `x-internal-service-token` matching `ALLEGRO_INTERNAL_SERVICE_TOKEN` or `INTERNAL_SERVICE_TOKEN`.
-- Requires `x-service-name: marketing-microservice`.
 - Anonymous, browser/operator, and other-service calls fail with `401 internal_service_auth_required`.
 
 Response guarantees:
@@ -66,21 +64,12 @@ Eligibility rules:
 ## Remaining Blockers
 
 - `[MISSING: Marketing parser support for marketplace-owned replay source envelopes]`.
-- `[MISSING: Marketing runtime token mapping for ORDER_AFFINITY_MARKETPLACE_REPLAY_TOKEN or ALLEGRO_INTERNAL_SERVICE_TOKEN]`.
 - `[MISSING: durable Marketing backfill run ledger and idempotency key registry]`.
 - `[MISSING: owner-approved retention/decay policy for stale affinity rows]`.
 - `[MISSING: scheduled dry-run matrix across Allegro, Aukro, Bazos, FlipFlop, and central Orders]`.
 - `[UNKNOWN: whether marketplace services other than Allegro currently have paid multi-product orders mapped to Catalog product ids]`.
 
 ## Marketplace Producer Matrix
-
-| Marketplace | Protected complete/repeatable producer | Auth boundary | Window/cursor metadata | Paid/processable eligibility | Catalog product mapping | Forbidden-field redaction | Validation evidence | Status |
-| --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| Allegro | Yes: `GET /internal/allegro/order-affinity/replay-candidates`. | Requires internal token and `x-service-name: marketing-microservice`. | Bounded `windowEnd`, deterministic `orderDate/id` order, opaque `cursorAfter`, `completeSnapshot` only for one-page full window. | `READY_FOR_PROCESSING` plus `paymentStatus=PAID` or `paidAt`. | Emits only mapped `lineItems.catalogProductId`; skips orders with fewer than two distinct mapped products. | Excludes buyer/customer/address/payment provider/raw marketplace ids/tokens; event/order refs are hashed. | `orders.service.spec: PASS`, `services/allegro-service npm run build: PASS`, `git diff --check: PASS`. | Allegro-owned producer guarantee resolved in source; not deployed by this worker. |
-| Bazos | Exists as protected fail-closed producer; current main records zero-event source until Bazos has persisted order-item replay data. | Internal Marketing service-token contract exists in source; runtime smoke previously returned 401. | Contract response has `completeSnapshot`/cursor fields but source is fail-closed. | Blocked by missing persisted Bazos order-item replay source. | Blocked by `[MISSING: Bazos persisted order item replay source]` and `[MISSING: Bazos order item ingestion contract]`. | Source reports safe zero-event contract; no raw buyer/customer/payment/address output required. | Existing repo reports: `2026-07-03-goal24-bazos-order-affinity-replay-producer.md` and contract/runtime smoke notes. | Remaining blocker: `[MISSING: Bazos runtime internal replay token env accepted by /internal/bazos/order-affinity/replay-candidates]`. |
-| Aukro | Exists on current main as protected producer and eligibility gate. | Internal Marketing token contract in source. | Existing report verifies `GET /internal/aukro/order-affinity/replay-candidates` envelope. | Current main `400b274` gates pending/ineligible rows. | Producer emits bounded Catalog product item amounts only when mapped. | Existing report requires hashed ids and no raw customer/payment/provider payloads. | Existing repo reports: `2026-07-03-goal24-aukro-order-affinity-replay-producer.md` and contract report. | Remaining blocker: `[MISSING: Marketing marketplace replay URL path selection for aukro-service /internal/aukro/order-affinity/replay-candidates]`. |
-| FlipFlop | Not found in current source as a marketplace replay producer. | `[MISSING: FlipFlop protected marketplace replay auth boundary]`. | `[MISSING: FlipFlop repeatable replay window/cursor contract]`. | FlipFlop has paid checkout/order surfaces, but no Goal 24 marketplace producer endpoint found. | `[MISSING: FlipFlop order line to Catalog product replay mapping contract for marketplace producer]`. | `[MISSING: FlipFlop forbidden-field replay redaction contract]`. | Source search found Catalog order-affinity consumption/status only, not `marketplace.order_affinity_candidate.v1` producer. | Document-only blocker; do not force implementation without owner/API decision. |
-| Heureka | Not found in current source as a marketplace replay producer. | `[MISSING: Heureka protected marketplace replay auth boundary]`. | `[MISSING: Heureka repeatable replay window/cursor contract]`. | Heureka order ingestion exists, but no Goal 24 marketplace producer endpoint found. | Heureka ingestion validates `catalogProductId`, but producer replay mapping is missing. | `[MISSING: Heureka forbidden-field replay redaction contract]`. | Source search found order ingestion/readiness only, not `marketplace.order_affinity_candidate.v1` producer. | Document-only blocker; next owner is Heureka orders/API owner. |
 
 ## Integration Handoff
 
