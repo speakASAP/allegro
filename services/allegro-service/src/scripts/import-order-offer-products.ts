@@ -63,7 +63,15 @@ type NormalizedProduct = {
 const prisma = new PrismaClient();
 const ALLEGRO_API_URL = process.env.ALLEGRO_API_URL || 'https://api.allegro.pl';
 const CATALOG_SERVICE_URL = process.env.CATALOG_SERVICE_URL || 'http://catalog-microservice:3200';
-const CATALOG_TOKEN = process.env.CATALOG_INTERNAL_SERVICE_TOKEN || process.env.INTERNAL_SERVICE_TOKEN;
+// Per-pair RS256 principal for allegro-service -> catalog-microservice, role
+// internal:catalog-microservice:write. There is deliberately no fallback to the
+// former CATALOG_INTERNAL_SERVICE_TOKEN / INTERNAL_SERVICE_TOKEN: that was a
+// shared static secret paired with a self-asserted x-service-name header, the
+// shape SERVICE_IDENTITY_CONSUMER_STANDARD.md prohibits. Keeping it as a
+// fallback would silently restore the prohibited path whenever the bearer is
+// missing or rejected -- and a credential that fails over to a working legacy
+// path fails invisibly.
+const CATALOG_TOKEN = process.env.CATALOG_SERVICE_TOKEN;
 const CATALOG_APPLY_CONFIRMATION = 'ALLEGRO_ORDER_OFFER_CATALOG_IMPORT';
 
 function printHelp(): void {
@@ -169,9 +177,19 @@ function decrypt(value: string): string {
 }
 
 function catalogHeaders(): Record<string, string> {
+  if (!CATALOG_TOKEN) {
+    // Fail loudly rather than sending an unauthenticated request. Without this
+    // the missing credential surfaced as a 401 from catalog on every call,
+    // which reads like a broken principal rather than an unset variable.
+    throw new Error(
+      'CATALOG_SERVICE_TOKEN is not set. It is the per-pair principal for ' +
+        'allegro-service -> catalog-microservice, delivered Vault -> ExternalSecret -> ' +
+        'Secret -> secretKeyRef. There is no legacy fallback.',
+    );
+  }
   return {
     'content-type': 'application/json',
-    ...(CATALOG_TOKEN ? { 'x-internal-service-token': CATALOG_TOKEN, 'x-service-name': 'allegro-service' } : {}),
+    authorization: `Bearer ${CATALOG_TOKEN}`,
   };
 }
 

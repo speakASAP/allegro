@@ -81,6 +81,17 @@ spec:
                 secretKeyRef:
                   name: allegro-service-secret
                   key: CATALOG_INTERNAL_SERVICE_TOKEN
+            # Per-pair RS256 principal for allegro-service -> catalog-microservice
+            # (role internal:catalog-microservice:write). The order-offer catalog
+            # import reads THIS and nothing else; it has no fallback to the shared
+            # static token above, which is retained only until the remaining
+            # catalog callers are migrated and CatalogAuthGuard's static path is
+            # deleted.
+            - name: CATALOG_SERVICE_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: allegro-service-secret
+                  key: CATALOG_SERVICE_TOKEN
             - name: WAREHOUSE_INTERNAL_SERVICE_TOKEN
               valueFrom:
                 secretKeyRef:
