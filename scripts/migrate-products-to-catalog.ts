@@ -163,13 +163,19 @@ class ProductMigrationService {
   }
 
   private configureCatalogAuthHeaders(): void {
-    const internalToken = process.env.CATALOG_INTERNAL_SERVICE_TOKEN || process.env.INTERNAL_SERVICE_TOKEN;
+    // Per-pair principal for allegro-service -> catalog-microservice. No
+    // fallback to the shared CATALOG_INTERNAL_SERVICE_TOKEN /
+    // INTERNAL_SERVICE_TOKEN: that was one static secret held by seven services
+    // with a self-asserted x-service-name header, the shape
+    // SERVICE_IDENTITY_CONSUMER_STANDARD.md prohibits.
+    const internalToken = process.env.CATALOG_SERVICE_TOKEN;
     if (!internalToken) {
       return;
     }
 
-    this.catalogClient.defaults.headers.common['x-internal-service-token'] = internalToken;
-    this.catalogClient.defaults.headers.common['x-service-name'] = 'allegro-service';
+    this.catalogClient.defaults.headers.common['Authorization'] = internalToken.startsWith('Bearer ')
+      ? internalToken
+      : `Bearer ${internalToken}`;
   }
 
   /**
