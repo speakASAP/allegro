@@ -69,18 +69,31 @@ export class CatalogClientService {
   }
 
   private requestOptions(extra: Record<string, any> = {}, options: CatalogClientRequestOptions = {}): Record<string, any> {
-    const internalToken = process.env.CATALOG_INTERNAL_SERVICE_TOKEN || process.env.INTERNAL_SERVICE_TOKEN;
     const headers: Record<string, any> = {
       ...(extra.headers || {}),
     };
     const authorization = this.toAuthorizationHeader(options.authorization);
 
-    if (internalToken) {
-      headers['x-internal-service-token'] = internalToken;
-      headers['x-service-name'] = this.serviceName;
-    }
+    // A caller-supplied user token wins: some catalog routes resolve per-user
+    // settings and reject a service actor outright, so the human identity must
+    // not be replaced by the service one.
+    //
+    // Otherwise this is a service-to-service call and uses the per-pair
+    // principal for allegro-service -> catalog-microservice
+    // (role internal:catalog-microservice:write -- this client POSTs and PUTs
+    // products, media and pricing). The former x-internal-service-token
+    // fallback is deliberately gone: it was one shared static secret held by
+    // seven services plus a self-asserted x-service-name header, the shape
+    // SERVICE_IDENTITY_CONSUMER_STANDARD.md prohibits. Catalog still accepts it
+    // until the last caller migrates, so falling back would authenticate
+    // successfully and hide the regression rather than surfacing it.
     if (authorization) {
       headers.Authorization = authorization;
+    } else {
+      const pairToken = (process.env.CATALOG_SERVICE_TOKEN || '').trim();
+      if (pairToken) {
+        headers.Authorization = pairToken.startsWith('Bearer ') ? pairToken : `Bearer ${pairToken}`;
+      }
     }
 
     return {
