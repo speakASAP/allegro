@@ -893,25 +893,63 @@ async function testOrderAffinityReplayCandidatesReturnCursorForRepeatablePages()
   assert.equal(fixture.captured.orderFindMany.where.AND[1].OR[0].orderDate.gt.toISOString(), '2026-07-03T08:00:00.000Z');
 }
 
-async function testInternalOrderAffinityControllerRequiresMarketingServiceToken() {
+async function testInternalOrderAffinityControllerRequiresAuthBearerRole() {
   const fixture = createServiceFixture([], [], { localOrders: [] });
-  const config = {
-    get: (key: string) => key === 'ALLEGRO_INTERNAL_SERVICE_TOKEN' ? 'secret-token' : undefined,
-  };
-  const controller = new InternalOrderAffinityController(fixture.service, config as any);
+  const controller = new InternalOrderAffinityController(fixture.service);
+  const originalFetch = global.fetch;
 
   await assert.rejects(
-    () => controller.getReplayCandidates({}, undefined, 'marketing-microservice'),
+    () => controller.getReplayCandidates({}),
     (error: any) => error?.getStatus?.() === 401,
   );
   await assert.rejects(
-    () => controller.getReplayCandidates({}, 'secret-token', 'orders-microservice'),
+    () => controller.getReplayCandidates({}, 'secret-token'),
     (error: any) => error?.getStatus?.() === 401,
   );
 
-  const result = await controller.getReplayCandidates({ limit: 1 }, 'Bearer secret-token', 'marketing-microservice');
-  assert.equal(result.success, true);
-  assert.equal(result.data.sourceOwner, 'allegro-service');
+  global.fetch = (async () => ({
+    ok: true,
+    json: async () => ({
+      valid: true,
+      user: { id: 'svc-marketing--allegro', roles: ['internal:allegro-service:order-affinity'] },
+    }),
+  })) as any;
+
+  try {
+    const result = await controller.getReplayCandidates({ limit: 1 }, 'Bearer auth-rs256-jwt');
+    assert.equal(result.success, true);
+    assert.equal(result.data.sourceOwner, 'allegro-service');
+  } finally {
+    global.fetch = originalFetch;
+  }
+
+  global.fetch = (async () => ({
+    ok: true,
+    json: async () => ({
+      valid: true,
+      user: { id: 'svc-other', roles: ['internal:allegro-service:readonly'] },
+    }),
+  })) as any;
+
+  try {
+    await assert.rejects(
+      () => controller.getReplayCandidates({ limit: 1 }, 'Bearer wrong-role-jwt'),
+      (error: any) => error?.getStatus?.() === 403,
+    );
+  } finally {
+    global.fetch = originalFetch;
+  }
+
+  // Static ALLEGRO_INTERNAL_SERVICE_TOKEN must never grant access.
+  global.fetch = (async () => ({ ok: false, json: async () => ({}) })) as any;
+  try {
+    await assert.rejects(
+      () => controller.getReplayCandidates({ limit: 1 }, 'Bearer static-allegro-token'),
+      (error: any) => error?.getStatus?.() === 401,
+    );
+  } finally {
+    global.fetch = originalFetch;
+  }
 }
 
 function getControllerMethodGuards(controller: any, methodName: string): any[] {
@@ -981,7 +1019,7 @@ export async function runOrdersServiceSpec(): Promise<void> {
   await testGetOrdersSellerDashboardDoesNotUseBuyerSubjectBinding();
   await testOrderAffinityReplayCandidatesReturnBoundedMarketplaceEvents();
   await testOrderAffinityReplayCandidatesReturnCursorForRepeatablePages();
-  await testInternalOrderAffinityControllerRequiresMarketingServiceToken();
+  await testInternalOrderAffinityControllerRequiresAuthBearerRole();
 }
 
 if (require.main === module) {
