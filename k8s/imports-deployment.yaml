@@ -46,15 +46,8 @@ spec:
                 secretKeyRef:
                   name: auth-microservice-secret
                   key: JWT_SECRET
-            - name: JWT_TOKEN
-              valueFrom:
-                secretKeyRef:
-                  name: allegro-service-secret
-                  key: JWT_TOKEN
-            # import.service.ts calls warehouse setStock. This key was never mapped
-            # here, so imports held no warehouse credential at all and every call
-            # was 401 -- invisible while the client turned failures into empty
-            # results. Same per-pair RS256 principal as allegro-service
+            # import.service.ts calls warehouse setStock. Same per-pair RS256
+            # principal as allegro-service
             # (svc-allegro-service--warehouse-microservice@internal.alfares.cz).
             - name: WAREHOUSE_SERVICE_TOKEN
               valueFrom:

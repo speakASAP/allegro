@@ -61,27 +61,19 @@ spec:
             # (SERVICE_CREDENTIAL_PROBER_PLAN.md Task A). This deployment maps secret
             # keys one by one rather than with envFrom: secretRef, so adding the key
             # to the ExternalSecret alone does NOT reach the container.
-            - name: NOTIFICATION_SERVICE_TOKEN
+            - name: MONITORING_INGEST_SERVICE_TOKEN
               valueFrom:
                 secretKeyRef:
                   name: allegro-service-secret
-                  key: NOTIFICATION_SERVICE_TOKEN
+                  key: MONITORING_INGEST_SERVICE_TOKEN
             - name: JWT_SECRET
               valueFrom:
                 secretKeyRef:
                   name: auth-microservice-secret
                   key: JWT_SECRET
-            - name: JWT_TOKEN
-              valueFrom:
-                secretKeyRef:
-                  name: allegro-service-secret
-                  key: JWT_TOKEN
             # Per-pair RS256 principal for allegro-service -> catalog-microservice
             # (role internal:catalog-microservice:write). The order-offer catalog
-            # import reads THIS and nothing else; it has no fallback to the shared
-            # static token above, which is retained only until the remaining
-            # catalog callers are migrated and CatalogAuthGuard's static path is
-            # deleted.
+            # import reads THIS and nothing else.
             - name: CATALOG_SERVICE_TOKEN
               valueFrom:
                 secretKeyRef:
