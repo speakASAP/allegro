@@ -80,13 +80,7 @@ export class CatalogClientService {
     //
     // Otherwise this is a service-to-service call and uses the per-pair
     // principal for allegro-service -> catalog-microservice
-    // (role internal:catalog-microservice:write -- this client POSTs and PUTs
-    // products, media and pricing). The former x-internal-service-token
-    // fallback is deliberately gone: it was one shared static secret held by
-    // seven services plus a self-asserted x-service-name header, the shape
-    // SERVICE_IDENTITY_CONSUMER_STANDARD.md prohibits. Catalog still accepts it
-    // until the last caller migrates, so falling back would authenticate
-    // successfully and hide the regression rather than surfacing it.
+    // S2S: auth-microservice/docs/SERVICE_IDENTITY_CONSUMER_STANDARD.md
     if (authorization) {
       headers.Authorization = authorization;
     } else {

@@ -57,11 +57,7 @@ export class OrderClientService {
     this.baseUrl = process.env.ORDER_SERVICE_URL || 'http://orders-microservice:3203';
   }
 
-  /**
-   * Per-pair RS256 principal for allegro-service -> orders-microservice, sent as
-   * `Authorization: Bearer` only. No legacy x-internal-service-token /
-   * x-service-name dual-send — orders verifies via /auth/validate.
-   */
+  /** S2S: auth-microservice/docs/SERVICE_IDENTITY_CONSUMER_STANDARD.md */
   private resolveOrdersBearerToken(): string {
     const token = process.env.ORDERS_SERVICE_TOKEN?.trim();
     if (!token) {

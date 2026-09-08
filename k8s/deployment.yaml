@@ -76,11 +76,6 @@ spec:
                 secretKeyRef:
                   name: allegro-service-secret
                   key: JWT_TOKEN
-            - name: CATALOG_INTERNAL_SERVICE_TOKEN
-              valueFrom:
-                secretKeyRef:
-                  name: allegro-service-secret
-                  key: CATALOG_INTERNAL_SERVICE_TOKEN
             # Per-pair RS256 principal for allegro-service -> catalog-microservice
             # (role internal:catalog-microservice:write). The order-offer catalog
             # import reads THIS and nothing else; it has no fallback to the shared
