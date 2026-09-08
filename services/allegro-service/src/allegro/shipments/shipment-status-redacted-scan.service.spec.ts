@@ -113,30 +113,68 @@ async function testUnknownOnlyScanKeepsMissingBlocker() {
   assert.deepEqual(result.blockers, ["[MISSING: Allegro provider sample with carrier tracking status other than UNKNOWN]"]);
 }
 
-async function testControllerRequiresAllowedInternalService() {
+async function testControllerRequiresAuthBearerRole() {
   const service = { scan: async () => ({ contract: "allegro.shipment_status_redacted_scan.v1" }) };
-  const config = {
-    get: (key: string) => key === "ALLEGRO_INTERNAL_SERVICE_TOKEN" ? "secret-token" : undefined,
-  };
-  const controller = new InternalShipmentStatusController(service as any, config as any);
+  const controller = new InternalShipmentStatusController(service as any);
+  const originalFetch = global.fetch;
 
   await assert.rejects(
-    () => controller.redactedScan({}, undefined, undefined, "orders-microservice"),
+    () => controller.redactedScan({}),
     (error: any) => error?.getStatus?.() === 401,
   );
   await assert.rejects(
-    () => controller.redactedScan({}, "secret-token", undefined, "unknown-service"),
+    () => controller.redactedScan({}, "secret-token"),
     (error: any) => error?.getStatus?.() === 401,
   );
 
-  const result = await controller.redactedScan({ limit: 1 }, "Bearer secret-token", undefined, "orders-microservice");
-  assert.equal(result.success, true);
+  global.fetch = (async () => ({
+    ok: true,
+    json: async () => ({
+      valid: true,
+      user: { id: "svc-orders--allegro", roles: ["internal:allegro-service:service"] },
+    }),
+  })) as any;
+
+  try {
+    const result = await controller.redactedScan({ limit: 1 }, "Bearer auth-rs256-jwt");
+    assert.equal(result.success, true);
+  } finally {
+    global.fetch = originalFetch;
+  }
+
+  global.fetch = (async () => ({
+    ok: true,
+    json: async () => ({
+      valid: true,
+      user: { id: "svc-other", roles: ["internal:allegro-service:readonly"] },
+    }),
+  })) as any;
+
+  try {
+    await assert.rejects(
+      () => controller.redactedScan({ limit: 1 }, "Bearer wrong-role-jwt"),
+      (error: any) => error?.getStatus?.() === 403,
+    );
+  } finally {
+    global.fetch = originalFetch;
+  }
+
+  // Static ALLEGRO_INTERNAL_SERVICE_TOKEN / x-service-name must never grant access.
+  global.fetch = (async () => ({ ok: false, json: async () => ({}) })) as any;
+  try {
+    await assert.rejects(
+      () => controller.redactedScan({ limit: 1 }, "Bearer static-allegro-token"),
+      (error: any) => error?.getStatus?.() === 401,
+    );
+  } finally {
+    global.fetch = originalFetch;
+  }
 }
 
 async function runShipmentStatusRedactedScanSpec(): Promise<void> {
   await testRedactedScanAggregatesOnlySanitizedCounts();
   await testUnknownOnlyScanKeepsMissingBlocker();
-  await testControllerRequiresAllowedInternalService();
+  await testControllerRequiresAuthBearerRole();
 }
 
 if (require.main === module) {

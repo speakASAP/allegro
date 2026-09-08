@@ -1,6 +1,11 @@
-import { Controller, Get, Headers, Query, UnauthorizedException } from "@nestjs/common";
-import { ConfigService } from "@nestjs/config";
-import { timingSafeEqual } from "crypto";
+import {
+  Controller,
+  ForbiddenException,
+  Get,
+  Headers,
+  Query,
+  UnauthorizedException,
+} from "@nestjs/common";
 import { Injectable } from "@nestjs/common";
 import { PrismaService } from "@allegro/shared";
 import { AllegroAuthService } from "../allegro-auth.service";
@@ -51,6 +56,11 @@ const DEFAULT_SCAN_LIMIT = 50;
 const MAX_SCAN_LIMIT = 50;
 const NO_NON_UNKNOWN_BLOCKER = "[MISSING: Allegro provider sample with carrier tracking status other than UNKNOWN]";
 const SERVICE_NATIVE_BLOCKER = "[MISSING: service-native Allegro OAuth shipment scan candidate]";
+
+/** Auth RS256 roles allowed to call the redacted shipment-status scan. */
+const SHIPMENT_STATUS_SCAN_ROLES: ReadonlySet<string> = new Set([
+  "internal:allegro-service:service",
+]);
 
 @Injectable()
 export class ShipmentStatusRedactedScanService {
@@ -164,37 +174,91 @@ export class ShipmentStatusRedactedScanService {
 
 @Controller("internal/allegro/shipment-status")
 export class InternalShipmentStatusController {
+  private readonly authServiceUrl = (
+    process.env.AUTH_SERVICE_URL || "http://auth-microservice:3370"
+  ).replace(/\/+$/, "");
+  private readonly authValidateTimeoutMs = Number(
+    process.env.AUTH_VALIDATE_TIMEOUT_MS || 3000,
+  );
+
   constructor(
     private readonly scanService: ShipmentStatusRedactedScanService,
-    private readonly configService: ConfigService,
   ) {}
 
   @Get("redacted-scan")
   async redactedScan(
     @Query() query: Record<string, unknown>,
-    @Headers("x-internal-service-token") internalToken?: string,
     @Headers("authorization") authorization?: string,
-    @Headers("x-service-name") serviceName?: string,
   ): Promise<{ success: boolean; data: ShipmentStatusRedactedScanSummary }> {
-    this.assertInternalService(internalToken || authorization, serviceName);
+    await this.assertAuthServicePrincipal(authorization);
     return { success: true, data: await this.scanService.scan(query) };
   }
 
-  private assertInternalService(token?: string, serviceName?: string): void {
-    const expected = (
-      this.configService.get<string>("ALLEGRO_INTERNAL_SERVICE_TOKEN")
-      || this.configService.get<string>("INTERNAL_SERVICE_TOKEN")
-      || ""
-    ).trim();
-    const supplied = String(token || "").replace(/^Bearer\s+/i, "").trim();
-    const allowedServices = String(
-      this.configService.get<string>("ALLEGRO_SHIPMENT_STATUS_SCAN_ALLOWED_SERVICES")
-      || "orders-microservice,warehouse-microservice,allegro-service",
-    ).split(",").map((value) => value.trim()).filter(Boolean);
-
-    if (!expected || !supplied || !safeEqual(supplied, expected) || !serviceName || !allowedServices.includes(serviceName)) {
-      throw new UnauthorizedException("internal_service_auth_required");
+  private async assertAuthServicePrincipal(authorization?: string): Promise<void> {
+    if (!authorization || !authorization.startsWith("Bearer ")) {
+      throw new UnauthorizedException("Missing bearer token");
     }
+    const token = authorization.slice("Bearer ".length).trim();
+    if (!token) {
+      throw new UnauthorizedException("Missing bearer token");
+    }
+
+    const roles = await this.validateRoles(token);
+    if (!roles.some((role) => SHIPMENT_STATUS_SCAN_ROLES.has(role))) {
+      throw new ForbiddenException("Principal lacks shipment-status scan role");
+    }
+  }
+
+  private async validateRoles(token: string): Promise<string[]> {
+    const controller = new AbortController();
+    const timeoutMs =
+      Number.isFinite(this.authValidateTimeoutMs) && this.authValidateTimeoutMs > 0
+        ? this.authValidateTimeoutMs
+        : 3000;
+    const timeout = setTimeout(() => controller.abort(), timeoutMs);
+
+    let response: Response;
+    try {
+      response = await fetch(`${this.authServiceUrl}/auth/validate`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ token }),
+        signal: controller.signal,
+      });
+    } catch (error) {
+      // eslint-disable-next-line no-console
+      console.error(
+        JSON.stringify({
+          level: "error",
+          event: "allegro_shipment_status_scan_auth_validate_unreachable",
+          message: "Auth validate unreachable during Allegro shipment-status redacted scan",
+          timestamp: new Date().toISOString(),
+          error: error instanceof Error ? error.message : String(error),
+        }),
+      );
+      throw new UnauthorizedException("Invalid token");
+    } finally {
+      clearTimeout(timeout);
+    }
+
+    if (!response.ok) {
+      throw new UnauthorizedException("Invalid token");
+    }
+
+    let data: { valid?: boolean; user?: { roles?: unknown } };
+    try {
+      data = (await response.json()) as { valid?: boolean; user?: { roles?: unknown } };
+    } catch {
+      throw new UnauthorizedException("Invalid token");
+    }
+
+    if (!data.valid || !data.user) {
+      throw new UnauthorizedException("Invalid token");
+    }
+
+    return Array.isArray(data.user.roles)
+      ? data.user.roles.filter((role): role is string => typeof role === "string")
+      : [];
   }
 }
 
@@ -255,18 +319,4 @@ function normalizeOptionalString(value: unknown): string | null {
   if (value === undefined || value === null) return null;
   const normalized = String(value).trim();
   return normalized || null;
-}
-
-/**
- * Constant-time shared-secret comparison. A plain `!==` leaks the length of the
- * matching prefix through timing; this secret is the only guard on the redacted
- * shipment-status scan endpoint.
- */
-function safeEqual(supplied: string, expected: string): boolean {
-  const a = Buffer.from(supplied);
-  const b = Buffer.from(expected);
-  if (a.length !== b.length) {
-    return false;
-  }
-  return timingSafeEqual(a, b);
 }
