@@ -30,6 +30,9 @@ None.
 ## Authority
 This repository is operated under the shared Alfares control model. Agents may work within the approved project scope, but they must not invent runtime contracts, user claims, marketplace workflows, or approval evidence.
 
+## Service-to-service authentication
+For machine service identity, follow the sole canonical [`SERVICE_IDENTITY_CONSUMER_STANDARD.md`](../auth-microservice/docs/SERVICE_IDENTITY_CONSUMER_STANDARD.md). It is not reproduced here.
+
 ## Intent preservation system
 The IPS lives in the central intent-preservation-system repository. This repo keeps project-specific runtime intent and operational evidence locally while reusing the standard validators and templates for traceability.
 
