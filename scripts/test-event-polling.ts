@@ -41,6 +41,22 @@ const normalizeUrl = (url: string): string => {
 const normalizedAllegroUrl = normalizeUrl(ALLEGRO_SERVICE_URL);
 const normalizedWebhookUrl = normalizeUrl(WEBHOOK_SERVICE_URL);
 
+/** Auth RS256 pair JWT with internal:allegro-service:service|admin. Never print. */
+const ALLEGRO_EVENTS_BEARER = (
+  process.env.ALLEGRO_EVENTS_SERVICE_TOKEN ||
+  process.env.ALLEGRO_SERVICE_TOKEN ||
+  ''
+).trim();
+
+function eventsAuthHeaders(): Record<string, string> {
+  if (!ALLEGRO_EVENTS_BEARER) {
+    throw new Error(
+      'Set ALLEGRO_EVENTS_SERVICE_TOKEN (Auth RS256 Bearer) for /allegro/events/*',
+    );
+  }
+  return { Authorization: `Bearer ${ALLEGRO_EVENTS_BEARER}` };
+}
+
 interface TestResult {
   name: string;
   passed: boolean;
@@ -94,25 +110,43 @@ async function main() {
     return response.data;
   });
 
-  // Test 4: Test direct event polling (via Allegro service)
+  // Test 4: unauthenticated events must fail closed
+  await runTest('Offer Events rejects missing Bearer (401)', async () => {
+    try {
+      await axios.get(`${normalizedAllegroUrl}/allegro/events/offers`, {
+        params: { limit: 10 },
+        timeout: 10000,
+      });
+      throw new Error('expected 401 without Bearer');
+    } catch (error: any) {
+      if (error.response?.status === 401) {
+        return { status: 401 };
+      }
+      throw error;
+    }
+  });
+
+  // Test 5: authenticated offer events
   await runTest('Direct Offer Events Endpoint (GET /allegro/events/offers)', async () => {
     const response = await axios.get(`${normalizedAllegroUrl}/allegro/events/offers`, {
       params: { limit: 10 },
       timeout: 10000,
+      headers: eventsAuthHeaders(),
     });
     return response.data;
   });
 
-  // Test 5: Test order events endpoint
+  // Test 6: authenticated order events
   await runTest('Direct Order Events Endpoint (GET /allegro/events/orders)', async () => {
     const response = await axios.get(`${normalizedAllegroUrl}/allegro/events/orders`, {
       params: { limit: 10 },
       timeout: 10000,
+      headers: eventsAuthHeaders(),
     });
     return response.data;
   });
 
-  // Test 6: Get processed events
+  // Test 7: Get processed events
   await runTest('Get Processed Events (GET /api/webhooks/events)', async () => {
     // Note: This requires authentication in production
     try {
@@ -128,11 +162,12 @@ async function main() {
     }
   });
 
-  // Test 7: Test with 'after' parameter
+  // Test 8: Test with 'after' parameter
   await runTest('Offer Events with after parameter', async () => {
     const response = await axios.get(`${normalizedAllegroUrl}/allegro/events/offers`, {
       params: { after: 'test-event-id', limit: 3 },
       timeout: 10000,
+      headers: eventsAuthHeaders(),
     });
     return response.data;
   });

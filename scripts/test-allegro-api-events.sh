@@ -57,11 +57,28 @@ else
     echo "Response: $BODY"
 fi
 
-# Test 3: Direct offer events endpoint
-echo -e "\n${YELLOW}3. Testing Direct Offer Events Endpoint${NC}"
+# Auth RS256 pair JWT (internal:allegro-service:service|admin). Never echo the value.
+ALLEGRO_EVENTS_TOKEN="${ALLEGRO_EVENTS_SERVICE_TOKEN:-${ALLEGRO_SERVICE_TOKEN:-}}"
+
+# Test 3: Unauthenticated events must 401
+echo -e "\n${YELLOW}3. Unauthenticated Offer Events (expect 401)${NC}"
 echo "----------------------------------------"
-echo "GET $ALLEGRO_SERVICE_URL/allegro/events/offers?limit=10"
 RESPONSE=$(curl -s -w "\n%{http_code}" "$ALLEGRO_SERVICE_URL/allegro/events/offers?limit=10")
+HTTP_CODE=$(echo "$RESPONSE" | tail -n1)
+if [ "$HTTP_CODE" -eq 401 ]; then
+    echo -e "${GREEN}✅ Status: $HTTP_CODE (fail-closed)${NC}"
+else
+    echo -e "${RED}❌ Status: $HTTP_CODE (expected 401)${NC}"
+fi
+
+# Test 4: Authenticated offer events
+echo -e "\n${YELLOW}4. Testing Direct Offer Events Endpoint${NC}"
+echo "----------------------------------------"
+if [ -z "$ALLEGRO_EVENTS_TOKEN" ]; then
+    echo -e "${RED}❌ Set ALLEGRO_EVENTS_SERVICE_TOKEN (Auth RS256 Bearer)${NC}"
+else
+echo "GET $ALLEGRO_SERVICE_URL/allegro/events/offers?limit=10 (Bearer)"
+RESPONSE=$(curl -s -w "\n%{http_code}" -H "Authorization: Bearer ${ALLEGRO_EVENTS_TOKEN}" "$ALLEGRO_SERVICE_URL/allegro/events/offers?limit=10")
 HTTP_CODE=$(echo "$RESPONSE" | tail -n1)
 BODY=$(echo "$RESPONSE" | sed '$d')
 
@@ -73,12 +90,16 @@ else
     echo -e "${RED}❌ Status: $HTTP_CODE${NC}"
     echo "Response: $BODY"
 fi
+fi
 
-# Test 4: Direct order events endpoint
-echo -e "\n${YELLOW}4. Testing Direct Order Events Endpoint${NC}"
+# Test 5: Authenticated order events
+echo -e "\n${YELLOW}5. Testing Direct Order Events Endpoint${NC}"
 echo "----------------------------------------"
-echo "GET $ALLEGRO_SERVICE_URL/allegro/events/orders?limit=10"
-RESPONSE=$(curl -s -w "\n%{http_code}" "$ALLEGRO_SERVICE_URL/allegro/events/orders?limit=10")
+if [ -z "$ALLEGRO_EVENTS_TOKEN" ]; then
+    echo -e "${RED}❌ Set ALLEGRO_EVENTS_SERVICE_TOKEN (Auth RS256 Bearer)${NC}"
+else
+echo "GET $ALLEGRO_SERVICE_URL/allegro/events/orders?limit=10 (Bearer)"
+RESPONSE=$(curl -s -w "\n%{http_code}" -H "Authorization: Bearer ${ALLEGRO_EVENTS_TOKEN}" "$ALLEGRO_SERVICE_URL/allegro/events/orders?limit=10")
 HTTP_CODE=$(echo "$RESPONSE" | tail -n1)
 BODY=$(echo "$RESPONSE" | sed '$d')
 
@@ -94,9 +115,10 @@ else
     echo -e "${RED}❌ Status: $HTTP_CODE${NC}"
     echo "Response: $BODY"
 fi
+fi
 
-# Test 5: Get processed events (may require auth)
-echo -e "\n${YELLOW}5. Testing Get Processed Events${NC}"
+# Test 6: Get processed events (may require auth)
+echo -e "\n${YELLOW}6. Testing Get Processed Events${NC}"
 echo "----------------------------------------"
 echo "GET $API_BASE_URL/webhooks/events?limit=10"
 RESPONSE=$(curl -s -w "\n%{http_code}" "$API_BASE_URL/webhooks/events?limit=10")
