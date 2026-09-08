@@ -49,10 +49,6 @@ interface CreateCentralOrderRequest {
 @Injectable()
 export class OrderClientService {
   private readonly baseUrl: string;
-  private readonly serviceName =
-    process.env.ORDER_SERVICE_CALLER_SERVICE_NAME ||
-    process.env.ALLEGRO_CALLER_SERVICE_NAME ||
-    'allegro-service';
 
   constructor(
     private readonly httpService: HttpService,
@@ -63,73 +59,33 @@ export class OrderClientService {
 
   /**
    * Per-pair RS256 principal for allegro-service -> orders-microservice, sent as
-   * `Authorization: Bearer`. orders verifies it via /auth/validate and reads the
-   * roles from the token, so a leak is revoked by deactivating one principal in
-   * the auth DB rather than by editing env vars in four repos at once.
+   * `Authorization: Bearer` only. No legacy x-internal-service-token /
+   * x-service-name dual-send — orders verifies via /auth/validate.
    */
-  private resolveOrdersBearerToken(): string | null {
-    return process.env.ORDERS_SERVICE_TOKEN?.trim() || null;
-  }
-
-  /**
-   * Legacy shared static secret, compared byte-for-byte by orders'
-   * `resolveInternalServiceActor`. The same value is held by allegro-imports,
-   * orders and marketing, so it cannot be rotated for one caller alone. Retained
-   * only as a cutover fallback; remove once ORDERS_SERVICE_TOKEN is mounted
-   * everywhere and the lane is confirmed green.
-   */
-  private resolveInternalServiceToken(): string | null {
-    const token =
-      process.env.ALLEGRO_INTERNAL_SERVICE_TOKEN ||
-      process.env.ORDERS_INTERNAL_SERVICE_TOKEN ||
-      process.env.ORDER_SERVICE_INTERNAL_TOKEN ||
-      process.env.INTERNAL_SERVICE_TOKEN;
-    const normalized = token?.trim();
-    return normalized || null;
-  }
-
-  private requestOptions(extra: Record<string, any> = {}): Record<string, any> | null {
-    const bearer = this.resolveOrdersBearerToken();
-    if (bearer) {
-      return {
-        ...extra,
-        headers: {
-          ...(extra.headers || {}),
-          authorization: `Bearer ${bearer}`,
-          'x-service-name': this.serviceName,
-        },
-      };
-    }
-
-    const token = this.resolveInternalServiceToken();
+  private resolveOrdersBearerToken(): string {
+    const token = process.env.ORDERS_SERVICE_TOKEN?.trim();
     if (!token) {
-      return null;
+      this.logger.error(
+        'ORDERS_SERVICE_TOKEN is unset; refusing to call orders-microservice '
+          + 'unauthenticated. Set the per-pair RS256 principal for '
+          + 'allegro-service -> orders-microservice.',
+        undefined,
+        'OrderClient',
+      );
+      throw new HttpException('[MISSING: Orders runtime credential]', HttpStatus.SERVICE_UNAVAILABLE);
     }
+    return token;
+  }
 
-    this.logger.warn(
-      'ORDERS_SERVICE_TOKEN is not set; falling back to the shared static ' +
-        'x-internal-service-token for orders-microservice. This credential is shared ' +
-        'with three other pods and cannot be revoked per caller.',
-      'OrderClient',
-    );
-
+  private requestOptions(extra: Record<string, any> = {}): Record<string, any> {
+    const bearer = this.resolveOrdersBearerToken();
     return {
       ...extra,
       headers: {
         ...(extra.headers || {}),
-        'x-internal-service-token': token,
-        'x-service-name': this.serviceName,
+        authorization: bearer.startsWith('Bearer ') ? bearer : `Bearer ${bearer}`,
       },
     };
-  }
-
-  private requireCreateOrderRequestOptions(): Record<string, any> {
-    const options = this.requestOptions();
-    if (!options) {
-      this.logger.warn('Refusing to call orders-microservice create without [MISSING: Orders runtime credential]', 'OrderClient');
-      throw new HttpException('[MISSING: Orders runtime credential]', HttpStatus.SERVICE_UNAVAILABLE);
-    }
-    return options;
   }
 
   async createOrder(orderData: CreateCentralOrderRequest): Promise<any> {
@@ -139,7 +95,7 @@ export class OrderClientService {
       channelAccountId: this.normalizeChannelAccountId(orderData.channelAccountId),
     };
 
-    const requestOptions = this.requireCreateOrderRequestOptions();
+    const requestOptions = this.requestOptions();
     try {
       const response = await firstValueFrom(
         this.httpService.post(this.baseUrl + '/api/orders', payload, requestOptions),
@@ -147,6 +103,9 @@ export class OrderClientService {
       this.logger.log('Order accepted by orders-microservice: ' + response.data.data?.id, 'OrderClient');
       return response.data.data;
     } catch (error: any) {
+      if (error instanceof HttpException) {
+        throw error;
+      }
       const status = error?.response?.status;
       const message = status === HttpStatus.CONFLICT
         ? 'ORDER_IDEMPOTENCY_CONFLICT'
@@ -171,7 +130,7 @@ export class OrderClientService {
       const response = await firstValueFrom(
         this.httpService.get(
           this.baseUrl + '/api/orders/' + encodeURIComponent(normalizedOrderId) + '/lifecycle',
-          this.requestOptions() || {},
+          this.requestOptions(),
         ),
       );
       const order = response.data?.data || response.data || null;
@@ -181,6 +140,9 @@ export class OrderClientService {
         reason: order ? undefined : ORDERS_LIFECYCLE_READ_UNAVAILABLE,
       };
     } catch (error: any) {
+      if (error instanceof HttpException && error.getStatus() === HttpStatus.SERVICE_UNAVAILABLE) {
+        throw error;
+      }
       const status = error?.response?.status || null;
       const message = status ? `status_${status}` : error instanceof Error ? error.message : 'Unknown error';
       this.logger.warn(`Orders lifecycle read unavailable for central order ${normalizedOrderId}: ${message}`, 'OrderClient');

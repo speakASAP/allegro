@@ -103,9 +103,9 @@ function createFixture(options: { getResponse?: any; getError?: any } = {}) {
   return { service, getCalls, postCalls, warnings, logs, errors };
 }
 
-async function testCreateOrderSendsMachineAuthHeaders() {
+async function testCreateOrderSendsBearerOnly() {
   await withCleanOrderEnv({
-    ALLEGRO_INTERNAL_SERVICE_TOKEN: 'synthetic-orders-token',
+    ORDERS_SERVICE_TOKEN: 'synthetic-orders-token',
   }, async () => {
     const fixture = createFixture();
 
@@ -115,24 +115,27 @@ async function testCreateOrderSendsMachineAuthHeaders() {
     assert.equal(fixture.postCalls[0][0], 'http://orders-microservice:3203/api/orders');
     assert.equal(fixture.postCalls[0][1].contractVersion, 'orders.create.v1');
     assert.equal(fixture.postCalls[0][1].items[0].warehouseId, 'warehouse-main');
-    assert.equal(fixture.postCalls[0][2].headers['x-internal-service-token'], 'synthetic-orders-token');
-    assert.equal(fixture.postCalls[0][2].headers['x-service-name'], 'allegro-service');
+    assert.equal(fixture.postCalls[0][2].headers.authorization, 'Bearer synthetic-orders-token');
+    assert.equal(fixture.postCalls[0][2].headers['x-internal-service-token'], undefined);
+    assert.equal(fixture.postCalls[0][2].headers['x-service-name'], undefined);
   });
 }
 
 async function testCreateOrderFailsClosedWithoutMachineCredential() {
-  await withCleanOrderEnv({}, async () => {
+  await withCleanOrderEnv({
+    ALLEGRO_INTERNAL_SERVICE_TOKEN: 'legacy-static',
+  }, async () => {
     const fixture = createFixture();
 
     await assert.rejects(() => fixture.service.createOrder(syntheticOrderPayload() as any), /\[MISSING: Orders runtime credential\]/);
     assert.equal(fixture.postCalls.length, 0);
-    assert.equal(fixture.warnings.length, 1);
+    assert.equal(fixture.errors.length, 1);
   });
 }
 
 async function testGetOrderLifecycleReadsCentralOrderById() {
   await withCleanOrderEnv({
-    ALLEGRO_INTERNAL_SERVICE_TOKEN: 'synthetic-orders-token',
+    ORDERS_SERVICE_TOKEN: 'synthetic-orders-token',
   }, async () => {
     const fixture = createFixture({
       getResponse: { data: { data: { id: 'central-order-1', lifecycleStage: 'warehouse_collecting', status: 'warehouse_collecting', rawStatus: 'processing' } } },
@@ -146,13 +149,16 @@ async function testGetOrderLifecycleReadsCentralOrderById() {
     assert.equal(result.order.rawStatus, 'processing');
     assert.equal(fixture.getCalls.length, 1);
     assert.equal(fixture.getCalls[0][0], 'http://orders-microservice:3203/api/orders/central-order-1/lifecycle');
-    assert.equal(fixture.getCalls[0][1].headers['x-internal-service-token'], 'synthetic-orders-token');
-    assert.equal(fixture.getCalls[0][1].headers['x-service-name'], 'allegro-service');
+    assert.equal(fixture.getCalls[0][1].headers.authorization, 'Bearer synthetic-orders-token');
+    assert.equal(fixture.getCalls[0][1].headers['x-internal-service-token'], undefined);
+    assert.equal(fixture.getCalls[0][1].headers['x-service-name'], undefined);
   });
 }
 
 async function testGetOrderLifecycleReturnsUnavailableWhenReadFails() {
-  await withCleanOrderEnv({}, async () => {
+  await withCleanOrderEnv({
+    ORDERS_SERVICE_TOKEN: 'synthetic-orders-token',
+  }, async () => {
     const fixture = createFixture({ getError: { response: { status: 404 }, message: 'not found' } });
 
     const result = await fixture.service.getOrderLifecycle('central-order-1');
@@ -164,7 +170,7 @@ async function testGetOrderLifecycleReturnsUnavailableWhenReadFails() {
   });
 }
 
-async function testCreateOrderPrefersPerPairBearerToken() {
+async function testCreateOrderIgnoresLegacyStaticEnv() {
   await withCleanOrderEnv({
     ORDERS_SERVICE_TOKEN: 'synthetic-per-pair-jwt',
     ALLEGRO_INTERNAL_SERVICE_TOKEN: 'synthetic-orders-token',
@@ -174,36 +180,27 @@ async function testCreateOrderPrefersPerPairBearerToken() {
     await fixture.service.createOrder(syntheticOrderPayload() as any);
 
     const headers = fixture.postCalls[0][2].headers;
-    // The per-pair principal wins even when the shared static token is also present.
     assert.equal(headers.authorization, 'Bearer synthetic-per-pair-jwt');
-    assert.equal(headers['x-service-name'], 'allegro-service');
-    // The shared credential must not be sent alongside it.
+    assert.equal(headers['x-service-name'], undefined);
     assert.equal(headers['x-internal-service-token'], undefined);
-    // Preferring the per-pair token is not a fallback, so it must not warn.
     assert.equal(fixture.warnings.length, 0);
   });
 }
 
-async function testStaticTokenFallbackWarns() {
+async function testPrefixedBearerNotDoubleWrapped() {
   await withCleanOrderEnv({
-    ALLEGRO_INTERNAL_SERVICE_TOKEN: 'synthetic-orders-token',
+    ORDERS_SERVICE_TOKEN: 'Bearer already-prefixed',
   }, async () => {
     const fixture = createFixture();
-
     await fixture.service.createOrder(syntheticOrderPayload() as any);
-
-    assert.equal(fixture.postCalls[0][2].headers['x-internal-service-token'], 'synthetic-orders-token');
-    assert.equal(fixture.postCalls[0][2].headers.authorization, undefined);
-    // Falling back to the shared credential must be visible, never silent.
-    assert.equal(fixture.warnings.length, 1);
-    assert.match(String(fixture.warnings[0][0]), /ORDERS_SERVICE_TOKEN is not set/);
+    assert.equal(fixture.postCalls[0][2].headers.authorization, 'Bearer already-prefixed');
   });
 }
 
 export async function runOrderClientServiceSpec(): Promise<void> {
-  await testCreateOrderSendsMachineAuthHeaders();
-  await testCreateOrderPrefersPerPairBearerToken();
-  await testStaticTokenFallbackWarns();
+  await testCreateOrderSendsBearerOnly();
+  await testCreateOrderIgnoresLegacyStaticEnv();
+  await testPrefixedBearerNotDoubleWrapped();
   await testCreateOrderFailsClosedWithoutMachineCredential();
   await testGetOrderLifecycleReadsCentralOrderById();
   await testGetOrderLifecycleReturnsUnavailableWhenReadFails();
