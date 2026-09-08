@@ -92,11 +92,11 @@ spec:
                 secretKeyRef:
                   name: allegro-service-secret
                   key: CATALOG_SERVICE_TOKEN
-            - name: WAREHOUSE_INTERNAL_SERVICE_TOKEN
+            - name: WAREHOUSE_SERVICE_TOKEN
               valueFrom:
                 secretKeyRef:
                   name: allegro-service-secret
-                  key: WAREHOUSE_INTERNAL_SERVICE_TOKEN
+                  key: WAREHOUSE_SERVICE_TOKEN
             # Per-pair RS256 principal for allegro-service -> orders-microservice.
             - name: ORDERS_SERVICE_TOKEN
               valueFrom:

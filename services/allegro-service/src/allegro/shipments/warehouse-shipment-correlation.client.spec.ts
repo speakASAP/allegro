@@ -112,7 +112,6 @@ async function testEnabledClientBlocksWithoutWarehouseToken() {
   await withEnv({
     ALLEGRO_WAREHOUSE_SHIPMENT_CORRELATION_ENABLED: "true",
     WAREHOUSE_SERVICE_TOKEN: undefined,
-    WAREHOUSE_INTERNAL_SERVICE_TOKEN: undefined,
     ALLEGRO_INTERNAL_SERVICE_TOKEN: undefined,
     INTERNAL_SERVICE_TOKEN: undefined,
   }, async () => {
@@ -128,7 +127,6 @@ async function testEnabledClientBlocksWithOnlyBroadInternalFallbackTokens() {
   await withEnv({
     ALLEGRO_WAREHOUSE_SHIPMENT_CORRELATION_ENABLED: "true",
     WAREHOUSE_SERVICE_TOKEN: undefined,
-    WAREHOUSE_INTERNAL_SERVICE_TOKEN: undefined,
     ALLEGRO_INTERNAL_SERVICE_TOKEN: "broad-allegro-token",
     INTERNAL_SERVICE_TOKEN: "generic-internal-token",
   }, async () => {

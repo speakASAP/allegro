@@ -24,24 +24,15 @@ export class WarehouseClientService {
   }
 
   private requestOptions(): Record<string, any> {
-    // JWT_TOKEN is deliberately NOT in this chain. It holds the shared legacy
-    // HS256 credential, which warehouse-microservice rejects (RS256 required).
-    // Falling through to it turns a missing-credential misconfiguration into a
-    // confusing 401 from warehouse instead of the loud failure below.
-    const token =
-      process.env.WAREHOUSE_SERVICE_TOKEN ||
-      process.env.WAREHOUSE_INTERNAL_SERVICE_TOKEN ||
-      process.env.INTERNAL_SERVICE_TOKEN;
+    const token = (process.env.WAREHOUSE_SERVICE_TOKEN || '').trim();
 
     if (!token) {
-      // Sending the request unauthenticated would surface as a confusing 401
-      // from warehouse rather than as the misconfiguration it actually is.
       this.logger.error(
-        'No warehouse credential configured (WAREHOUSE_SERVICE_TOKEN / WAREHOUSE_INTERNAL_SERVICE_TOKEN / INTERNAL_SERVICE_TOKEN); refusing to call warehouse-microservice unauthenticated',
+        'WAREHOUSE_SERVICE_TOKEN (Auth-minted RS256) required; refusing warehouse call',
         undefined,
         'WarehouseClient',
       );
-      throw new Error('[MISSING: warehouse runtime credential]');
+      throw new Error('[MISSING: WAREHOUSE_SERVICE_TOKEN]');
     }
 
     return {

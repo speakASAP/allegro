@@ -44,7 +44,7 @@ const LANES = [
   {
     principal: 'svc-allegro-service--warehouse-microservice@internal.alfares.cz',
     target: 'warehouse-microservice',
-    tokenEnv: 'WAREHOUSE_INTERNAL_SERVICE_TOKEN',
+    tokenEnv: 'WAREHOUSE_SERVICE_TOKEN',
     // WAREHOUSE_READ_ROLES includes internal:warehouse-microservice:action-admin.
     // An unknown product id returns 200 with an empty array, so the probe depends
     // on no particular product surviving in the database.

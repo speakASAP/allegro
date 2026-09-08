@@ -156,9 +156,6 @@ function normalizeOptionalHash(value: string | null | undefined, fieldName: stri
 }
 
 function resolveWarehouseToken(): string | null {
-  return (
-    process.env.WAREHOUSE_SERVICE_TOKEN ||
-    process.env.WAREHOUSE_INTERNAL_SERVICE_TOKEN ||
-    null
-  );
+  const token = (process.env.WAREHOUSE_SERVICE_TOKEN || '').trim();
+  return token || null;
 }

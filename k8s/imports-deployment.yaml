@@ -61,11 +61,11 @@ spec:
             # was 401 -- invisible while the client turned failures into empty
             # results. Same per-pair RS256 principal as allegro-service
             # (svc-allegro-service--warehouse-microservice@internal.alfares.cz).
-            - name: WAREHOUSE_INTERNAL_SERVICE_TOKEN
+            - name: WAREHOUSE_SERVICE_TOKEN
               valueFrom:
                 secretKeyRef:
                   name: allegro-service-secret
-                  key: WAREHOUSE_INTERNAL_SERVICE_TOKEN
+                  key: WAREHOUSE_SERVICE_TOKEN
           startupProbe:
             httpGet:
               path: /health
