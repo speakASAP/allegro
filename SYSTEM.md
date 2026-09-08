@@ -14,7 +14,7 @@ NestJS + PostgreSQL + Prisma. Allegro REST API + OAuth2.
 |---------|-------|
 | database-server:5432 | PostgreSQL |
 | logging-microservice:3367 | Logs |
-| auth-microservice:3370 | Admin auth |
+| auth-microservice:3370 | Human JWT validation + machine service identity (SPOT) |
 | catalog-microservice:3200 | Product data |
 | warehouse-microservice:3201 | Stock (RabbitMQ) |
 | orders-microservice:3203 | Forward orders |
@@ -61,7 +61,7 @@ The Allegro marketplace integration owns the offer-management, CSV-import, and s
 - log and notification evidence for production service health
 
 ## Dependencies
-- auth-microservice for shared authentication boundaries
+- auth-microservice for human JWT validation and machine service identity per [`SERVICE_IDENTITY_CONSUMER_STANDARD.md`](../auth-microservice/docs/SERVICE_IDENTITY_CONSUMER_STANDARD.md) (never shared `JWT_SECRET` HMAC for S2S)
 - catalog-microservice for validated product data
 - warehouse-microservice for stock.updated events
 - orders-microservice for order forwarding

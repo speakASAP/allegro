@@ -11,7 +11,7 @@ The machine-readable decisions live in ips-adoption.json. The real production de
 
 | Capability | Component | Decision | Contract/API/event | Configuration | Failure mode | Validation evidence |
 | --- | --- | --- | --- | --- | --- | --- |
-| Auth | auth-microservice | required | shared auth boundary | service configuration and secret injection | fail closed with recorded error state | IPS validation and health checks |
+| Auth | auth-microservice | required | [`SERVICE_IDENTITY_CONSUMER_STANDARD.md`](../../../auth-microservice/docs/SERVICE_IDENTITY_CONSUMER_STANDARD.md) (machine RS256 pair) + human JWT per consumer JWT standard | Vault-backed keys; never shared `JWT_SECRET` HMAC for S2S | fail closed with recorded error state | IPS validation and health checks |
 | PostgreSQL | db-server-postgres | required | shared relational persistence | repository config and platform settings | data access failure is surfaced and logged | CI and runtime validation evidence |
 | Redis | db-server-redis | not-applicable | none | none | not applicable | not applicable |
 | Logging | logging-microservice | required | shared logging API | environment and service configuration | log sink failures are surfaced to operations | health and log validation |
@@ -32,7 +32,7 @@ The machine-readable decisions live in ips-adoption.json. The real production de
 The service keeps only the operational state required to manage Allegro offers and synchronization flows. Product master data remains owned by the catalog service, and order ownership remains with the orders domain.
 
 ## Authentication and authorization
-The repository uses the platform auth model and shared service authentication boundaries. Marketplace credentials remain in secure secret storage, and runtime access is validated before any offer or stock action is executed.
+Machine service-to-service calls follow the sole canonical [`SERVICE_IDENTITY_CONSUMER_STANDARD.md`](../../../auth-microservice/docs/SERVICE_IDENTITY_CONSUMER_STANDARD.md) (Auth-issued RS256 pair Bearer). Human JWTs follow the consumer JWT validation standard (RS256 / JWKS). Do not use a shared `JWT_SECRET` HMAC matching Auth as S2S. Marketplace credentials remain in secure secret storage, and runtime access is validated before any offer or stock action is executed.
 
 ## Synchronous dependencies
 - catalog-microservice for product and offer validation
