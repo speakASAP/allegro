@@ -34,6 +34,9 @@ interface LogData {
 type LogLevel = 'error' | 'warn' | 'info' | 'debug';
 
 export class Logger {
+  /** Process-wide latch so the missing-credential warning is not emitted per log line. */
+  private static missingTokenReported = false;
+
   private loggingServiceUrl: string;
   private logLevel: string;
   private timestampFormat: string;
@@ -129,8 +132,26 @@ export class Logger {
     };
 
     // Fire and forget - non-blocking HTTP request
+    // Ingest requires an Auth-issued RS256 pair token (role
+    // internal:logging-microservice:ingest). Without it logging-microservice
+    // answers 401 and every line is lost silently -- report loudly, once, but
+    // never throw: this is a fire-and-forget path and a throw here becomes an
+    // unhandled rejection that kills the process.
+    const ingestToken = process.env.LOGGING_SERVICE_TOKEN?.trim();
+    if (!ingestToken) {
+      if (!Logger.missingTokenReported) {
+        Logger.missingTokenReported = true;
+        console.error(
+          `${new Date().toISOString()} [MISSING: LOGGING_SERVICE_TOKEN] ` +
+            `service=${this.serviceName} — logs are written locally but rejected (401) ` +
+            `by logging-microservice. Remote error alerting is blind to this service.`,
+        );
+      }
+      return;
+    }
+
     setImmediate(() => {
-      this.sendToLoggingServiceAsync(logData).catch((error) => {
+      this.sendToLoggingServiceAsync(logData, ingestToken).catch((error) => {
         // Silently handle errors - don't block application
         // Only log to console in development mode
         if (process.env.NODE_ENV === 'development') {
@@ -143,7 +164,7 @@ export class Logger {
   /**
    * Async HTTP request to logging service
    */
-  private async sendToLoggingServiceAsync(logData: LogData): Promise<void> {
+  private async sendToLoggingServiceAsync(logData: LogData, ingestToken: string): Promise<void> {
     try {
       const url = new URL(`${this.loggingServiceUrl}/api/logs`);
       const isHttps = url.protocol === 'https:';
@@ -160,6 +181,7 @@ export class Logger {
         headers: {
           'Content-Type': 'application/json',
           'Content-Length': Buffer.byteLength(postData),
+          Authorization: `Bearer ${ingestToken}`,
         },
       };
 

@@ -79,6 +79,14 @@ spec:
                 secretKeyRef:
                   name: allegro-service-secret
                   key: CATALOG_SERVICE_TOKEN
+            # S2S: auth-microservice/docs/SERVICE_IDENTITY_CONSUMER_STANDARD.md
+            # envFrom is not used for this Secret, so the ExternalSecret entry
+            # alone does NOT reach the container -- it must be named here.
+            - name: LOGGING_SERVICE_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: allegro-service-secret
+                  key: LOGGING_SERVICE_TOKEN
             - name: WAREHOUSE_SERVICE_TOKEN
               valueFrom:
                 secretKeyRef:
